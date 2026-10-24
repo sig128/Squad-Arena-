@@ -107,7 +107,7 @@ export function applyCandles(tok, list, five) {
 
 /* ---------- jobs ---------- */
 export async function jobPrices(mints) {
-  if (!mints.length) return;
+  if (!mints.length) { FEED.lastPrice = now(); return; }      // nothing to price yet: let discovery run
   for (let i = 0; i < mints.length; i += 30) applyPairs(await fetchJSON("https://api.dexscreener.com/tokens/v1/solana/" + mints.slice(i, i + 30).join(",")), now());
   FEED.lastPrice = now();
 }
