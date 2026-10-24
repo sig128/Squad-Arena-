@@ -78,11 +78,14 @@ setInterval(() => {
   if (sentC.size > 5000) sentC.clear();
   if (list.length) emit("candle", list);
 }, 5000);
+// prices go out within 150 ms of the swap (the set of coins pages care about is worked out once a second)
+let keepCache = { at: 0, set: new Set() };
+const keepNow = () => { const t = now(); if (t - keepCache.at > 1000) keepCache = { at: t, set: keepSet(t) }; return keepCache.set; };
 setInterval(() => {
   if (!tickBuf.size) return;
-  const keep = keepSet(now()), list = [...tickBuf.values()].filter(x => keep.has(x[0])); tickBuf.clear();
+  const keep = keepNow(), list = [...tickBuf.values()].filter(x => keep.has(x[0])); tickBuf.clear();
   if (list.length) emit("tick", list);
-}, 1000);
+}, 150);
 setInterval(() => {
   const t = now(), keep = keepSet(t);
   for (const m of keep) if (!sentTok.has(m) && TL.has(m)) { sentTok.add(m); emit("token", tokOut(TL.get(m))); }   // a coin new to the site arrives whole

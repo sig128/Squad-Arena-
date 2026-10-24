@@ -153,7 +153,7 @@ function boot() {
   addEventListener("scroll", () => { if (lensOpen) hideLens(); }, { passive: true });
   const n = TR.size, rug = [...TR.values()].filter(t => t.rugAt).map(t => t.s);
   if (!S.srv) wire("Desk", `Replay of a real hour on pump.fun: ${n} coins launched in the last 72 hours, 1-minute candles, ${utc(D0, false)}–${utc(REC_END, false)} UTC on 23 Oct. The hour loops on the UTC clock, so everyone sees the same round.${rug.length ? " Watch for the rug filter near the end of the hour." : ""}`);
-  setInterval(tick, 1000);
+  setInterval(tick, S.srv ? 400 : 1000);         // live: board numbers follow the price stream closely
   requestAnimationFrame(frame);
   if (store.get("intro", 0) !== 1 && !reduced) playIntro(false);
   if (S.srv) { srvStart(); return; }
