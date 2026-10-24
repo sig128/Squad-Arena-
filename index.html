@@ -3682,11 +3682,36 @@ function solWallet(addr) { return PV.wallets.find(w => w.address === addr) || PV
 /* ---------- money: deposit (signed in your wallet, sent by the server) and withdraw ---------- */
 const b64ToU8 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 const u8ToB64 = u => { let s = ""; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
+// config.js pins the arena wallet; the site only asks you to sign a plain transfer to that address
+const pinnedTreasury = () => String((window.SA_CONFIG && window.SA_CONFIG.treasury) || "").trim();
+const treasuryOk = m => !pinnedTreasury() || (m && m.treasury === pinnedTreasury());
+function checkDepositTx(u8, from, lamports) {
+  const bad = () => { throw new Error("That deposit doesn't go to the arena wallet, so it wasn't signed."); };
+  const pin = pinnedTreasury(); let o = 0;
+  if (u8[o++] !== 1) bad(); o += 64;
+  if (u8[o] !== 1 || u8[o + 1] !== 0) bad(); o += 3;
+  const nk = u8[o++]; if (nk > 8) bad();
+  const keys = []; for (let i = 0; i < nk; i++) { keys.push(b58enc(u8.slice(o, o + 32))); o += 32; }
+  o += 32;
+  const nix = u8[o++]; if (nix < 1 || nix > 2) bad();
+  for (let i = 0; i < nix; i++) {
+    const prog = keys[u8[o++]], na = u8[o++], acc = []; for (let j = 0; j < na; j++) acc.push(keys[u8[o++]]);
+    const dl = u8[o++], data = u8.slice(o, o + dl); o += dl;
+    if (i === 0) {
+      if (prog !== "11111111111111111111111111111111" || na !== 2 || acc[0] !== from || (pin && acc[1] !== pin) || dl !== 12) bad();
+      if (data[0] !== 2 || data[1] || data[2] || data[3]) bad();
+      if (new DataView(data.buffer, data.byteOffset + 4, 8).getBigUint64(0, true) !== BigInt(lamports)) bad();
+    } else if (prog !== "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr" || na !== 0) bad();
+  }
+  if (o !== u8.length) bad();
+}
 async function srvDeposit(sol, from) {
   const w = solWallet(from || (SRV.me && SRV.me.wallet));
   if (!w) throw new Error("No Solana wallet is connected to this login yet.");
+  if (!treasuryOk(SRV.money || (SRV.cfg && SRV.cfg.money))) throw new Error("Deposits are paused while the arena wallet is set up.");
   const prep = await api("/deposit/prepare", { sol, from: w.address });
   const unsigned = b64ToU8(prep.tx);
+  checkDepositTx(unsigned, w.address, prep.lamports);
   const res = await PV.signTx({ transaction: unsigned, wallet: w });
   let signed = res && res.signedTransaction;
   if (!signed) throw new Error("The wallet didn't sign.");
@@ -3735,8 +3760,8 @@ function openAccount() {
     ${me && me.wallet ? `<p class="fine" style="margin:0 0 6px">Wallet <code>${esc(short(me.wallet))}</code> <button class="btn btn-quiet btn-xs" type="button" id="acCopy">Copy address</button></p>` : `<p class="fine">No Solana wallet on this login yet.</p>`}
     ${CUR === "SOL" ? `
       <hr class="divider">
-      <label class="lbl" for="dAmt">Deposit from your wallet</label>
-      <div style="display:flex;gap:8px"><div class="field" style="flex:1"><input id="dAmt" type="number" inputmode="decimal" min="${m.depositMin || 0.01}" step="0.01" value="0.1"><span>SOL</span></div><button class="btn btn-solid" type="button" id="dGo">Deposit</button></div>
+      ${treasuryOk(m) ? `<label class="lbl" for="dAmt">Deposit from your wallet</label>
+      <div style="display:flex;gap:8px"><div class="field" style="flex:1"><input id="dAmt" type="number" inputmode="decimal" min="${m.depositMin || 0.01}" step="0.01" value="0.1"><span>SOL</span></div><button class="btn btn-solid" type="button" id="dGo">Deposit</button></div>` : `<p class="fine" style="color:var(--fg)">Deposits are paused while the arena wallet is set up.</p>`}
       <label class="lbl" for="wAmt" style="margin-top:12px">Withdraw to your wallet</label>
       <div style="display:flex;gap:8px"><div class="field" style="flex:1"><input id="wAmt" type="number" inputmode="decimal" min="${m.withdrawMin || 0.01}" step="0.01" value=""><span>SOL</span></div><button class="btn btn-quiet" type="button" id="wGo">Withdraw</button></div>
       <p class="fine">${m.network === "mainnet" ? "Real SOL." : "Devnet: test SOL with no value. Get some free at faucet.solana.com."} Withdrawals go to your own linked wallet, up to ${m.withdrawMax || 25} SOL at a time and ${m.withdrawDaily || 50} SOL a day.</p>`

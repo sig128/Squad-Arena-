@@ -189,6 +189,8 @@ export function decide(r, w) {
     const refunded = new Set(out.filter(o => o.status === "refund").map(o => o.bet.id));
     const pl = pool(r, mk, cur); for (const id of refunded) { const b = G.bets.get(id); if (b && b.rk === r.key && b.mk === mk && b.cur === cur) { pl.P -= b.s; pl.sh.set(b.m, (pl.sh.get(b.m) || 0) - b.s * b.w); } }
     const tot = res.winners.reduce((a, m) => a + (pl.sh.get(m) || 0), 0);
+    // no house seed and nobody backed a winner: the pool goes back to everyone who bet
+    if (!(tot > 0)) { still.forEach(b => out.push({ bet: b, status: "refund", payout: 0, why: "nobody backed the winner" })); continue; }
     for (const b of still) {
       if (res.winners.includes(b.m)) out.push({ bet: b, status: "won", payout: +(pl.P * (1 - CFG.rake) * (b.s * b.w) / (tot || 1)).toFixed(9), why: null, receipt: res.hash });
       else out.push({ bet: b, status: "lost", payout: 0, why: null, receipt: res.hash });
