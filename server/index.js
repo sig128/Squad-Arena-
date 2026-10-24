@@ -3,7 +3,7 @@
 import { CFG, TF, TFK, MKS, CURRENCIES, checkConfig } from "./lib/config.js";
 import { log, now } from "./lib/util.js";
 import { DB } from "./lib/db.js";
-import { TL, FEED, RPC, jobPrices, jobValidate, jobDiscover, jobHistory, queueHistory, prune, rpcStart, rpcWatch, pumpOff } from "./lib/market.js";
+import { TL, FEED, RPC, jobPrices, jobValidate, jobDiscover, jobDiscoverDS, jobHistory, queueHistory, prune, rpcStart, rpcWatch, pumpOff } from "./lib/market.js";
 import { G, roundAt, roundOfKey, refreshBoard, ensureFields, lcs, lcsJSON, lcsFromJSON, resultOf, decide, roundsWithOpenBets, indexBet, roundState } from "./lib/game.js";
 import { SOC, betIn, joinSquad, pushDoc, allDocs, peopleOut } from "./lib/social.js";
 import { emit, online } from "./lib/hub.js";
@@ -128,6 +128,7 @@ async function feedStep() {
   try {
     if (t - FEED.lastPrice > 4000) await jobPrices([...keep].slice(0, 360));
     else if (FEED.pending.length) await jobValidate();
+    else if (t - (FEED.lastDS || 0) > (G.board.top.length < 15 ? 5000 : 60000)) await jobDiscoverDS();
     else if (!pumpOff() && t - FEED.lastDisc > discEvery()) await jobDiscover();
   } catch (e) { if (t - FEED.lastPrice > 4000) FEED.lastPrice = t - 2000; log("warn", "feed: " + e.message); }
   finally { feedBusy = false; }

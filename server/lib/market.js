@@ -116,6 +116,17 @@ export async function jobValidate() {
   const batch = FEED.pending.splice(0, 30); if (!batch.length) return;
   applyPairs(await fetchJSON("https://api.dexscreener.com/tokens/v1/solana/" + batch.join(",")), now());
 }
+// DEX Screener's latest profiles and boosts: a second source of fresh pump.fun coins that works from any server
+const DS_LISTS = ["https://api.dexscreener.com/token-profiles/latest/v1", "https://api.dexscreener.com/token-boosts/latest/v1", "https://api.dexscreener.com/token-boosts/top/v1"];
+export async function jobDiscoverDS() {
+  FEED.lastDS = now(); FEED.dsI = ((FEED.dsI || 0) + 1) % DS_LISTS.length;
+  const arr = await fetchJSON(DS_LISTS[FEED.dsI]);
+  for (const x of Array.isArray(arr) ? arr : []) {
+    const m = x && x.chainId === "solana" ? String(x.tokenAddress || "") : "";
+    if (!m.endsWith("pump") || TL.has(m) || FEED.cand.has(m)) continue;
+    FEED.cand.set(m, { t: 0, logo: x.icon || null }); FEED.pending.push(m);
+  }
+}
 // pump.fun first; if it refuses this server three times, GeckoTerminal's PumpSwap pools for 30 minutes, then pump.fun again
 export const pumpOff = () => FEED.pumpBlocked && now() - FEED.pumpBlockedAt < 1800e3;
 export async function jobDiscover() {
