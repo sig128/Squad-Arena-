@@ -3123,22 +3123,7 @@ function openProof(m, k) {
   };
 }
 
-/* ---------- rules + data panels ---------- */
-function openRules() {
-  modal(`${head("How Squad Arena works", "Markets, scoring and squads")}
-  <p class="fine" style="margin:12px 0 0">The short version. <a href="/docs">Read the full docs</a> for every rule, with diagrams and a payout calculator.</p>
-  <div class="rules">
-    <h4>The board</h4><p>pump.fun coins launched in the last 72 hours, filtered for real trading: at least $25K liquidity, a market cap no bigger than 60× its liquidity (fake-cap clones fail this), daily turnover of 25% of market cap, 2,000 trades a day (both adjusted for age) and 300 trades in the last 24 hours. The top 15 by market cap are on the board; the next 10 are on deck and still bettable. A coin leaves when it turns 72 hours old or when the rug filter catches it (liquidity under the floor, or a fall of 80% in 5 minutes). Bets on removed coins are refunded.</p>
-    <h4>Rounds</h4><p>15-minute, 30-minute, 1-hour and 24-hour rounds, aligned to the clock. Every round runs the same three markets.</p>
-    <h4>Scoring</h4><p>Returns use a time-weighted average price over 3% of the round at the open and at the close, so a single trade can't swing a result. A coin that lists mid-round is measured from its first price.</p>
-    <h4>Top gainer</h4><p>The best TWAP return wins. Bets close at 40% of the round.</p>
-    <h4>Last coin standing</h4><p>At each sixth of the round the bottom coins are cut: 3, 3, 3, 2, 2 for a full field, then the last two duel to the close. Coins that enter the top 15 mid-round join at the next checkpoint. Bets stay open on any survivor until the duel is scored, with weight <code>1 / (1 + 2 × elapsed share)</code>. Survive 3 checkpoints with your pick and you earn a streak pass: one free move to another survivor.</p>
-    <h4>Hype delta</h4><p>Pace growth A compares the recent trade rate with the longer baseline (5 min vs 1 h for short rounds, 1 h vs 6 h for 1-hour rounds, 6 h vs 24 h for daily ones). Most efficient pays the highest <code>R / (1 + max(A, −0.9))</code>. Biggest bust pays the largest <code>A × −R</code> among coins whose pace rose while the price fell, and refunds if none qualifies.</p>
-    <h4>Pools</h4><p>Pari-mutuel. Each pool starts with a ${seedNow()} ${CUR} house seed per coin, so the house holds a small stake on every coin. Your share is stake × weight. At settlement the pool minus a ${RAKE * 100}% rake goes to the winning coin's backers. Every settled round shows a SHA-256 receipt of its field, prices and result.</p>
-    <h4>Squads</h4><p>Backing a coin in any market makes you a member of its squad. Squads clear tasks together; new tasks unlock at $500K, $2M, $10M and $50M market cap. ${esc(RULES_TASKS)}</p>
-    <h4>Money</h4><p>${S.srv ? `Everyone gets practice credits (tSOL).${SRV.cfg && SRV.cfg.money && SRV.cfg.money.enabled ? ` The SOL wallet runs on Solana ${esc(SRV.cfg.money.network)}: deposits go to the arena's treasury wallet, winnings are paid to your arena balance, and withdrawals go back to your own linked wallet.` : ""} Real-money betting is regulated, and some countries block or forbid it.` : "This build uses practice credits. Real SOL needs sign-in, a treasury, geofencing and a gambling licence where required."} None of this is financial advice.</p>
-  </div>`, true);
-}
+/* ---------- data panel ---------- */
 function openData() {
   if (S.srv) {
     const c = SRV.cfg || {}, m = c.money || {};
@@ -3243,8 +3228,8 @@ $("autoBtn").addEventListener("click", () => { const on = $("autoBtn").getAttrib
 /* ---------- footer ---------- */
 function renderFoot() {
   $("foot").innerHTML = `${S.srv ? "Squad Arena. Coins, prices and launch data are real Solana mainnet data from pump.fun, DEX Screener, GeckoTerminal and the Solana RPC. Practice credits (tSOL) for everyone; SOL bets only where the SOL wallet is on. Nothing here is financial advice. Real-money betting is regulated, and some countries block or forbid it." : "Squad Arena prototype. Coins, prices and launch data are real Solana mainnet data from pump.fun, DEX Screener and GeckoTerminal. Bets use practice credits; no SOL moves and nothing here is financial advice. Real-money prediction markets are regulated, and some countries block unlicensed ones."}
-  <br><a class="link" href="/docs">Docs</a> · <button type="button" class="link" id="fRules">How it works</button> · <button type="button" class="link" id="fData">Data</button> · <button type="button" class="link" id="fIntro">Replay intro</button>`;
-  $("fRules").onclick = openRules; $("fData").onclick = openData; $("fIntro").onclick = () => playIntro(true);
+  <br><a class="link" href="/docs">Docs</a> · <button type="button" class="link" id="fData">Data</button> · <button type="button" class="link" id="fIntro">Replay intro</button>`;
+  $("fData").onclick = openData; $("fIntro").onclick = () => playIntro(true);
 }
 
 /* ---------- collapsible rail ---------- */
