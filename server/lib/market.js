@@ -233,12 +233,15 @@ export function samplePools(ms) {
 }
 // background history: one GeckoTerminal fill per coin, for the stretch before the server started watching it.
 // Nothing waits on it; a refusal pauses it for two minutes.
+// GeckoTerminal through the site's own Vercel function: a different network address than Railway's, and cached for a minute
+export const gtUrl = (pool, five) => CFG.gtProxy
+  ? `${CFG.gtProxy}?pool=${pool}&agg=${five ? 5 : 1}`
+  : `https://api.geckoterminal.com/api/v2/networks/solana/pools/${pool}/ohlcv/minute?aggregate=${five ? 5 : 1}&limit=${five ? 300 : 200}&currency=usd&token=base`;
 export async function jobBackfill(tok) {
   const five = !!tok.histAt; if (five) tok.hist5At = 1; else tok.histAt = 1;
-  const q = five ? "minute?aggregate=5&limit=300" : "minute?aggregate=1&limit=200";
   let j;
-  try { j = await fetchJSON(`https://api.geckoterminal.com/api/v2/networks/solana/pools/${tok.pool}/ohlcv/${q}&currency=usd&token=base`); }
-  catch (e) { if (e.status === 429) { if (five) tok.hist5At = 0; else tok.histAt = 0; } throw e; }      // rate limited: try again later; anything else: give up on this coin
+  try { j = await getJSON(gtUrl(tok.pool, five), { timeout: 9000 }); FEED.calls++; }
+  catch (e) { FEED.errs++; if (e.status === 429 || e.status === 504) { if (five) tok.hist5At = 0; else tok.histAt = 0; } throw e; }      // rate limited: try again later; anything else: give up on this coin
   applyCandles(tok, j && j.data && j.data.attributes && j.data.attributes.ohlcv_list, five);
   FEED.backfilled++;
 }
@@ -296,9 +299,9 @@ export async function quickHistory(tok) {
   if (!CFG.gtBackfill || tok.histAt || tok.C.length > 5 || now() < FEED.gtPauseUntil || !tok.pool) return;
   tok.histAt = 1;
   try {
-    const j = await getJSON(`https://api.geckoterminal.com/api/v2/networks/solana/pools/${tok.pool}/ohlcv/minute?aggregate=1&limit=200&currency=usd&token=base`, { timeout: 2500 });
+    const j = await getJSON(gtUrl(tok.pool, false), { timeout: 2500 });
     applyCandles(tok, j && j.data && j.data.attributes && j.data.attributes.ohlcv_list, false); FEED.backfilled++;
-  } catch (e) { tok.histAt = 0; if (e.status === 429) FEED.gtPauseUntil = now() + 120e3; }
+  } catch (e) { tok.histAt = 0; if (e.status === 429) FEED.gtPauseUntil = now() + 45e3; }
 }
 
 /* ---------- QuickNode stream: pool vault balances → price on every swap ---------- */

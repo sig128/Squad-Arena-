@@ -3,6 +3,7 @@
 import { CFG, TF, TFK, MKS, CURRENCIES, checkConfig } from "./lib/config.js";
 import { log, now } from "./lib/util.js";
 import { DB } from "./lib/db.js";
+import { STORE, storeInit, storeSave, storeLoad } from "./lib/store.js";
 import { TL, FEED, RPC, jobPrices, jobValidate, jobDiscover, jobDiscoverDS, jobBackfill, jobMeta, jobDesc, samplePools, chartC, prune, rpcStart, rpcWatch, pumpOff } from "./lib/market.js";
 import { G, roundAt, roundOfKey, refreshBoard, ensureFields, lcs, lcsJSON, lcsFromJSON, resultOf, decide, roundsWithOpenBets, indexBet, roundState } from "./lib/game.js";
 import { SOC, betIn, joinSquad, pushDoc, allDocs, peopleOut } from "./lib/social.js";
@@ -56,7 +57,8 @@ function health() {
   return { ok: true, time: now(), up: Math.round((now() - STARTED) / 1000), feed: CFG.feed, coins: TL.size, board: G.board.top.length, rpc: RPC.live, rpcCoins: RPC.watched.size,
     db: DB.kind, money: moneyInfo(), treasurySol: MONEY.treasuryLamports == null ? null : MONEY.treasuryLamports / 1e9, calls: FEED.calls, errors: FEED.errs, lastError: FEED.lastErr || null, lastPrice: FEED.lastPrice,
     discovery: { pools: FEED.sample.pools, fresh: FEED.sample.fresh, ago: FEED.sample.at ? Math.round((now() - FEED.sample.at) / 1000) : null, err: FEED.sample.err, pending: FEED.pending.length, pumpfun: !pumpOff() },
-    charts: { withHistory: [...TL.values()].filter(x => x.C.length > 1).length, backfilled: FEED.backfilled, backfill: CFG.gtBackfill } };
+    charts: { withHistory: [...TL.values()].filter(x => x.C.length > 1).length, backfilled: FEED.backfilled, backfill: CFG.gtBackfill, gtPausedFor: Math.max(0, Math.round((FEED.gtPauseUntil - now()) / 1000)),
+      stored: { on: STORE.on, saved: STORE.saved, loaded: STORE.loaded, err: STORE.err } } };
 }
 
 /* ---------- live stream batching ---------- */
@@ -171,14 +173,40 @@ async function descStep() {
   } catch (_) {}
   finally { descBusy = false; }
 }
+// candles survive restarts: read a coin's saved candles when it comes back, save every few minutes and on shutdown
+let loadBusy = false, saveBusy = false;
+async function loadStep() {
+  if (loadBusy || !STORE.on) return; loadBusy = true;
+  try {
+    const order = [...G.board.top.map(x => x.m), ...G.board.bench.map(x => x.m), ...keepSet(now())];
+    const tok = order.map(m => TL.get(m)).find(x => x && !x.storeAt && !x.full);
+    if (tok) { tok.storeAt = now(); await storeLoad(tok); }
+  } catch (e) { log("warn", "candle load: " + e.message); }
+  finally { loadBusy = false; }
+}
+async function saveStep(all) {
+  if (saveBusy || !STORE.on) return; saveBusy = true;
+  try {
+    const t = now(), order = [...new Set([...G.board.top.map(x => x.m), ...G.board.bench.map(x => x.m), ...keepSet(t)])];
+    const due = order.map(m => TL.get(m)).filter(x => x && x.C.length && x.storeAt && (all || t - (x.savedAt || 0) > 300e3)).slice(0, all ? 60 : 8);
+    await Promise.all(due.map(x => storeSave(x).catch(() => {})));
+  } finally { saveBusy = false; }
+}
+process.on("SIGTERM", async () => {
+  log("info", "stopping: saving candles");
+  saveBusy = false;
+  await Promise.race([saveStep(true), new Promise(r => setTimeout(r, 8000))]);
+  process.exit(0);
+});
 // background chart history for coins on the board (then on deck, then everything else kept), one GeckoTerminal call at a time
 async function gtStep() {
   if (gtBusy || !CFG.gtBackfill || now() < FEED.gtPauseUntil) return; gtBusy = true;
   try {
-    const order = [...G.board.top, ...G.board.bench].map(x => x.m).concat([...keepSet(now())]);
+    // coins someone has open right now first, then the board, on deck and the rest
+    const order = [...FEED.viewed.keys(), ...G.board.top.map(x => x.m), ...G.board.bench.map(x => x.m), ...keepSet(now())];
     const tok = order.map(m => TL.get(m)).find(x => x && x.pool && (!x.histAt || !x.hist5At));
     if (tok) await jobBackfill(tok);
-  } catch (e) { if (e.status === 429) FEED.gtPauseUntil = now() + 120e3; }
+  } catch (e) { if (e.status === 429) FEED.gtPauseUntil = now() + 45e3; }
   finally { gtBusy = false; }
 }
 function engineStep() {
@@ -221,8 +249,11 @@ async function main() {
   if (CFG.feed === "replay") startReplay(process.env.REPLAY_FILE || new URL("./replay.json", import.meta.url).pathname);
   else {
     setInterval(() => feedStep(), 1000);
-    setInterval(() => gtStep(), 4000);
+    setInterval(() => gtStep(), 2500);
     setInterval(metaStep, 3000);
+    storeInit().then(() => log(STORE.on ? "info" : "warn", STORE.on ? "candle storage ready" : "candle storage off: " + STORE.err));
+    setInterval(loadStep, 700);
+    setInterval(() => saveStep(false), 30000);
     setInterval(descStep, 1500);
     setInterval(sampleStep, 2000); sampleStep();
     rpcStart(() => {});

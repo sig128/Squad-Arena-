@@ -20,6 +20,7 @@ export const CFG = {
   feed: env("FEED", "live"),                            // "live" or "replay" (recorded hour, for local tests)
   discoveryWs: env("DISCOVERY_WS", "wss://api.mainnet-beta.solana.com,wss://solana-rpc.publicnode.com"),   // free Solana WebSockets for the pool stream (new coins), tried in turn; "off" to skip
   gtBackfill: env("GT_BACKFILL", "on") !== "off",       // older chart history from GeckoTerminal, in the background
+  gtProxy: env("GT_PROXY", "https://www.squadarena.fun/api/ohlcv"),   // the site's Vercel function in front of GeckoTerminal; "off" to call it directly
 
   // Money
   network: env("NETWORK", "devnet") === "mainnet" ? "mainnet" : "devnet",
@@ -42,6 +43,7 @@ export const CFG = {
   startBalance: 25
 };
 if (CFG.discoveryWs === "off") CFG.discoveryWs = "";
+if (CFG.gtProxy === "off") CFG.gtProxy = "";
 CFG.moneyRpc = CFG.solanaRpc || (CFG.network === "mainnet" ? CFG.quicknode : "https://api.devnet.solana.com");
 
 // TIME_SCALE and SCORE_LATE_ROUNDS exist for local tests only (short rounds, score a round the server joined late)
