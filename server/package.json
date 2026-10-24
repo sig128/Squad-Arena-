@@ -1,0 +1,13 @@
+{
+  "name": "squad-arena-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Squad Arena round server: coin feed, rounds, bets, settlement, live stream",
+  "type": "module",
+  "main": "index.js",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node index.js",
+    "keygen": "node keygen.js"
+  }
+}

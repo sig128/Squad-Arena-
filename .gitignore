@@ -5,3 +5,4 @@ config.local.js
 .vercel
 .DS_Store
 node_modules
+app/dist/

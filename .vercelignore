@@ -1,0 +1,4 @@
+# the website is index.html + config.js + icons; the rest is source and the Railway server
+app/
+server/
+supabase/
