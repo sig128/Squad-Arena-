@@ -45,7 +45,7 @@ async function loadKolsFor(m) {
   try {
     const r = await fetch(SRV.url + "/kols?m=" + encodeURIComponent(m)); if (!r.ok) return;
     const j = await r.json(); KOLS.set(m, { holders: j.holders || [], trades: j.trades || [], at: nowW() });
-    if (coinUI.m === m) { renderKolBox(m); CH.mkKey = ""; dirty.coin = true; }
+    if (coinUI.m === m) { renderKolBox(m); CH.mkKey = ""; dirty.coin = true; if (CH.prim) CH.prim.req(); }
   } catch (_) {}
   finally { loadKolsFor.busy = false; if (coinUI.m === m && !KOLS.has(m)) renderKolBox(m); }
 }
@@ -60,7 +60,7 @@ function kolEvent(d) {
   if (tr.hold > 0) k.holders.unshift({ w: tr.w, name: tr.name, x: tr.x, avatar: tr.avatar, amt: tr.hold, since: tr.t });
   KOLS.set(d.m, k);
   const tok = TL.get(d.m); if (tok) tok.kol = k.holders.length;
-  if (coinUI.m === d.m) { renderKolBox(d.m); CH.mkKey = ""; dirty.coin = true; }
+  if (coinUI.m === d.m) { renderKolBox(d.m); CH.mkKey = ""; dirty.coin = true; if (CH.prim) CH.prim.req(); }
   if (tok && (inTop(d.m) || inBench(d.m)) && tr.sol >= 0.5) wire("KOL", `${esc(kolName(tr))} ${tr.side === "buy" ? "bought" : "sold"} ${fmtAmt(tr.sol, "SOL")} of ${tkHTML(tok)}.`, tr.side === "buy");
 }
 function renderKolBox(m) {

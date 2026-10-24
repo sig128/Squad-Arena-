@@ -27,7 +27,7 @@ const indCfg = (() => {
   return o;
 })();
 const indSig = () => IND_DEF.map(d => indCfg[d.id].on ? d.id + indCfg[d.id].p.join(",") : "").join(";");
-const chartPref = { scale: ["log", "pct"].includes(store.get("cscale", "")) ? store.get("cscale", "") : "", magnet: store.get("magnet", true) !== false };
+const chartPref = { scale: ["log", "pct"].includes(store.get("cscale", "")) ? store.get("cscale", "") : "", magnet: store.get("magnet", true) !== false, kols: store.get("kols", true) !== false };
 if (STYLES.some(s => s[0] === store.get("cstyle", ""))) coinUI.style = store.get("cstyle", "candles");
 const CH = { sd: 4, step: 0, pendLR: null, chart: null, main: null, vol: null, lines: [], rk: "", vk: "", n: 0, first: 0, bars: [], times: [], ind: {}, K: 1, iv: 1, fullAt: 0, syncAt: 0, theme: "", openLine: null, openP: null, openAt: 0, hl: new Map(), markers: null, mkKey: "", hover: false, hoverI: -1, full: false, prim: null, leg: [], lastC: 1, ro: null };
 const DW = { tool: "cross", list: [], sel: null, pend: null, hov: null, meas: null, drag: null, down: null, dragEnd: 0, addAt: 0, m: null };
@@ -244,7 +244,7 @@ function markersSync(tok) {
   const L = LW(); if (!L.createSeriesMarkers || !CH.main) return;
   const mine = S.my.b.filter(b => b.m === tok.m && b.md === S.mode).slice(0, 40);
   const key = mine.map(b => b.id).join() + "|" + kolKey(tok.m) + "|" + CH.n + "|" + CH.first + "|" + CH.iv + "|" + CH.rk; if (key === CH.mkKey) return; CH.mkKey = key;
-  const ms = kolMarkers(tok);
+  const ms = [];
   for (const b of mine) {
     let t = b.ts; if (S.mode === "replay") { try { t = recOf(roundAt(b.tf, b.ts, b.md), b.ts); } catch (_) { continue; } }
     const i = barIndexAt(t); if (i < 0) continue;
@@ -375,7 +375,46 @@ function paintDraw(x, ms) {
       const tw = x.measureText(txt).width + 14, bx = clamp(mx - tw / 2, 2, ms.width - tw - 2), by = clamp(up ? t - 26 : t + h + 6, 2, ms.height - 22);
       x.fillStyle = col; x.fillRect(bx, by, tw, 20); x.fillStyle = C.bg; x.textBaseline = "middle"; x.fillText(txt, bx + 7, by + 10.5);
     } }
+  paintKols(x, ms);
   x.restore();
+}
+/* ---------- KOL bubbles: each KOL trade as the trader's avatar at its time and price; green ring buys, red ring sells ---------- */
+const KIMG = new Map();
+function kolImg(k) {
+  if (!k.avatar) return null; let im = KIMG.get(k.avatar);
+  if (!im) {
+    im = new Image(); im.decoding = "async"; im.referrerPolicy = "no-referrer"; KIMG.set(k.avatar, im);
+    im.onload = () => { if (CH.prim) CH.prim.req(); };
+    im.onerror = () => { if (!im.dataset.px && /^https:/.test(k.avatar) && !window.claude) { im.dataset.px = "1"; im.src = "/api/img?u=" + encodeURIComponent(k.avatar); } else im.dead = true; };
+    im.src = k.avatar;
+  }
+  return im.complete && im.naturalWidth && !im.dead ? im : null;
+}
+function paintKols(x, ms) {
+  CH.kb = [];
+  if (!chartPref.kols || !coinUI.m) return;
+  const k = KOLS.get(coinUI.m), tok = tokAny(coinUI.m); if (!k || !k.trades.length || !tok) return;
+  for (const t of k.trades.slice(-150)) {
+    const p = t.px || pAt(tok, t.t); if (!p) continue;
+    const q = pt({ t: t.t, p }); if (!q || q.x < -10 || q.x > ms.width + 10 || q.y < -10 || q.y > ms.height + 10) continue;
+    const r = 6 + Math.min(4, Math.log10(1 + (t.sol || 0)) * 3), buy = t.side === "buy", ring = buy ? C.up : C.down, im = kolImg(t);
+    x.save(); x.beginPath(); x.arc(q.x, q.y, r, 0, Math.PI * 2); x.closePath();
+    if (im) { x.clip(); x.drawImage(im, q.x - r, q.y - r, r * 2, r * 2); }
+    else { x.fillStyle = rgba(ring, 0.85); x.fill(); x.fillStyle = C.bg; x.font = `600 ${Math.round(r)}px ${MONO}`; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText((kolName(t).replace(/^@/, "")[0] || "?").toUpperCase(), q.x, q.y + 0.5); }
+    x.restore();
+    x.beginPath(); x.arc(q.x, q.y, r + 1, 0, Math.PI * 2); x.strokeStyle = ring; x.lineWidth = 2; x.stroke();
+    CH.kb.push({ x: q.x, y: q.y, r: r + 2, t });
+  }
+}
+// hovering a bubble shows who traded, how much and when
+function kolHover(e) {
+  const tip = $("cKolTip"); if (!tip) return;
+  const px = localPt(e), hit = (CH.kb || []).slice().reverse().find(b => Math.hypot(b.x - px.x, b.y - px.y) <= b.r);
+  if (!hit) { tip.hidden = true; return; }
+  const t = hit.t, buy = t.side === "buy";
+  tip.innerHTML = `<b>${esc(kolName(t))}</b> <span class="${buy ? "up" : "down"}">${buy ? "bought" : "sold"}</span> ${fmtAmt(t.sol, "SOL")}${t.px ? " at " + esc(fmtPrice(t.px)) : ""}<br><span class="dim">${esc(local(t.t, true))} · ${ago(nowW() - t.t)}</span>`;
+  tip.hidden = false; const w = $("cChart").clientWidth;
+  tip.style.left = Math.min(w - tip.offsetWidth - 8, hit.x + 12) + "px"; tip.style.top = Math.max(4, hit.y - tip.offsetHeight - 8) + "px";
 }
 function inMain(px) { if (!CH.chart) return false; const s = CH.chart.paneSize(0); return px.x >= 0 && px.y >= 0 && px.x < s.width && px.y < s.height; }
 function localPt(e) { const r = $("cChart").getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
@@ -443,6 +482,7 @@ function setTool(t) {
 function toolBtns() {
   qsa("#cTools [data-tool]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tool === DW.tool)));
   const mg = $("cMagnet"); if (mg) mg.setAttribute("aria-pressed", String(chartPref.magnet));
+  const kt = $("cKolT"); if (kt) kt.setAttribute("aria-pressed", String(chartPref.kols));
   const del = $("cDel"); if (del) { del.disabled = !DW.list.length && !DW.meas; const t = DW.sel ? "Delete the selected drawing" : "Clear all drawings"; del.title = t; del.setAttribute("aria-label", t); }
 }
 function scaleBtns() {
@@ -461,6 +501,7 @@ function setFull(on) {
   requestAnimationFrame(() => { legendPos(); if (CH.prim) CH.prim.req(); });
 }
 const ICON = {
+  kol: `<circle cx="5.5" cy="6" r="2.6"/><circle cx="11" cy="9.5" r="2.6"/><path d="M1.5 14c.6-2.2 2.2-3.2 4-3.2M7.6 14.5c.5-1.3 1.8-2 3.4-2s2.9.7 3.4 2"/>`,
   cross: `<path d="M8 2v12M2 8h12"/>`,
   tl: `<path d="M3 13L13 3"/><rect x="1.5" y="11.5" width="3" height="3"/><rect x="11.5" y="1.5" width="3" height="3"/>`,
   hl: `<path d="M1 8h14"/><rect x="6.5" y="6.5" width="3" height="3"/>`,
@@ -479,6 +520,7 @@ function chartToolsHTML() {
     <button type="button" data-tool="meas" title="Measure: click two points (or Shift + click)" aria-label="Measure">${svgI("meas")}</button>
     <i></i>
     <button type="button" id="cMagnet" title="Magnet: snap to open, high, low and close" aria-label="Magnet">${svgI("magnet")}</button>
+    ${S.srv ? `<button type="button" id="cKolT" title="KOL trades on the chart" aria-label="Show KOL trades">${svgI("kol")}</button>` : ""}
     <button type="button" id="cDel" title="Clear all drawings" aria-label="Clear all drawings">${svgI("del")}</button>
     <i></i>
     <button type="button" id="cFull" title="Full screen (Esc to leave)" aria-label="Full screen" aria-pressed="false">${svgI("full")}</button>
@@ -503,6 +545,8 @@ document.addEventListener("keydown", e => { const el = $("cIndMenu"); if (e.key 
 function chartWire() {
   qsa("#cTools [data-tool]").forEach(b => b.onclick = () => { setTool(DW.tool === b.dataset.tool && b.dataset.tool !== "cross" ? "cross" : b.dataset.tool); $("cChart").focus({ preventScroll: true }); });
   $("cMagnet").onclick = () => { chartPref.magnet = !chartPref.magnet; store.set("magnet", chartPref.magnet); toolBtns(); };
+  if ($("cKolT")) $("cKolT").onclick = () => { chartPref.kols = !chartPref.kols; store.set("kols", chartPref.kols); toolBtns(); if (!chartPref.kols && $("cKolTip")) $("cKolTip").hidden = true; if (CH.prim) CH.prim.req(); };
+  $("cChart").addEventListener("pointermove", kolHover); $("cChart").addEventListener("pointerleave", () => { if ($("cKolTip")) $("cKolTip").hidden = true; });
   $("cDel").onclick = () => delDraw(!DW.sel);
   $("cIndBtn").onclick = () => openIndMenu($("cIndMenu").hidden);
   $("cFull").onclick = () => setFull(!CH.full);
