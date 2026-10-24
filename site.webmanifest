@@ -1,0 +1,27 @@
+{
+  "name": "Squad Arena",
+  "short_name": "Squad Arena",
+  "description": "Fifteen fresh pump.fun coins race in live rounds. Back the top gainer or the last coin standing, join the coin's squad and push it up the board.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#08080a",
+  "theme_color": "#08080a",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
