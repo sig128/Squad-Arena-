@@ -3,7 +3,7 @@
 import { CFG, TF, TFK, MKS, CURRENCIES, checkConfig } from "./lib/config.js";
 import { log, now } from "./lib/util.js";
 import { DB } from "./lib/db.js";
-import { TL, FEED, RPC, jobPrices, jobValidate, jobDiscover, jobDiscoverDS, jobBackfill, samplePools, chartC, prune, rpcStart, rpcWatch, pumpOff } from "./lib/market.js";
+import { TL, FEED, RPC, jobPrices, jobValidate, jobDiscover, jobDiscoverDS, jobBackfill, jobMeta, jobDesc, samplePools, chartC, prune, rpcStart, rpcWatch, pumpOff } from "./lib/market.js";
 import { G, roundAt, roundOfKey, refreshBoard, ensureFields, lcs, lcsJSON, lcsFromJSON, resultOf, decide, roundsWithOpenBets, indexBet, roundState } from "./lib/game.js";
 import { SOC, betIn, joinSquad, pushDoc, allDocs, peopleOut } from "./lib/social.js";
 import { emit, online } from "./lib/hub.js";
@@ -154,6 +154,23 @@ function sampleStep() {
   if (FEED.sample.running || now() - FEED.sample.at < (short() ? 60e3 : 240e3)) return;
   samplePools(short() ? 25000 : 40000).then(n => { if (n) log("info", `pool stream: ${FEED.sample.pools} active pools, ${n} new coins to check`); else if (FEED.sample.err) log("warn", "pool stream: " + FEED.sample.err); });
 }
+// coin details for everything the site shows (board first): logos and links, then descriptions
+let metaBusy = false, descBusy = false;
+async function metaStep() {
+  if (metaBusy) return; metaBusy = true;
+  try { await jobMeta([...new Set([...G.board.top, ...G.board.bench].map(x => x.m).concat([...keepSet(now())]))]); }
+  catch (e) { log("warn", "coin details: " + e.message); }
+  finally { metaBusy = false; }
+}
+async function descStep() {
+  if (descBusy) return; descBusy = true;
+  try {
+    const order = [...G.board.top, ...G.board.bench].map(x => x.m).concat([...keepSet(now())]);
+    const tok = order.map(m => TL.get(m)).find(x => x && !x.descAt && !x.full);
+    if (tok) await jobDesc(tok);
+  } catch (_) {}
+  finally { descBusy = false; }
+}
 // background chart history for coins on the board (then on deck, then everything else kept), one GeckoTerminal call at a time
 async function gtStep() {
   if (gtBusy || !CFG.gtBackfill || now() < FEED.gtPauseUntil) return; gtBusy = true;
@@ -205,6 +222,8 @@ async function main() {
   else {
     setInterval(() => feedStep(), 1000);
     setInterval(() => gtStep(), 4000);
+    setInterval(metaStep, 3000);
+    setInterval(descStep, 1500);
     setInterval(sampleStep, 2000); sampleStep();
     rpcStart(() => {});
     // start the price stream for kept coins, up to four a second (board coins first)

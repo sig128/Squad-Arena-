@@ -7,7 +7,7 @@ import { authed } from "./auth.js";
 import { attach, online } from "./hub.js";
 import { log, rateOk } from "./util.js";
 import * as A from "./actions.js";
-import { TL, FEED, applyPairs, chartC } from "./market.js";
+import { TL, FEED, applyPairs, chartC, quickHistory } from "./market.js";
 import { getJSON, isAddress } from "./util.js";
 
 const POST = {
@@ -66,6 +66,7 @@ export function makeServer({ snapshot, health }) {
         if (!tok || !tok.pool) throw Object.assign(new Error("Couldn't find that coin trading on Solana."), { status: 404 });
         // answers straight away with what the server has; opening the page keeps the coin live (prices, candles) for 10 minutes
         FEED.viewed.set(m, Date.now());
+        if (!tok.C.length && !tok.CH.length) await quickHistory(tok);
         const c = x => [x.t, x.o, x.h, x.l, x.c, Math.round(x.v || 0)];
         return send(req, res, 200, { m, C: chartC(tok, false).slice(-300).map(c), C5: chartC(tok, true).map(c) }, origin);
       }

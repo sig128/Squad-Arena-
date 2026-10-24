@@ -3796,7 +3796,13 @@ async function srvPlaceBet(r, mk, m, s) {
 }
 
 /* ================= search: any coin, from the board or anywhere on Solana ================= */
-const SR = { q: "", res: [], remote: [], sel: 0, t: null, seq: 0, open: false };
+const SR = { q: "", res: [], remote: [], sel: 0, t: null, seq: 0, open: false, icons: new Map(), cache: new Map() };
+// logos DEX Screener doesn't have come from Jupiter's token list, filled in as soon as they arrive
+async function fillIcons(mints) {
+  const need = mints.filter(m => !SR.icons.has(m)).slice(0, 50); if (!need.length) return false;
+  need.forEach(m => SR.icons.set(m, null));
+  try { const r = await fetch("https://lite-api.jup.ag/tokens/v2/search?query=" + need.join(",")); if (!r.ok) return false; for (const x of await r.json()) if (x && x.id && x.icon) SR.icons.set(x.id, x.icon); return true; } catch (_) { return false; }
+}
 const isMintLike = q => /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(q);
 // a coin that isn't on the board still gets a page: its data comes from DEX Screener, its candles from GeckoTerminal
 const tokTime = tok => S.mode === "replay" && tok && !TR.has(tok.m) ? nowW() : S.rt;
@@ -3834,7 +3840,7 @@ function srRow(item, i) {
     return `<button type="button" role="option" class="s-row" data-i="${i}" aria-selected="${i === SR.sel}">${avHTML(tok, 22, 1.5)}<span class="s-nm"><b>$${esc(tok.s)}</b><span>${esc(tok.n || "")}</span></span><span class="s-mc">${fmtUsd(mcAt(tok, tokTime(tok)) || tok.mc)}</span><span class="s-tag">${[tag, n ? n + " in squad" : "", short(tok.m)].filter(Boolean).join(" · ")}</span></button>`;
   }
   const p = item.pair, b = p.baseToken, mc = +(p.marketCap || p.fdv) || 0, age = p.pairCreatedAt ? ageShort(nowW() - p.pairCreatedAt) : "";
-  return `<button type="button" role="option" class="s-row" data-i="${i}" aria-selected="${i === SR.sel}">${avHTML({ m: b.address, s: b.symbol || "?", logo: (p.info && p.info.imageUrl) || null }, 22, 1.5)}<span class="s-nm"><b>$${esc(b.symbol || "?")}</b><span>${esc(b.name || "")}</span></span><span class="s-mc">${mc ? fmtUsd(mc) : "—"}</span><span class="s-tag">${esc(short(b.address))}${age ? " · " + esc(age) : ""}${p.volume && p.volume.h24 ? " · " + fmtUsd(p.volume.h24) + " vol 24h" : ""}</span></button>`;
+  return `<button type="button" role="option" class="s-row" data-i="${i}" aria-selected="${i === SR.sel}">${avHTML({ m: b.address, s: b.symbol || "?", logo: (p.info && p.info.imageUrl) || SR.icons.get(b.address) || null }, 22, 1.5)}<span class="s-nm"><b>$${esc(b.symbol || "?")}</b><span>${esc(b.name || "")}</span></span><span class="s-mc">${mc ? fmtUsd(mc) : "—"}</span><span class="s-tag">${esc(short(b.address))}${age ? " · " + esc(age) : ""}${p.volume && p.volume.h24 ? " · " + fmtUsd(p.volume.h24) + " vol 24h" : ""}</span></button>`;
 }
 const ageShort = ms => { const h = ms / 3600e3; return h < 1 ? Math.max(1, Math.round(h * 60)) + "m old" : h < 48 ? Math.round(h) + "h old" : Math.round(h / 24) + "d old"; };
 function srRender() {
@@ -3857,12 +3863,15 @@ function srInput() {
   SR.res = q.length >= 1 ? localMatches(q) : []; SR.remote = []; SR.busy = q.length >= 2;
   srRender(); clearTimeout(SR.t);
   if (q.length < 2) return;
-  const my = ++SR.seq;
+  const my = ++SR.seq, hit = SR.cache.get(q.toLowerCase());
+  if (hit && nowW() - hit.at < 60000) { SR.remote = hit.r; SR.busy = false; srRender(); return; }      // the same search again within a minute: instant
   SR.t = setTimeout(async () => {
-    try { const r = await remoteSearch(q); if (my !== SR.seq) return; SR.remote = r; }
+    try { const r = await remoteSearch(q); if (my !== SR.seq) return; SR.remote = r; SR.cache.set(q.toLowerCase(), { r, at: nowW() }); if (SR.cache.size > 60) SR.cache.delete(SR.cache.keys().next().value); }
     catch (_) { if (my !== SR.seq) return; SR.remote = []; }
     SR.busy = false; srRender();
-  }, 280);
+    const missing = SR.remote.filter(p => !(p.info && p.info.imageUrl)).map(p => p.baseToken.address);
+    if (missing.length && await fillIcons(missing) && my === SR.seq) srRender();
+  }, 120);
 }
 function srPick(i) {
   const it = (SR.items || [])[i]; if (!it) return;
@@ -3882,6 +3891,7 @@ function adoptPair(p) {
   applyPairs([p], nowW());
   const tok = TL.get(p.baseToken.address); if (!tok) return null;
   if (p.info && p.info.imageUrl && !tok.logo) tok.logo = p.info.imageUrl;
+  if (!tok.logo && SR.icons.get(tok.m)) tok.logo = SR.icons.get(tok.m);
   tok.offBoard = true;
   return tok;
 }

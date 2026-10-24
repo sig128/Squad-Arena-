@@ -251,6 +251,56 @@ export function prune(keep) {
   }
 }
 
+/* ---------- coin details: logo, X, website from Jupiter's token list; description and Telegram from the coin's own metadata ---------- */
+// up to 100 coins per call; a coin is asked again after 30 minutes if it still has no logo
+export async function jobMeta(mints) {
+  const t = now(), list = mints.filter(m => { const k = TL.get(m); return k && (!k.metaAt || (!k.logo && t - k.metaAt > 1800e3)); }).slice(0, 100);
+  if (!list.length) return false;
+  list.forEach(m => { TL.get(m).metaAt = t; });
+  const arr = await getJSON("https://lite-api.jup.ag/tokens/v2/search?query=" + list.join(","), { timeout: 8000 });
+  FEED.calls++;
+  const changed = [];
+  for (const x of Array.isArray(arr) ? arr : []) {
+    const tok = x && TL.get(x.id); if (!tok) continue;
+    if (x.icon && !tok.logo) tok.logo = x.icon;
+    if (x.twitter && !tok.x) tok.x = x.twitter;
+    if (x.website && !tok.w) tok.w = x.website;
+    if (x.telegram && !tok.tg) tok.tg = x.telegram;
+    if (x.holderCount) tok.holders = x.holderCount;
+    changed.push(tok);
+  }
+  if (FEED.onMeta && changed.length) FEED.onMeta(changed, []);
+  return true;
+}
+// pump.fun coins keep their metadata in the mint itself (Token-2022): read its link, then the JSON it points to
+const ipfsAlt = u => { const m = String(u).match(/\/ipfs\/([A-Za-z0-9]+.*)$/); return m ? ["https://ipfs.io/ipfs/" + m[1], "https://gateway.pinata.cloud/ipfs/" + m[1]] : [u]; };
+export async function jobDesc(tok) {
+  tok.descAt = now(); if (!CFG.quicknode) return;
+  const acc = await rpcHttp("getAccountInfo", [tok.m, { encoding: "jsonParsed" }]);
+  const info = acc && acc.value && acc.value.data && acc.value.data.parsed && acc.value.data.parsed.info;
+  const md = info && (info.extensions || []).find(e => e.extension === "tokenMetadata");
+  const uri = md && md.state && md.state.uri; if (!uri || !/^https:\/\//.test(uri)) return;
+  let j = null;
+  for (const u of ipfsAlt(uri)) { try { j = await getJSON(u, { timeout: 8000 }); if (j) break; } catch (_) {} }
+  if (!j || typeof j !== "object") return;
+  const str = v => typeof v === "string" ? v.trim().slice(0, 400) : "";
+  if (str(j.description) && !tok.ds) tok.ds = str(j.description);
+  if (/^https:\/\//.test(str(j.twitter)) && !tok.x) tok.x = str(j.twitter);
+  if (/^https:\/\//.test(str(j.telegram)) && !tok.tg) tok.tg = str(j.telegram);
+  if (/^https:\/\//.test(str(j.website)) && !tok.w) tok.w = str(j.website);
+  if (/^https:\/\//.test(str(j.image)) && !tok.logo) tok.logo = str(j.image);
+  if (FEED.onMeta) FEED.onMeta([tok], []);
+}
+// a coin page opened for a coin with no history: one quick GeckoTerminal try (2.5 s at most), so the chart isn't empty
+export async function quickHistory(tok) {
+  if (!CFG.gtBackfill || tok.histAt || tok.C.length > 5 || now() < FEED.gtPauseUntil || !tok.pool) return;
+  tok.histAt = 1;
+  try {
+    const j = await getJSON(`https://api.geckoterminal.com/api/v2/networks/solana/pools/${tok.pool}/ohlcv/minute?aggregate=1&limit=200&currency=usd&token=base`, { timeout: 2500 });
+    applyCandles(tok, j && j.data && j.data.attributes && j.data.attributes.ohlcv_list, false); FEED.backfilled++;
+  } catch (e) { tok.histAt = 0; if (e.status === 429) FEED.gtPauseUntil = now() + 120e3; }
+}
+
 /* ---------- QuickNode stream: pool vault balances → price on every swap ---------- */
 export const RPC = { ws: null, live: false, id: 1, pend: new Map(), subs: new Map(), watched: new Set(), retry: 0 };
 async function rpcHttp(method, params) {
