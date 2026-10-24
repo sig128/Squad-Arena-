@@ -155,7 +155,11 @@ function engineStep() {
 async function loadState() {
   const t = now(), since = t - 26 * 3600e3;
   for (const r of await DB.loadRounds(since)) {
-    G.fields.set(r.key, { top: r.field_top || [], bench: r.field_bench || [], live: !!r.live, at: Date.parse(r.created_at) || t });
+    // a round that was still running when the server restarted lost its prices from before the restart, so it isn't
+    // scored (its bets are refunded) unless its results were already saved
+    const R = roundOfKey(r.key), saved = r.settled_at || (r.results && Object.keys(r.results).length);
+    const cut = !saved && R && R.s < t && !CFG.scoreLate;
+    G.fields.set(r.key, { top: r.field_top || [], bench: r.field_bench || [], live: !!r.live && !cut, at: Date.parse(r.created_at) || t });
     if (r.lcs) G.lcs.set(r.key, lcsFromJSON(r.lcs));
     if (r.results) for (const [mk, res] of Object.entries(r.results)) G.results.set(r.key + "|" + mk, res);
     if (r.settled_at) G.settled.add(r.key);
