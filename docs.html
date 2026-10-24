@@ -143,8 +143,8 @@ details > div{padding:0 0 16px;color:var(--ink2)}
 
 /* ---------- live round (hero) ---------- */
 .live{border:1px solid var(--rule2);border-radius:14px;background:var(--panel);margin:0 0 18px;overflow:hidden}
-.live-head{display:flex;flex-wrap:wrap;align-items:stretch;border-bottom:1px solid var(--rule)}
-.live-head .ttl{padding:14px 18px;display:flex;flex-direction:column;justify-content:center;gap:2px;margin-right:auto}
+.live-head{display:grid;grid-template-columns:minmax(0,1fr) repeat(4,auto);border-bottom:1px solid var(--rule)}
+.live-head .ttl{padding:14px 18px;display:flex;flex-direction:column;justify-content:center;gap:2px;min-width:0}
 .live-head .ttl b{font-family:var(--disp);font-weight:400;font-size:13px;letter-spacing:.08em}
 .live-head .ttl span{font-size:13.5px;color:var(--dim)}
 .live-head .st{padding:12px 18px;border-left:1px solid var(--rule);min-width:120px}
@@ -214,6 +214,12 @@ details > div{padding:0 0 16px;color:var(--ink2)}
 .foot .sp{flex:1}
 
 /* ---------- small screens ---------- */
+@media (max-width:1240px){
+  .live-head{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .live-head .ttl{grid-column:1/-1;border-bottom:1px solid var(--rule)}
+  .live-head .st{min-width:0}
+  .live-head .st:nth-child(2){border-left:0}
+}
 @media (max-width:1020px){
   .layout{grid-template-columns:1fr;gap:0}
   .side{display:none}
@@ -229,9 +235,9 @@ details > div{padding:0 0 16px;color:var(--ink2)}
   .top-in{gap:10px}
   .btn{padding:0 12px}
   .btn .long{display:none} .btn .short{display:inline}
-  .live-head{display:grid;grid-template-columns:1fr 1fr}
-  .live-head .ttl{grid-column:1/-1}
-  .live-head .st{min-width:0;border-left:0;border-top:1px solid var(--rule)}
+  .live-head{grid-template-columns:1fr 1fr}
+  .live-head .ttl{border-bottom:0}
+  .live-head .st{border-left:0;border-top:1px solid var(--rule)}
   .live-head .st:nth-child(odd){border-left:1px solid var(--rule)}
   #heroChart{min-height:250px}
   #heroChart svg{height:250px}
@@ -737,7 +743,7 @@ const pad = n => String(n).padStart(2, "0");
 const clock = ms => { ms = Math.max(0, ms); const s = Math.floor(ms / 1000); return (s >= 3600 ? Math.floor(s / 3600) + ":" + pad(Math.floor(s / 60) % 60) : Math.floor(s / 60)) + ":" + pad(s % 60); };
 const hm = t => { const d = new Date(t); return pad(d.getHours()) + ":" + pad(d.getMinutes()); };
 const pct = (v, d = 2) => (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(d) + "%";
-const amt = (v, cur) => (cur === "SOL" ? (+v).toFixed(4).replace(/(\.\d*?[1-9])0+$|\.0+$/, "$1") : Number.isInteger(+v) ? String(+v) : (+v).toFixed(2)) + " " + cur;
+const amt = (v, cur) => (cur === "SOL" ? (+v).toFixed(4).replace(/(\.\d*?[1-9])0+$|\.0+$/, "$1") : String(parseFloat((+v).toFixed(2)))) + " " + cur;
 
 /* ---------- live settings ---------- */
 let cfg = { rake: 0.03, seed: { tSOL: 0.1, SOL: 0.01 }, minStake: { tSOL: 0.05, SOL: 0.01 }, maxStake: { tSOL: 100, SOL: 10 }, startBalance: 25,
