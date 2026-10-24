@@ -190,7 +190,7 @@ function chartSync(force) {
   if (!CH.chart || !coinUI.m) return;
   const tok = tokAny(coinUI.m); if (!tok) return;
   const now = performance.now(); if (!force && now - CH.syncAt < 90) return; CH.syncAt = now;
-  const K = coinUI.unit === "mc" ? tok.supply : 1, raw = candlesIv(tok, S.rt, coinUI.iv);
+  const K = coinUI.unit === "mc" ? tok.supply : 1, raw = candlesIv(tok, tokTime(tok), coinUI.iv);
   const b = K === 1 ? raw : raw.map(c => ({ ...c, o: c.o * K, h: c.h * K, l: c.l * K, c: c.c * K })), n = b.length, first = n ? b[0].t : 0;
   if (n) CH.lastC = b[n - 1].c;
   const theme = C.bg + C.fg + MONO;

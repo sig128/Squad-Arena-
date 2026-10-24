@@ -1,5 +1,5 @@
 /* ================= ui: squads, coin page, animated task visuals ================= */
-function squadTier(tok) { const p = pAt(tok, S.rt); return tierOf(p == null ? 0 : p * tok.supply); }
+function squadTier(tok) { const p = pAt(tok, tokTime(tok)); return tierOf(p == null ? 0 : p * tok.supply); }
 function taskProgress(m, sqd) { const out = {}; for (const t of TASKS) { const ps = sqd.byTask.get(t.id) || []; out[t.id] = { n: ps.length, prog: Math.min(1, ps.length / t.goal), ps }; } return out; }
 function activeTask(tok, sqd) {
   const tier = squadTier(tok), pr = taskProgress(tok.m, sqd);
@@ -16,14 +16,17 @@ function segbar(n, on, live) {
 let sqSig = "";
 function renderSquads() {
   if (S.view !== "squads") return;
-  const list = S.board.top.concat(S.board.bench);
+  const onBoard = S.board.top.concat(S.board.bench), seen = new Set(onBoard.map(t => t.m)), counts = new Map();
+  for (const [, d] of allMemberDocs()) for (const m of Object.keys((d && d.sq) || {})) if (!seen.has(m)) counts.set(m, (counts.get(m) || 0) + 1);
+  const others = [...counts.keys()].map(m => tokAny(m)).filter(Boolean).sort((a, b) => (isMember(b.m) - isMember(a.m)) || counts.get(b.m) - counts.get(a.m)).slice(0, 30);
+  const list = onBoard.concat(others);
   const sig = list.map(t => t.m).join() + "|" + allProofs().length + "|" + [...S.members.keys()].length + "|" + Object.keys(S.my.sq).length;
   const grid = $("sqGrid");
   if (sig !== sqSig || !grid.children.length) {
     sqSig = sig;
     grid.innerHTML = list.map(tok => {
       const sqd = squadOf(tok.m), tier = squadTier(tok), a = activeTask(tok, sqd), cleared = TASKS.filter(t => t.tier <= tier && (sqd.byTask.get(t.id) || []).length >= t.goal).length;
-      return `<div class="sq${inBench(tok.m) ? " bench" : ""}" data-m="${esc(tok.m)}" tabindex="0" role="link" aria-label="${esc(tok.s)} squad">
+      return `${tok === others[0] ? `<div class="sq-sep"><b>Squads off the board</b><span>Started from search. Tasks, proofs and chat work for any coin.</span></div>` : ""}<div class="sq${inBench(tok.m) ? " bench" : ""}${seen.has(tok.m) ? "" : " off"}" data-m="${esc(tok.m)}" tabindex="0" role="link" aria-label="${esc(tok.s)} squad">
         <div class="sq-top">${avHTML(tok, 30, 2)}<div class="nm"><b>$${esc(tok.s)}</b><span>${esc(tok.n)}</span></div><span class="tier" title="${esc(TIERS[tier].name)}">${TIERS[tier].n}</span></div>
         <canvas data-viz="${a.t.viz}" data-m="${esc(tok.m)}" data-k="${a.t.id}" aria-label="${esc(a.t.name)}: ${a.p.n} of ${a.t.goal}"></canvas>
         <div class="sq-meta"><span>${esc(a.t.name)}</span><b>${a.p.n}/${a.t.goal}</b></div>
@@ -34,7 +37,7 @@ function renderSquads() {
     registerViz(grid);
   }
   qsa("[data-tb]", grid).forEach(el => {
-    const tok = T.get(el.dataset.tb); if (!tok) return; const p = pAt(tok, S.rt), mc = p == null ? 0 : p * tok.supply, k = tierOf(mc), nx = TIERS[k + 1];
+    const tok = tokAny(el.dataset.tb); if (!tok) return; const p = pAt(tok, tokTime(tok)), mc = p == null ? 0 : p * tok.supply, k = tierOf(mc), nx = TIERS[k + 1];
     const f = nx ? clamp((Math.log(mc) - Math.log(Math.max(1, TIERS[k].min || 1e5))) / (Math.log(nx.min) - Math.log(Math.max(1, TIERS[k].min || 1e5))), 0, 1) : 1;
     el.innerHTML = `<div class="sq-meta" style="margin-bottom:5px"><span>${fmtUsd(mc)}</span><span>${nx ? "Tier " + nx.n + " at " + fmtUsd(nx.min) : "Top tier"}</span></div>${segbar(20, Math.round(f * 20), !!nx)}`;
   });
@@ -85,7 +88,7 @@ function buildCoin(m) {
     </div>
   </div>
   <div class="sec">
-    <div class="sec-h"><div class="t"><h2 data-scr>Squad</h2><p id="cSqSub"></p></div><div style="display:flex;gap:8px"><button class="btn btn-quiet" type="button" id="cChat">Squad chat</button><button class="btn btn-solid" type="button" id="cJoin"></button></div></div>
+    <div class="sec-h"><div class="t"><h2 data-scr>Squad</h2><p id="cSqSub"></p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-quiet" type="button" id="cChat">Squad chat</button><button class="btn btn-quiet" type="button" id="cBet" hidden>Back $${esc(tok.s)}</button><button class="btn btn-solid" type="button" id="cJoin"></button></div></div>
     <p class="desc" style="margin:0 0 12px">${esc(RULES_TASKS)}</p>
     <div class="tasks" id="cTasks"></div>
   </div>
@@ -99,7 +102,15 @@ function buildCoin(m) {
   qsa("#cStyle button").forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.y === coinUI.style)); b.onclick = () => { coinUI.style = b.dataset.y; store.set("cstyle", coinUI.style); qsa("#cStyle button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); dirty.coin = true; if (CH.chart) chartSync(true); }; });
   $("cCopy").onclick = () => copyText(tok.m, $("cCopy"), $("cMint"));
   $("cCaBtn").onclick = () => copyText(tok.m, $("cCaBtn"));
-  $("cJoin").onclick = () => openBet(m, bestMarket(m));
+  $("cBet").onclick = () => openBet(m, bestMarket(m));
+  $("cJoin").onclick = async () => {
+    const b = $("cJoin");
+    if (isMember(m)) { copyText(location.href.split("#")[0] + "#coin-" + m, b); return; }
+    b.disabled = true;
+    try { await joinSquad(m); b.disabled = false; notice("You're in the $" + tok.s + " squad"); coinSig = ""; updateCoin(true); }
+    catch (e) { notice(e.message); }
+    finally { b.disabled = false; }
+  };
   $("cChat").onclick = () => { setChatChan(m); $("chatIn").focus(); };
   if (lw) { if (chartInit(m)) { chartWire(); chartSync(true); } else { buildCoinFallback(m); } }
   else {
@@ -120,17 +131,19 @@ let coinSig = "";
 function updateCoin(force) {
   if (S.view !== "coin" || !coinUI.m) return;
   const m = coinUI.m, tok = tokAny(m); if (!tok) return;
-  const w = S.w, r = roundAt(S.tf, w), p = pAt(tok, S.rt), mc = p == null ? null : p * tok.supply, tier = tierOf(mc || 0);
+  const w = S.w, r = roundAt(S.tf, w), p = pAt(tok, tokTime(tok)), mc = p == null ? null : p * tok.supply, tier = tierOf(mc || 0);
   $("cPx").textContent = coinUI.unit === "mc" ? fmtUsd(mc) : fmtPrice(p);
   const rr = tfOk(S.tf) ? spotRet(tok, r, w) : null; $("cPct").textContent = rr == null ? "" : fmtPct(rr) + " this " + S.tf.toUpperCase() + " round"; $("cPct").className = "num " + (rr == null ? "dim" : rr >= 0 ? "up" : "down");
   $("cTier").textContent = "TIER " + TIERS[tier].n + " · " + TIERS[tier].name.toUpperCase();
-  $("cAge").textContent = tok.born ? "launched " + age(S.rt - tok.born) + " ago" : "";
+  $("cAge").textContent = tok.born ? "launched " + age(tokTime(tok) - tok.born) + " ago" : "";
   const ti = S.board.top.findIndex(t => t.m === m), bi = S.board.bench.findIndex(t => t.m === m);
-  $("cRank").textContent = ti >= 0 ? "#" + (ti + 1) + " in the top 15" : bi >= 0 ? "on deck #" + (16 + bi) : tok.rugAt && tok.rugAt <= S.rt ? "removed by the rug filter" : "off the board";
+  $("cRank").textContent = ti >= 0 ? "#" + (ti + 1) + " in the top 15" : bi >= 0 ? "on deck #" + (16 + bi) : tok.rugAt && tok.rugAt <= S.rt ? "removed by the rug filter" : "not on the board · squads still work";
   $("cKv").innerHTML = [["Price", fmtPrice(p)], ["Market cap", fmtUsd(mc)], ["Liquidity", fmtUsd(tok.liq)], ["Vol 5m · 1h", fmtUsd(tok.vol[0]) + " · " + fmtUsd(tok.vol[1])], ["Vol 6h · 24h", fmtUsd(tok.vol[2]) + " · " + fmtUsd(tok.vol[3])],
     ["Trades 5m · 1h", fmtNum(tok.tx[0]) + " · " + fmtNum(tok.tx[1])], ["Buys · sells 1h", fmtNum(tok.bs[0]) + " · " + fmtNum(tok.bs[1])], ["Change 1h · 24h", fmtPct((tok.ch[1] || 0) / 100, 1) + " · " + fmtPct((tok.ch[3] || 0) / 100, 1)],
     ["Pace growth", fmtPct(attn(tok, S.tf === "24h" ? "24h" : S.tf, S.mode === "replay" ? SNAP : nowW()), 0)], ["Venue", (tok.dex || "—") + " " + short(tok.pool || "")]].map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("");
-  $("cBack").innerHTML = tfOk(S.tf) ? MKS.map(mk => {
+  const bettable = tfOk(S.tf) && MKS.some(mk => fieldOf(r, mk).some(t => t.m === m) || (mk === "lcs" && lcs(r, w).alive.has(m)));
+  $("cBet").hidden = !bettable;
+  $("cBack").innerHTML = !bettable && tfOk(S.tf) ? `<div class="closed">Not in this round. Bets open when ${esc(tok.s)} makes the top 25; the squad, its tasks and chat work any time.</div>` : tfOk(S.tf) ? MKS.map(mk => {
     const bs = betState(r, mk, w, m), od = impliedOdds(r, mk, m), inF = fieldOf(r, mk).some(t => t.m === m) || (mk === "lcs" && lcs(r, w).alive.has(m));
     return `<div class="next" style="padding:6px 0;border-bottom:1px solid var(--rule)"><span>${esc(MK[mk].label)}<br><span class="dim">${!inF ? "not in this round" : bs.open ? (od ? fmtX(od) + " · weight ×" + bs.w.toFixed(2) : "open") : "closed"}</span></span>
       <button class="btn btn-quiet btn-xs" type="button" data-cb="${mk}"${!inF || !bs.open ? " disabled" : ""}>Bet</button></div>`;
@@ -138,9 +151,10 @@ function updateCoin(force) {
   qsa("[data-cb]", $("cBack")).forEach(b => b.onclick = () => openBet(m, b.dataset.cb));
   const mine = S.my.b.filter(b => b.m === m).slice(0, 8);
   $("cPos").innerHTML = mine.length ? mine.map(b => `<div class="p"><b>${fmtSol(b.s)} · ${esc(MK[b.mk].short)}</b><span class="num">${betLive(b, w)}</span><span>${b.tf.toUpperCase()} round · weight ${b.w.toFixed(2)} · quote ${fmtX(b.q)}</span></div>`).join("")
-    : `<div class="empty" style="padding:8px 0">No bets on ${esc(tok.s)} yet. Backing it in any market makes you a squad member.</div>`;
+    : `<div class="empty" style="padding:8px 0">No bets on ${esc(tok.s)} yet.${bettable ? " Backing it in any market also makes you a squad member." : ""}</div>`;
   const member = isMember(m), sqd = squadOf(m), here = onlineCount(m);
-  $("cJoin").textContent = member ? "Back again" : "Join the squad";
+  if (!$("cJoin").disabled) $("cJoin").textContent = member ? "Copy invite link" : sqd.members.length ? "Join the squad" : "Start the squad";
+  $("cJoin").classList.toggle("btn-solid", !member); $("cJoin").classList.toggle("btn-quiet", member);
   $("cSqSub").textContent = `${sqd.members.length} member${sqd.members.length === 1 ? "" : "s"}${here ? " · " + here + " here now" : ""} · tier ${TIERS[tier].n} ${TIERS[tier].name}${TIERS[tier + 1] ? " · next tier at " + fmtUsd(TIERS[tier + 1].min) : ""}`;
   const sig = m + "|" + tier + "|" + sqd.proofs.map(p => p.id + p.checks + p.flags).join() + "|" + sqd.members.length + "|" + member + "|" + canShare();
   if (sig !== coinSig || force) { coinSig = sig; renderTasks(tok, sqd, tier, member); renderProofs(tok, sqd, member); renderMembers(tok, sqd); }
@@ -179,7 +193,7 @@ function renderMembers(tok, sqd) {
   const el = $("cMembers");
   if (!sqd.members.length) { el.innerHTML = `<div class="empty">No members yet. The first bet on ${esc(tok.s)} founds the squad.</div>`; return; }
   const done = new Map(); sqd.proofs.forEach(p => done.set(p.uid, (done.get(p.uid) || 0) + 1));
-  el.innerHTML = sqd.members.slice(0, 50).map(mm => `<div class="mm">${picHTML(mm.uid)}<div style="min-width:0"><b>${esc(nameOf(mm.uid))}</b> <span>${esc(mm.h ? "@" + mm.h : "")}</span><br><span>joined ${ago(nowW() - mm.since)} · ${done.get(mm.uid) || 0} proofs</span></div><span class="num">${fmtSol(mm.stake)}</span></div>`).join("");
+  el.innerHTML = sqd.members.slice(0, 50).map(mm => `<div class="mm">${picHTML(mm.uid)}<div style="min-width:0"><b>${esc(nameOf(mm.uid))}</b> <span>${esc(mm.h ? "@" + mm.h : "")}</span><br><span>joined ${ago(nowW() - mm.since)} · ${done.get(mm.uid) || 0} proofs</span></div><span class="num">${mm.stake > 0 ? fmtSol(mm.stake) : ""}</span></div>`).join("");
 }
 function hitTask(m, k) {
   if (S.view === "coin" && coinUI.m === m) { const el = qsa(`.task[data-k="${k}"]`, $("cTasks"))[0]; if (el) { el.classList.remove("hit"); void el.offsetWidth; el.classList.add("hit"); } }
@@ -206,7 +220,7 @@ function drawCoinCanvas() {
   const cv = $("coinCv"); if (!cv || !cv.offsetParent || !coinUI.m) return;
   const tok = tokAny(coinUI.m); if (!tok) return;
   const t0p = performance.now(), { ctx, w: W, h: H } = fit(cv); ctx.clearRect(0, 0, W, H);
-  const K = coinUI.unit === "mc" ? tok.supply : 1, raw = candlesIv(tok, S.rt, coinUI.iv);
+  const K = coinUI.unit === "mc" ? tok.supply : 1, raw = candlesIv(tok, tokTime(tok), coinUI.iv);
   const all = K === 1 ? raw : raw.map(c => ({ ...c, o: c.o * K, h: c.h * K, l: c.l * K, c: c.c * K })); coinUI.nAll = all.length;
   const F = K === 1 ? fmtPrice : v => fmtMc(v);
   if (!all.length) { ctx.fillStyle = C.dim; ctx.font = `12px ${MONO}`; ctx.textAlign = "center"; ctx.fillText(S.mode === "replay" ? "No trades yet at this point of the replay." : "Loading candles…", W / 2, H / 2); return; }

@@ -12,6 +12,7 @@ export const G = {
   results: new Map(),         // round key | market -> result
   settled: new Set(),         // round keys paid out
   bets: new Map(),            // bet id -> bet
+  followed: new Map(),        // mint -> last join ms: coins with a squad, tracked even when they are off the board
   byPool: new Map(),          // round key | market | currency -> [bet]
   hooks: { field: null, lcs: null, settled: null, bet: null, board: null }
 };

@@ -9,7 +9,12 @@ function parseHash() {
 const tokAny = m => T.get(m) || TR.get(m) || TL.get(m);
 function route() {
   const { v, m } = parseHash();
-  if (v === "coin" && !tokAny(m)) { if (location.hash !== "#arena") location.hash = "#arena"; return; }
+  if (v === "coin" && !tokAny(m)) {
+    // a shared link to a coin this page hasn't loaded: look it up on Solana first
+    if (isMintLike(m) && route.pending !== m) { route.pending = m; resolveCoin(m).then(ok => { route.pending = null; if (ok) route(); else if (location.hash !== "#arena") location.hash = "#arena"; }); return; }
+    if (route.pending === m) return;
+    if (location.hash !== "#arena") location.hash = "#arena"; return;
+  }
   if (curView === v && (v !== "coin" || S.coin === m)) return;
   const prevEl = curView ? $("v-" + curView) : null, nextEl = $("v-" + v);
   S.view = v; S.coin = v === "coin" ? m : null;
@@ -50,8 +55,7 @@ function setTf(k) {
 }
 function renderMode() {
   const live = S.mode !== "replay";
-  $("modeDot").className = "dot " + (live ? "live" : "rep");
-  $("modeTxt").textContent = live ? "Live" : "Replay";
+  if ($("modeDot")) { $("modeDot").className = "dot " + (live ? "live" : "rep"); $("modeTxt").textContent = live ? "Live" : "Replay"; }
 }
 
 /* ---------- round strip + timeline ---------- */

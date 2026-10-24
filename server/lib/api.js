@@ -9,7 +9,7 @@ import { log, rateOk } from "./util.js";
 import * as A from "./actions.js";
 
 const POST = {
-  "/bet": A.placeBet, "/pass": A.streakPass, "/topup": A.topup, "/profile": A.setHandle, "/proof": A.postProof, "/mark": A.markProof, "/chat": A.chat,
+  "/bet": A.placeBet, "/squad": A.joinSquadAction, "/pass": A.streakPass, "/topup": A.topup, "/profile": A.setHandle, "/proof": A.postProof, "/mark": A.markProof, "/chat": A.chat,
   "/deposit/prepare": A.depositPrepare, "/deposit/submit": A.depositSubmit, "/deposit/confirm": A.depositConfirm, "/withdraw": A.withdrawOut
 };
 const GET_AUTH = { "/me": A.me, "/money": A.money };

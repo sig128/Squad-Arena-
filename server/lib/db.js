@@ -29,6 +29,7 @@ class SupaDB {
   usePass(id, uid, mint) { return this.rpc("use_streak_pass", { p_bet: id, p_user: uid, p_mint: mint }); }
   loadBets(sinceMs) { return this.req(`bets?or=(status.eq.open,created_at.gte.${enc('"' + iso(sinceMs) + '"')})&select=*&order=created_at.asc&limit=20000`); }
   loadSquads() { return this.req("squad_members?select=*&limit=50000"); }
+  joinSquad(uid, mint) { return this.req("squad_members?on_conflict=user_id,mint", { method: "POST", body: { user_id: uid, mint }, prefer: "resolution=ignore-duplicates,return=minimal" }); }
 
   upsertRound(r) { return this.req("rounds?on_conflict=key", { method: "POST", body: r, prefer: "resolution=ignore-duplicates,return=minimal" }); }
   updateRound(key, patch) { return this.req(`rounds?key=eq.${enc(key)}`, { method: "PATCH", body: patch, prefer: "return=minimal" }); }
@@ -90,6 +91,7 @@ class MemDB {
   async usePass(id, uid, mint) { const b = this.bets.get(id); if (!b || b.user_id !== uid || b.status !== "open" || b.market !== "lcs" || b.pass_used) return null; b.mint = mint; b.pass_used = true; const k = uid + "|" + mint; if (!this.sq.has(k)) this.sq.set(k, { user_id: uid, mint, joined_at: new Date().toISOString() }); return b; }
   async loadBets(sinceMs) { return [...this.bets.values()].filter(b => b.status === "open" || Date.parse(b.created_at) >= sinceMs); }
   async loadSquads() { return [...this.sq.values()]; }
+  async joinSquad(uid, mint) { const k = uid + "|" + mint; if (!this.sq.has(k)) this.sq.set(k, { user_id: uid, mint, joined_at: new Date().toISOString() }); }
   async upsertRound(r) { if (!this.rounds.has(r.key)) this.rounds.set(r.key, { ...r }); }
   async updateRound(key, patch) { const r = this.rounds.get(key); if (r) Object.assign(r, patch); }
   async loadRounds(sinceMs) { return [...this.rounds.values()].filter(r => Date.parse(r.ends_at) >= sinceMs); }

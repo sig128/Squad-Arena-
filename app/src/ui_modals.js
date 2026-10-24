@@ -152,7 +152,7 @@ function openData() {
   if ($("dLive")) $("dLive").onclick = async () => { $("dLive").disabled = true; $("dLive").textContent = "Connecting…"; try { await goLive(); closeModal(); } catch (e) { $("dErr").textContent = e.message || "Live data could not start."; $("dLive").disabled = false; $("dLive").textContent = "Go live"; } };
   if ($("dRep")) $("dRep").onclick = () => { stopLive("You switched back to the replay."); closeModal(); };
 }
-$("modeBtn").addEventListener("click", openData);
+if ($("modeBtn")) $("modeBtn").addEventListener("click", openData);
 
 /* ---------- chat panel ---------- */
 function setChatChan(c) { chatChan = c || "g"; lastChatN = -1; dirty.chat = true; renderChatTabs(); }

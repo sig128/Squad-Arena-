@@ -1,7 +1,8 @@
 // Everything a logged-in player can do. Each action checks the rules on the server before anything is saved.
 import { CFG, TF, MKS, CURRENCIES } from "./config.js";
 import { DB } from "./db.js";
-import { TL } from "./market.js";
+import { TL, FEED, applyPairs } from "./market.js";
+import { getJSON, isAddress } from "./util.js";
 import { G, roundAt, betState, quote, indexBet, lcs, roundState, roundOfKey } from "./game.js";
 import { SOC, betIn, betOut, joinSquad, pushDoc, setPerson } from "./social.js";
 import { TASKS, PROOF } from "./rules.js";
@@ -64,6 +65,28 @@ export async function placeBet(user, body) {
   emit("round", roundState(r, Date.now()));
   if (joined) await systemPost(user.id, m, "joined the squad");
   return { bet: betOut(b), bal: await balances(user.id), joined };
+}
+
+// any Solana coin can have a squad: joining is free, betting stays limited to the board
+export async function joinSquadAction(user, body) {
+  const m = String(body.m || "").trim();
+  if (!isAddress(m)) throw err("That isn't a Solana coin address.");
+  if (!rateOk("squad:" + user.id, 20, 5)) throw err("Slow down a little.", 429);
+  if (!TL.has(m)) {
+    let pairs = null; try { pairs = await getJSON("https://api.dexscreener.com/tokens/v1/solana/" + m); } catch (_) {}
+    if (pairs && pairs.length) applyPairs(pairs, Date.now());
+    if (!TL.has(m)) throw err("Couldn't find that coin trading on Solana.");
+  }
+  await ensureUser(user);
+  const first = ![...SOC.squads.values()].some(s => s.has(m));
+  const joined = joinSquad(user.id, m, Date.now());
+  if (!joined) return { joined: false, first: false };
+  await DB.joinSquad(user.id, m);
+  G.followed.set(m, Date.now());
+  pushDoc("members", user.id);
+  emit("follow", { m });
+  await systemPost(user.id, m, first ? "started the squad" : "joined the squad");
+  return { joined: true, first };
 }
 
 export async function streakPass(user, body) {

@@ -31,6 +31,8 @@ function keepSet(t) {
   const keep = new Set([...G.board.top, ...G.board.bench].map(x => x.m));
   for (const tfk of TFK) { const f = G.fields.get(roundAt(tfk, t).key); if (f) { f.top.forEach(m => keep.add(m)); f.bench.forEach(m => keep.add(m)); } }
   for (const b of G.bets.values()) if (b.st === "open") keep.add(b.m);
+  // coins with a squad, most recently joined first
+  [...G.followed].sort((a, b) => b[1] - a[1]).slice(0, 300).forEach(([m]) => keep.add(m));
   return keep;
 }
 function snapshot() {
@@ -122,7 +124,7 @@ async function feedStep() {
   if (feedBusy) return; feedBusy = true;
   const t = now(), keep = keepSet(t);
   try {
-    if (t - FEED.lastPrice > 4000) await jobPrices([...keep].slice(0, 90));
+    if (t - FEED.lastPrice > 4000) await jobPrices([...keep].slice(0, 360));
     else if (FEED.pending.length) await jobValidate();
     else if (t - FEED.lastDisc > 20000) await jobDiscover();
     else { queueHistory([...keep].map(m => TL.get(m)).filter(Boolean)); if (FEED.histQ.length && t - FEED.lastHist > 2500) await jobHistory(); }
@@ -146,7 +148,8 @@ async function loadState() {
     if (r.settled_at) G.settled.add(r.key);
   }
   for (const row of await DB.loadBets(since)) indexBet(betIn(row));
-  for (const s of await DB.loadSquads()) joinSquad(s.user_id, s.mint, Date.parse(s.joined_at));
+  for (const s of await DB.loadSquads()) { const ts = Date.parse(s.joined_at); joinSquad(s.user_id, s.mint, ts); G.followed.set(s.mint, Math.max(G.followed.get(s.mint) || 0, ts)); }
+  for (const m of G.followed.keys()) if (!TL.has(m)) FEED.pending.push(m);
   for (const p of await DB.loadProofs(t - 30 * 86400e3)) SOC.proofs.set(p.id, { id: p.id, uid: p.user_id, m: p.mint, k: p.task, u: p.url, ts: Date.parse(p.created_at) });
   for (const k of await DB.loadMarks()) { if (!SOC.proofs.has(k.proof_id)) continue; let mk = SOC.marks.get(k.proof_id); if (!mk) SOC.marks.set(k.proof_id, mk = { v: new Map(), f: new Map() }); (k.kind === "flag" ? mk.f : mk.v).set(k.user_id, Date.parse(k.created_at) || t); }
   SOC.chat = (await DB.loadChat(t - 3 * 86400e3)).reverse().map(c => ({ id: "c" + c.id, uid: c.user_id, c: c.chan, x: c.body, ts: Date.parse(c.created_at), sys: !!c.sys }));

@@ -69,6 +69,30 @@ input,textarea{font:inherit;color:inherit}
 .seg button:hover{color:var(--fg)}
 .seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
 .seg button[disabled]{opacity:.4;cursor:not-allowed}
+.search{position:relative;flex:1 1 260px;max-width:340px;min-width:0;display:flex;align-items:center}
+.search .s-ic{position:absolute;left:10px;color:var(--faint);pointer-events:none}
+.search input{width:100%;height:30px;padding:0 30px 0 31px;border:1px solid var(--rule2);background:var(--bg);color:var(--fg);font:inherit;font-size:11px;letter-spacing:.02em;border-radius:0;outline:none;-webkit-appearance:none;appearance:none}
+.search input::placeholder{color:var(--faint)}
+.search input:focus{border-color:var(--fg)}
+.search input::-webkit-search-cancel-button{display:none}
+.search kbd{position:absolute;right:8px;font:inherit;font-size:10px;color:var(--faint);border:1px solid var(--rule2);padding:0 5px;line-height:16px;pointer-events:none}
+.search input:focus~kbd{display:none}
+.s-list{position:absolute;top:calc(100% + 6px);left:0;width:max(100%,420px);max-width:calc(100vw - 32px);max-height:min(70vh,520px);overflow-y:auto;background:var(--bg);border:1px solid var(--rule2);z-index:60;padding:4px 0}
+.s-h{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);padding:8px 12px 4px}
+.s-row{display:grid;grid-template-columns:22px minmax(0,1fr) auto;grid-template-rows:auto auto;column-gap:10px;align-items:center;width:100%;padding:7px 12px;text-align:left}
+.s-row>.av{grid-row:1/3}
+.s-row:hover,.s-row[aria-selected="true"]{background:var(--hover)}
+.s-nm{display:flex;gap:8px;align-items:baseline;min-width:0}
+.s-nm b{font-weight:500;white-space:nowrap}
+.s-nm span{color:var(--dim);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s-mc{font-size:11px;font-variant-numeric:tabular-nums;text-align:right}
+.s-tag{grid-column:2/4;font-size:10px;letter-spacing:.06em;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s-empty{padding:12px;font-size:11px;color:var(--dim)}
+.s-foot{border-top:1px solid var(--rule);margin-top:4px;padding:8px 12px 6px;font-size:10px;color:var(--faint)}
+@media (max-width:560px){.search{flex:1 1 auto}.search kbd{display:none}.s-list{position:fixed;left:16px;right:16px;width:auto;top:calc(env(safe-area-inset-top,0px) + var(--top) + 6px)}}
+.sq-sep{grid-column:1/-1;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;padding:26px 14px 10px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.sq-sep b{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:500}
+.sq-sep span{font-size:11px;color:var(--dim)}
 .mode{display:inline-flex;align-items:center;gap:8px;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);white-space:nowrap;padding:6px 2px}
 .mode:hover{color:var(--fg)}
 .mode b{color:var(--fg);font-weight:500}
@@ -513,9 +537,14 @@ body.chart-full{overflow:hidden}
     <nav class="nav" aria-label="Sections">
       <a href="#arena" data-v="arena">Arena</a><a href="#markets" data-v="markets">Markets</a><a href="#squads" data-v="squads">Squads</a>
     </nav>
+    <div class="search" id="search">
+      <svg class="s-ic" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="7" cy="7" r="4.6"/><path d="M10.4 10.4L14 14"/></svg>
+      <input id="searchIn" type="search" placeholder="Search any coin" autocomplete="off" spellcheck="false" enterkeyhint="search" role="combobox" aria-autocomplete="list" aria-controls="searchList" aria-expanded="false" aria-label="Search any coin by ticker, name or contract address">
+      <kbd aria-hidden="true">/</kbd>
+      <div class="s-list" id="searchList" role="listbox" aria-label="Coins" hidden></div>
+    </div>
     <div class="top-r">
       <div class="seg tf" role="group" aria-label="Round length"></div>
-      <button class="mode" id="modeBtn" type="button" aria-label="Data source"><span class="dot rep" id="modeDot"></span><b id="modeTxt">Replay</b></button>
       <span class="clock" id="clock">--:--:--</span>
       <button class="btn btn-solid" id="walletBtn" type="button">Wallet</button>
     </div>

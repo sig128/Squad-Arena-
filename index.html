@@ -98,6 +98,30 @@ input,textarea{font:inherit;color:inherit}
 .seg button:hover{color:var(--fg)}
 .seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
 .seg button[disabled]{opacity:.4;cursor:not-allowed}
+.search{position:relative;flex:1 1 260px;max-width:340px;min-width:0;display:flex;align-items:center}
+.search .s-ic{position:absolute;left:10px;color:var(--faint);pointer-events:none}
+.search input{width:100%;height:30px;padding:0 30px 0 31px;border:1px solid var(--rule2);background:var(--bg);color:var(--fg);font:inherit;font-size:11px;letter-spacing:.02em;border-radius:0;outline:none;-webkit-appearance:none;appearance:none}
+.search input::placeholder{color:var(--faint)}
+.search input:focus{border-color:var(--fg)}
+.search input::-webkit-search-cancel-button{display:none}
+.search kbd{position:absolute;right:8px;font:inherit;font-size:10px;color:var(--faint);border:1px solid var(--rule2);padding:0 5px;line-height:16px;pointer-events:none}
+.search input:focus~kbd{display:none}
+.s-list{position:absolute;top:calc(100% + 6px);left:0;width:max(100%,420px);max-width:calc(100vw - 32px);max-height:min(70vh,520px);overflow-y:auto;background:var(--bg);border:1px solid var(--rule2);z-index:60;padding:4px 0}
+.s-h{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);padding:8px 12px 4px}
+.s-row{display:grid;grid-template-columns:22px minmax(0,1fr) auto;grid-template-rows:auto auto;column-gap:10px;align-items:center;width:100%;padding:7px 12px;text-align:left}
+.s-row>.av{grid-row:1/3}
+.s-row:hover,.s-row[aria-selected="true"]{background:var(--hover)}
+.s-nm{display:flex;gap:8px;align-items:baseline;min-width:0}
+.s-nm b{font-weight:500;white-space:nowrap}
+.s-nm span{color:var(--dim);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s-mc{font-size:11px;font-variant-numeric:tabular-nums;text-align:right}
+.s-tag{grid-column:2/4;font-size:10px;letter-spacing:.06em;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s-empty{padding:12px;font-size:11px;color:var(--dim)}
+.s-foot{border-top:1px solid var(--rule);margin-top:4px;padding:8px 12px 6px;font-size:10px;color:var(--faint)}
+@media (max-width:560px){.search{flex:1 1 auto}.search kbd{display:none}.s-list{position:fixed;left:16px;right:16px;width:auto;top:calc(env(safe-area-inset-top,0px) + var(--top) + 6px)}}
+.sq-sep{grid-column:1/-1;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;padding:26px 14px 10px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.sq-sep b{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:500}
+.sq-sep span{font-size:11px;color:var(--dim)}
 .mode{display:inline-flex;align-items:center;gap:8px;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);white-space:nowrap;padding:6px 2px}
 .mode:hover{color:var(--fg)}
 .mode b{color:var(--fg);font-weight:500}
@@ -543,9 +567,14 @@ body.chart-full{overflow:hidden}
     <nav class="nav" aria-label="Sections">
       <a href="#arena" data-v="arena">Arena</a><a href="#markets" data-v="markets">Markets</a><a href="#squads" data-v="squads">Squads</a>
     </nav>
+    <div class="search" id="search">
+      <svg class="s-ic" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="7" cy="7" r="4.6"/><path d="M10.4 10.4L14 14"/></svg>
+      <input id="searchIn" type="search" placeholder="Search any coin" autocomplete="off" spellcheck="false" enterkeyhint="search" role="combobox" aria-autocomplete="list" aria-controls="searchList" aria-expanded="false" aria-label="Search any coin by ticker, name or contract address">
+      <kbd aria-hidden="true">/</kbd>
+      <div class="s-list" id="searchList" role="listbox" aria-label="Coins" hidden></div>
+    </div>
     <div class="top-r">
       <div class="seg tf" role="group" aria-label="Round length"></div>
-      <button class="mode" id="modeBtn" type="button" aria-label="Data source"><span class="dot rep" id="modeDot"></span><b id="modeTxt">Replay</b></button>
       <span class="clock" id="clock">--:--:--</span>
       <button class="btn btn-solid" id="walletBtn" type="button">Wallet</button>
     </div>
@@ -825,7 +854,7 @@ const IMG = {};
 function imgOf(tok) { if (!tok.logo) return null; let im = IMG[tok.m]; if (!im) { im = new Image(); im.decoding = "async"; im.src = tok.logo; IMG[tok.m] = im; } return im.complete && im.naturalWidth ? im : null; }
 function avHTML(tok, size, rw) {
   const src = tok && tok.logo, m = tok ? tok.m : "";
-  return `<span class="av${src ? "" : " mono"}" data-av="${esc(m)}" style="--s:${size}px;--rw:${rw}px;--ring:${ringOf(m)}">${src ? `<img src="${src}" alt="" width="${size}" height="${size}">` : esc((tok && tok.s || "?")[0])}</span>`;
+  return `<span class="av${src ? "" : " mono"}" data-av="${esc(m)}" style="--s:${size}px;--rw:${rw}px;--ring:${ringOf(m)}">${src ? `<img src="${esc(src)}" alt="" width="${size}" height="${size}" loading="lazy" referrerpolicy="no-referrer">` : esc((tok && tok.s || "?")[0])}</span>`;
 }
 const tkHTML = (tok, size = 14) => tok ? `<a class="tk" href="#coin-${esc(tok.m)}">${avHTML(tok, size, 1.5)}<span>${esc(tok.s)}</span></a>` : "";
 async function copyText(text, btn, selEl) {
@@ -1503,7 +1532,12 @@ function parseHash() {
 const tokAny = m => T.get(m) || TR.get(m) || TL.get(m);
 function route() {
   const { v, m } = parseHash();
-  if (v === "coin" && !tokAny(m)) { if (location.hash !== "#arena") location.hash = "#arena"; return; }
+  if (v === "coin" && !tokAny(m)) {
+    // a shared link to a coin this page hasn't loaded: look it up on Solana first
+    if (isMintLike(m) && route.pending !== m) { route.pending = m; resolveCoin(m).then(ok => { route.pending = null; if (ok) route(); else if (location.hash !== "#arena") location.hash = "#arena"; }); return; }
+    if (route.pending === m) return;
+    if (location.hash !== "#arena") location.hash = "#arena"; return;
+  }
   if (curView === v && (v !== "coin" || S.coin === m)) return;
   const prevEl = curView ? $("v-" + curView) : null, nextEl = $("v-" + v);
   S.view = v; S.coin = v === "coin" ? m : null;
@@ -1544,8 +1578,7 @@ function setTf(k) {
 }
 function renderMode() {
   const live = S.mode !== "replay";
-  $("modeDot").className = "dot " + (live ? "live" : "rep");
-  $("modeTxt").textContent = live ? "Live" : "Replay";
+  if ($("modeDot")) { $("modeDot").className = "dot " + (live ? "live" : "rep"); $("modeTxt").textContent = live ? "Live" : "Replay"; }
 }
 
 /* ---------- round strip + timeline ---------- */
@@ -2044,7 +2077,7 @@ function renderSettled(w) {
 }
 
 /* ================= ui: squads, coin page, animated task visuals ================= */
-function squadTier(tok) { const p = pAt(tok, S.rt); return tierOf(p == null ? 0 : p * tok.supply); }
+function squadTier(tok) { const p = pAt(tok, tokTime(tok)); return tierOf(p == null ? 0 : p * tok.supply); }
 function taskProgress(m, sqd) { const out = {}; for (const t of TASKS) { const ps = sqd.byTask.get(t.id) || []; out[t.id] = { n: ps.length, prog: Math.min(1, ps.length / t.goal), ps }; } return out; }
 function activeTask(tok, sqd) {
   const tier = squadTier(tok), pr = taskProgress(tok.m, sqd);
@@ -2061,14 +2094,17 @@ function segbar(n, on, live) {
 let sqSig = "";
 function renderSquads() {
   if (S.view !== "squads") return;
-  const list = S.board.top.concat(S.board.bench);
+  const onBoard = S.board.top.concat(S.board.bench), seen = new Set(onBoard.map(t => t.m)), counts = new Map();
+  for (const [, d] of allMemberDocs()) for (const m of Object.keys((d && d.sq) || {})) if (!seen.has(m)) counts.set(m, (counts.get(m) || 0) + 1);
+  const others = [...counts.keys()].map(m => tokAny(m)).filter(Boolean).sort((a, b) => (isMember(b.m) - isMember(a.m)) || counts.get(b.m) - counts.get(a.m)).slice(0, 30);
+  const list = onBoard.concat(others);
   const sig = list.map(t => t.m).join() + "|" + allProofs().length + "|" + [...S.members.keys()].length + "|" + Object.keys(S.my.sq).length;
   const grid = $("sqGrid");
   if (sig !== sqSig || !grid.children.length) {
     sqSig = sig;
     grid.innerHTML = list.map(tok => {
       const sqd = squadOf(tok.m), tier = squadTier(tok), a = activeTask(tok, sqd), cleared = TASKS.filter(t => t.tier <= tier && (sqd.byTask.get(t.id) || []).length >= t.goal).length;
-      return `<div class="sq${inBench(tok.m) ? " bench" : ""}" data-m="${esc(tok.m)}" tabindex="0" role="link" aria-label="${esc(tok.s)} squad">
+      return `${tok === others[0] ? `<div class="sq-sep"><b>Squads off the board</b><span>Started from search. Tasks, proofs and chat work for any coin.</span></div>` : ""}<div class="sq${inBench(tok.m) ? " bench" : ""}${seen.has(tok.m) ? "" : " off"}" data-m="${esc(tok.m)}" tabindex="0" role="link" aria-label="${esc(tok.s)} squad">
         <div class="sq-top">${avHTML(tok, 30, 2)}<div class="nm"><b>$${esc(tok.s)}</b><span>${esc(tok.n)}</span></div><span class="tier" title="${esc(TIERS[tier].name)}">${TIERS[tier].n}</span></div>
         <canvas data-viz="${a.t.viz}" data-m="${esc(tok.m)}" data-k="${a.t.id}" aria-label="${esc(a.t.name)}: ${a.p.n} of ${a.t.goal}"></canvas>
         <div class="sq-meta"><span>${esc(a.t.name)}</span><b>${a.p.n}/${a.t.goal}</b></div>
@@ -2079,7 +2115,7 @@ function renderSquads() {
     registerViz(grid);
   }
   qsa("[data-tb]", grid).forEach(el => {
-    const tok = T.get(el.dataset.tb); if (!tok) return; const p = pAt(tok, S.rt), mc = p == null ? 0 : p * tok.supply, k = tierOf(mc), nx = TIERS[k + 1];
+    const tok = tokAny(el.dataset.tb); if (!tok) return; const p = pAt(tok, tokTime(tok)), mc = p == null ? 0 : p * tok.supply, k = tierOf(mc), nx = TIERS[k + 1];
     const f = nx ? clamp((Math.log(mc) - Math.log(Math.max(1, TIERS[k].min || 1e5))) / (Math.log(nx.min) - Math.log(Math.max(1, TIERS[k].min || 1e5))), 0, 1) : 1;
     el.innerHTML = `<div class="sq-meta" style="margin-bottom:5px"><span>${fmtUsd(mc)}</span><span>${nx ? "Tier " + nx.n + " at " + fmtUsd(nx.min) : "Top tier"}</span></div>${segbar(20, Math.round(f * 20), !!nx)}`;
   });
@@ -2130,7 +2166,7 @@ function buildCoin(m) {
     </div>
   </div>
   <div class="sec">
-    <div class="sec-h"><div class="t"><h2 data-scr>Squad</h2><p id="cSqSub"></p></div><div style="display:flex;gap:8px"><button class="btn btn-quiet" type="button" id="cChat">Squad chat</button><button class="btn btn-solid" type="button" id="cJoin"></button></div></div>
+    <div class="sec-h"><div class="t"><h2 data-scr>Squad</h2><p id="cSqSub"></p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-quiet" type="button" id="cChat">Squad chat</button><button class="btn btn-quiet" type="button" id="cBet" hidden>Back $${esc(tok.s)}</button><button class="btn btn-solid" type="button" id="cJoin"></button></div></div>
     <p class="desc" style="margin:0 0 12px">${esc(RULES_TASKS)}</p>
     <div class="tasks" id="cTasks"></div>
   </div>
@@ -2144,7 +2180,15 @@ function buildCoin(m) {
   qsa("#cStyle button").forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.y === coinUI.style)); b.onclick = () => { coinUI.style = b.dataset.y; store.set("cstyle", coinUI.style); qsa("#cStyle button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); dirty.coin = true; if (CH.chart) chartSync(true); }; });
   $("cCopy").onclick = () => copyText(tok.m, $("cCopy"), $("cMint"));
   $("cCaBtn").onclick = () => copyText(tok.m, $("cCaBtn"));
-  $("cJoin").onclick = () => openBet(m, bestMarket(m));
+  $("cBet").onclick = () => openBet(m, bestMarket(m));
+  $("cJoin").onclick = async () => {
+    const b = $("cJoin");
+    if (isMember(m)) { copyText(location.href.split("#")[0] + "#coin-" + m, b); return; }
+    b.disabled = true;
+    try { await joinSquad(m); b.disabled = false; notice("You're in the $" + tok.s + " squad"); coinSig = ""; updateCoin(true); }
+    catch (e) { notice(e.message); }
+    finally { b.disabled = false; }
+  };
   $("cChat").onclick = () => { setChatChan(m); $("chatIn").focus(); };
   if (lw) { if (chartInit(m)) { chartWire(); chartSync(true); } else { buildCoinFallback(m); } }
   else {
@@ -2165,17 +2209,19 @@ let coinSig = "";
 function updateCoin(force) {
   if (S.view !== "coin" || !coinUI.m) return;
   const m = coinUI.m, tok = tokAny(m); if (!tok) return;
-  const w = S.w, r = roundAt(S.tf, w), p = pAt(tok, S.rt), mc = p == null ? null : p * tok.supply, tier = tierOf(mc || 0);
+  const w = S.w, r = roundAt(S.tf, w), p = pAt(tok, tokTime(tok)), mc = p == null ? null : p * tok.supply, tier = tierOf(mc || 0);
   $("cPx").textContent = coinUI.unit === "mc" ? fmtUsd(mc) : fmtPrice(p);
   const rr = tfOk(S.tf) ? spotRet(tok, r, w) : null; $("cPct").textContent = rr == null ? "" : fmtPct(rr) + " this " + S.tf.toUpperCase() + " round"; $("cPct").className = "num " + (rr == null ? "dim" : rr >= 0 ? "up" : "down");
   $("cTier").textContent = "TIER " + TIERS[tier].n + " · " + TIERS[tier].name.toUpperCase();
-  $("cAge").textContent = tok.born ? "launched " + age(S.rt - tok.born) + " ago" : "";
+  $("cAge").textContent = tok.born ? "launched " + age(tokTime(tok) - tok.born) + " ago" : "";
   const ti = S.board.top.findIndex(t => t.m === m), bi = S.board.bench.findIndex(t => t.m === m);
-  $("cRank").textContent = ti >= 0 ? "#" + (ti + 1) + " in the top 15" : bi >= 0 ? "on deck #" + (16 + bi) : tok.rugAt && tok.rugAt <= S.rt ? "removed by the rug filter" : "off the board";
+  $("cRank").textContent = ti >= 0 ? "#" + (ti + 1) + " in the top 15" : bi >= 0 ? "on deck #" + (16 + bi) : tok.rugAt && tok.rugAt <= S.rt ? "removed by the rug filter" : "not on the board · squads still work";
   $("cKv").innerHTML = [["Price", fmtPrice(p)], ["Market cap", fmtUsd(mc)], ["Liquidity", fmtUsd(tok.liq)], ["Vol 5m · 1h", fmtUsd(tok.vol[0]) + " · " + fmtUsd(tok.vol[1])], ["Vol 6h · 24h", fmtUsd(tok.vol[2]) + " · " + fmtUsd(tok.vol[3])],
     ["Trades 5m · 1h", fmtNum(tok.tx[0]) + " · " + fmtNum(tok.tx[1])], ["Buys · sells 1h", fmtNum(tok.bs[0]) + " · " + fmtNum(tok.bs[1])], ["Change 1h · 24h", fmtPct((tok.ch[1] || 0) / 100, 1) + " · " + fmtPct((tok.ch[3] || 0) / 100, 1)],
     ["Pace growth", fmtPct(attn(tok, S.tf === "24h" ? "24h" : S.tf, S.mode === "replay" ? SNAP : nowW()), 0)], ["Venue", (tok.dex || "—") + " " + short(tok.pool || "")]].map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("");
-  $("cBack").innerHTML = tfOk(S.tf) ? MKS.map(mk => {
+  const bettable = tfOk(S.tf) && MKS.some(mk => fieldOf(r, mk).some(t => t.m === m) || (mk === "lcs" && lcs(r, w).alive.has(m)));
+  $("cBet").hidden = !bettable;
+  $("cBack").innerHTML = !bettable && tfOk(S.tf) ? `<div class="closed">Not in this round. Bets open when ${esc(tok.s)} makes the top 25; the squad, its tasks and chat work any time.</div>` : tfOk(S.tf) ? MKS.map(mk => {
     const bs = betState(r, mk, w, m), od = impliedOdds(r, mk, m), inF = fieldOf(r, mk).some(t => t.m === m) || (mk === "lcs" && lcs(r, w).alive.has(m));
     return `<div class="next" style="padding:6px 0;border-bottom:1px solid var(--rule)"><span>${esc(MK[mk].label)}<br><span class="dim">${!inF ? "not in this round" : bs.open ? (od ? fmtX(od) + " · weight ×" + bs.w.toFixed(2) : "open") : "closed"}</span></span>
       <button class="btn btn-quiet btn-xs" type="button" data-cb="${mk}"${!inF || !bs.open ? " disabled" : ""}>Bet</button></div>`;
@@ -2183,9 +2229,10 @@ function updateCoin(force) {
   qsa("[data-cb]", $("cBack")).forEach(b => b.onclick = () => openBet(m, b.dataset.cb));
   const mine = S.my.b.filter(b => b.m === m).slice(0, 8);
   $("cPos").innerHTML = mine.length ? mine.map(b => `<div class="p"><b>${fmtSol(b.s)} · ${esc(MK[b.mk].short)}</b><span class="num">${betLive(b, w)}</span><span>${b.tf.toUpperCase()} round · weight ${b.w.toFixed(2)} · quote ${fmtX(b.q)}</span></div>`).join("")
-    : `<div class="empty" style="padding:8px 0">No bets on ${esc(tok.s)} yet. Backing it in any market makes you a squad member.</div>`;
+    : `<div class="empty" style="padding:8px 0">No bets on ${esc(tok.s)} yet.${bettable ? " Backing it in any market also makes you a squad member." : ""}</div>`;
   const member = isMember(m), sqd = squadOf(m), here = onlineCount(m);
-  $("cJoin").textContent = member ? "Back again" : "Join the squad";
+  if (!$("cJoin").disabled) $("cJoin").textContent = member ? "Copy invite link" : sqd.members.length ? "Join the squad" : "Start the squad";
+  $("cJoin").classList.toggle("btn-solid", !member); $("cJoin").classList.toggle("btn-quiet", member);
   $("cSqSub").textContent = `${sqd.members.length} member${sqd.members.length === 1 ? "" : "s"}${here ? " · " + here + " here now" : ""} · tier ${TIERS[tier].n} ${TIERS[tier].name}${TIERS[tier + 1] ? " · next tier at " + fmtUsd(TIERS[tier + 1].min) : ""}`;
   const sig = m + "|" + tier + "|" + sqd.proofs.map(p => p.id + p.checks + p.flags).join() + "|" + sqd.members.length + "|" + member + "|" + canShare();
   if (sig !== coinSig || force) { coinSig = sig; renderTasks(tok, sqd, tier, member); renderProofs(tok, sqd, member); renderMembers(tok, sqd); }
@@ -2224,7 +2271,7 @@ function renderMembers(tok, sqd) {
   const el = $("cMembers");
   if (!sqd.members.length) { el.innerHTML = `<div class="empty">No members yet. The first bet on ${esc(tok.s)} founds the squad.</div>`; return; }
   const done = new Map(); sqd.proofs.forEach(p => done.set(p.uid, (done.get(p.uid) || 0) + 1));
-  el.innerHTML = sqd.members.slice(0, 50).map(mm => `<div class="mm">${picHTML(mm.uid)}<div style="min-width:0"><b>${esc(nameOf(mm.uid))}</b> <span>${esc(mm.h ? "@" + mm.h : "")}</span><br><span>joined ${ago(nowW() - mm.since)} · ${done.get(mm.uid) || 0} proofs</span></div><span class="num">${fmtSol(mm.stake)}</span></div>`).join("");
+  el.innerHTML = sqd.members.slice(0, 50).map(mm => `<div class="mm">${picHTML(mm.uid)}<div style="min-width:0"><b>${esc(nameOf(mm.uid))}</b> <span>${esc(mm.h ? "@" + mm.h : "")}</span><br><span>joined ${ago(nowW() - mm.since)} · ${done.get(mm.uid) || 0} proofs</span></div><span class="num">${mm.stake > 0 ? fmtSol(mm.stake) : ""}</span></div>`).join("");
 }
 function hitTask(m, k) {
   if (S.view === "coin" && coinUI.m === m) { const el = qsa(`.task[data-k="${k}"]`, $("cTasks"))[0]; if (el) { el.classList.remove("hit"); void el.offsetWidth; el.classList.add("hit"); } }
@@ -2251,7 +2298,7 @@ function drawCoinCanvas() {
   const cv = $("coinCv"); if (!cv || !cv.offsetParent || !coinUI.m) return;
   const tok = tokAny(coinUI.m); if (!tok) return;
   const t0p = performance.now(), { ctx, w: W, h: H } = fit(cv); ctx.clearRect(0, 0, W, H);
-  const K = coinUI.unit === "mc" ? tok.supply : 1, raw = candlesIv(tok, S.rt, coinUI.iv);
+  const K = coinUI.unit === "mc" ? tok.supply : 1, raw = candlesIv(tok, tokTime(tok), coinUI.iv);
   const all = K === 1 ? raw : raw.map(c => ({ ...c, o: c.o * K, h: c.h * K, l: c.l * K, c: c.c * K })); coinUI.nAll = all.length;
   const F = K === 1 ? fmtPrice : v => fmtMc(v);
   if (!all.length) { ctx.fillStyle = C.dim; ctx.font = `12px ${MONO}`; ctx.textAlign = "center"; ctx.fillText(S.mode === "replay" ? "No trades yet at this point of the replay." : "Loading candles…", W / 2, H / 2); return; }
@@ -2626,7 +2673,7 @@ function chartSync(force) {
   if (!CH.chart || !coinUI.m) return;
   const tok = tokAny(coinUI.m); if (!tok) return;
   const now = performance.now(); if (!force && now - CH.syncAt < 90) return; CH.syncAt = now;
-  const K = coinUI.unit === "mc" ? tok.supply : 1, raw = candlesIv(tok, S.rt, coinUI.iv);
+  const K = coinUI.unit === "mc" ? tok.supply : 1, raw = candlesIv(tok, tokTime(tok), coinUI.iv);
   const b = K === 1 ? raw : raw.map(c => ({ ...c, o: c.o * K, h: c.h * K, l: c.l * K, c: c.c * K })), n = b.length, first = n ? b[0].t : 0;
   if (n) CH.lastC = b[n - 1].c;
   const theme = C.bg + C.fg + MONO;
@@ -3112,7 +3159,7 @@ function openData() {
   if ($("dLive")) $("dLive").onclick = async () => { $("dLive").disabled = true; $("dLive").textContent = "Connecting…"; try { await goLive(); closeModal(); } catch (e) { $("dErr").textContent = e.message || "Live data could not start."; $("dLive").disabled = false; $("dLive").textContent = "Go live"; } };
   if ($("dRep")) $("dRep").onclick = () => { stopLive("You switched back to the replay."); closeModal(); };
 }
-$("modeBtn").addEventListener("click", openData);
+if ($("modeBtn")) $("modeBtn").addEventListener("click", openData);
 
 /* ---------- chat panel ---------- */
 function setChatChan(c) { chatChan = c || "g"; lastChatN = -1; dirty.chat = true; renderChatTabs(); }
@@ -3734,6 +3781,158 @@ async function srvPlaceBet(r, mk, m, s) {
   if (out.joined) wire("Squad", `You joined the ${tkHTML(tok)} squad. Its tasks are on the coin page.`);
   return out.bet;
 }
+
+/* ================= search: any coin, from the board or anywhere on Solana ================= */
+const SR = { q: "", res: [], remote: [], sel: 0, t: null, seq: 0, open: false };
+const isMintLike = q => /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(q);
+// a coin that isn't on the board still gets a page: its data comes from DEX Screener, its candles from GeckoTerminal
+const tokTime = tok => S.mode === "replay" && tok && !TR.has(tok.m) ? nowW() : S.rt;
+function localMatches(q) {
+  const ql = q.toLowerCase(), seen = new Set(), out = [];
+  const add = (tok, rank) => { if (!tok || seen.has(tok.m)) return; seen.add(tok.m); out.push({ tok, rank }); };
+  const pool = [...S.board.top, ...S.board.bench, ...T.values(), ...TL.values()];
+  for (const tok of pool) {
+    const s = (tok.s || "").toLowerCase(), n = (tok.n || "").toLowerCase();
+    const score = s === ql || s === "$" + ql ? 0 : s.startsWith(ql) ? 1 : n.startsWith(ql) ? 2 : s.includes(ql) || n.includes(ql) ? 3 : tok.m === q || (q.length >= 6 && tok.m.startsWith(q)) ? 0 : 9;
+    if (score < 9) add(tok, score);
+  }
+  const boardIdx = m => { const i = S.board.top.findIndex(t => t.m === m); if (i >= 0) return i; const j = S.board.bench.findIndex(t => t.m === m); return j >= 0 ? 15 + j : 99; };
+  return out.sort((a, b) => a.rank - b.rank || boardIdx(a.tok.m) - boardIdx(b.tok.m) || (mcAt(b.tok, tokTime(b.tok)) || 0) - (mcAt(a.tok, tokTime(a.tok)) || 0)).slice(0, 8).map(x => x.tok);
+}
+async function remoteSearch(q) {
+  const url = isMintLike(q) ? "https://api.dexscreener.com/tokens/v1/solana/" + q : "https://api.dexscreener.com/latest/dex/search?q=" + encodeURIComponent(q);
+  const r = await fetch(url); if (!r.ok) throw new Error("HTTP " + r.status);
+  const j = await r.json(), pairs = Array.isArray(j) ? j : (j.pairs || []);
+  const best = new Map();
+  for (const p of pairs) {
+    if (!p || p.chainId !== "solana" || !p.baseToken || !p.priceUsd) continue;
+    const m = p.baseToken.address, cur = best.get(m), liq = (p.liquidity && p.liquidity.usd) || 0;
+    if (!cur || liq > ((cur.liquidity && cur.liquidity.usd) || 0)) best.set(m, p);
+  }
+  return [...best.values()].sort((a, b) => ((b.liquidity && b.liquidity.usd) || 0) - ((a.liquidity && a.liquidity.usd) || 0)).slice(0, 10);
+}
+function squadSize(m) { try { return squadOf(m).members.length; } catch (_) { return 0; } }
+function srRow(item, i) {
+  if (item.tok) {
+    const tok = item.tok, ti = S.board.top.findIndex(t => t.m === tok.m), bi = S.board.bench.findIndex(t => t.m === tok.m), n = squadSize(tok.m);
+    const tag = ti >= 0 ? "#" + (ti + 1) : bi >= 0 ? "On deck" : n ? "Squad" : "";
+    return `<button type="button" role="option" class="s-row" data-i="${i}" aria-selected="${i === SR.sel}">${avHTML(tok, 22, 1.5)}<span class="s-nm"><b>$${esc(tok.s)}</b><span>${esc(tok.n || "")}</span></span><span class="s-mc">${fmtUsd(mcAt(tok, tokTime(tok)) || tok.mc)}</span><span class="s-tag">${tag}${n ? ` · ${n} in squad` : ""}</span></button>`;
+  }
+  const p = item.pair, b = p.baseToken, mc = +(p.marketCap || p.fdv) || 0, age = p.pairCreatedAt ? ageShort(nowW() - p.pairCreatedAt) : "";
+  return `<button type="button" role="option" class="s-row" data-i="${i}" aria-selected="${i === SR.sel}">${avHTML({ m: b.address, s: b.symbol || "?", logo: (p.info && p.info.imageUrl) || null }, 22, 1.5)}<span class="s-nm"><b>$${esc(b.symbol || "?")}</b><span>${esc(b.name || "")}</span></span><span class="s-mc">${mc ? fmtUsd(mc) : "—"}</span><span class="s-tag">${esc(age)}${p.dexId ? " · " + esc(p.dexId) : ""}</span></button>`;
+}
+const ageShort = ms => { const h = ms / 3600e3; return h < 1 ? Math.max(1, Math.round(h * 60)) + "m old" : h < 48 ? Math.round(h) + "h old" : Math.round(h / 24) + "d old"; };
+function srRender() {
+  const list = $("searchList"); if (!list) return;
+  const loc = SR.res.map(tok => ({ tok })), rem = SR.remote.filter(p => !SR.res.some(t => t.m === p.baseToken.address)).map(pair => ({ pair }));
+  SR.items = loc.concat(rem);
+  if (!SR.q) { list.hidden = true; $("searchIn").setAttribute("aria-expanded", "false"); return; }
+  SR.sel = clamp(SR.sel, 0, Math.max(0, SR.items.length - 1));
+  let html = "";
+  if (loc.length) html += `<div class="s-h">In the arena</div>` + loc.map((x, i) => srRow(x, i)).join("");
+  if (rem.length) html += `<div class="s-h">On Solana</div>` + rem.map((x, i) => srRow(x, loc.length + i)).join("");
+  if (!html) html = `<div class="s-empty">${SR.busy ? "Searching…" : "No coin found. Try the ticker, the name or the contract address."}</div>`;
+  else if (SR.busy) html += `<div class="s-empty">Searching Solana…</div>`;
+  html += `<div class="s-foot">Any coin can have a squad. Betting opens when a coin makes the top 25.</div>`;
+  list.innerHTML = html; list.hidden = false; $("searchIn").setAttribute("aria-expanded", "true");
+  qsa(".s-row", list).forEach(b => { b.onpointerdown = e => e.preventDefault(); b.onclick = () => srPick(+b.dataset.i); });
+}
+function srInput() {
+  const q = $("searchIn").value.trim(); SR.q = q; SR.sel = 0;
+  SR.res = q.length >= 1 ? localMatches(q) : []; SR.remote = []; SR.busy = q.length >= 2;
+  srRender(); clearTimeout(SR.t);
+  if (q.length < 2) return;
+  const my = ++SR.seq;
+  SR.t = setTimeout(async () => {
+    try { const r = await remoteSearch(q); if (my !== SR.seq) return; SR.remote = r; }
+    catch (_) { if (my !== SR.seq) return; SR.remote = []; }
+    SR.busy = false; srRender();
+  }, 280);
+}
+function srPick(i) {
+  const it = (SR.items || [])[i]; if (!it) return;
+  let m;
+  if (it.tok) m = it.tok.m;
+  else { m = it.pair.baseToken.address; if (!tokAny(m)) adoptPair(it.pair); }
+  srClose(true);
+  location.hash = "#coin-" + m;
+}
+function srClose(clear) { const list = $("searchList"); if (list) list.hidden = true; $("searchIn").setAttribute("aria-expanded", "false"); if (clear) { $("searchIn").value = ""; SR.q = ""; SR.res = []; SR.remote = []; } $("searchIn").blur(); }
+async function resolveCoin(m) {
+  try { const r = await fetch("https://api.dexscreener.com/tokens/v1/solana/" + m); if (!r.ok) return false; const pairs = await r.json(); const best = (pairs || []).filter(p => p && p.chainId === "solana" && p.baseToken && p.baseToken.address === m).sort((a, b) => ((b.liquidity && b.liquidity.usd) || 0) - ((a.liquidity && a.liquidity.usd) || 0))[0]; if (!best) return false; adoptPair(best); return !!tokAny(m); }
+  catch (_) { return false; }
+}
+// a DEX Screener pair becomes a coin the page can show
+function adoptPair(p) {
+  applyPairs([p], nowW());
+  const tok = TL.get(p.baseToken.address); if (!tok) return null;
+  if (p.info && p.info.imageUrl && !tok.logo) tok.logo = p.info.imageUrl;
+  tok.offBoard = true;
+  return tok;
+}
+
+/* ---------- a coin page for a coin the arena isn't tracking: poll its price, fetch its candles ---------- */
+const WATCH = { m: null, timer: null, last: 0, hist: 0 };
+async function watchTick() {
+  const m = S.view === "coin" ? S.coin : null, tok = m && tokAny(m);
+  if (!tok) return;
+  const tracked = (S.srv && tok.ticks.length && nowW() - tok.ticks[tok.ticks.length - 1].t < 30000) || (!S.srv && S.mode !== "replay" && LIVE.on && (inTop(m) || inBench(m)));
+  if (S.mode === "replay" && TR.has(m)) return;
+  if (!tracked && nowW() - WATCH.last > 8000) {
+    WATCH.last = nowW();
+    try { const r = await fetch("https://api.dexscreener.com/tokens/v1/solana/" + m); if (r.ok) applyPairs(await r.json(), nowW()); dirty.coin = true; } catch (_) {}
+  }
+  if (!tok.C.length && tok.pool && nowW() - WATCH.hist > 15000) {
+    WATCH.hist = nowW();
+    for (const five of [false, true]) {
+      try {
+        const q = five ? "minute?aggregate=5&limit=300" : "minute?aggregate=1&limit=200";
+        const r = await fetch(`https://api.geckoterminal.com/api/v2/networks/solana/pools/${tok.pool}/ohlcv/${q}&currency=usd&token=base`); if (!r.ok) break;
+        const j = await r.json(), list = j && j.data && j.data.attributes && j.data.attributes.ohlcv_list;
+        const C = (list || []).map(c => ({ t: c[0] * 1000, o: +c[1], h: +c[2], l: +c[3], c: +c[4], v: +c[5] })).filter(c => c.c > 0).sort((a, b) => a.t - b.t);
+        if (five) tok.C5 = C; else tok.C = C; tok.firstT = firstTime(tok); dirty.coin = true;
+      } catch (_) { break; }
+    }
+  }
+}
+setInterval(() => { watchTick().catch(() => {}); }, 2000);
+
+/* ---------- joining a squad without a bet ---------- */
+async function joinSquad(m) {
+  const tok = tokAny(m);
+  if (S.srv) {
+    if (!S.me.id) { srvLogin(); throw new Error("Log in to join the squad."); }
+    const out = await api("/squad", { m });
+    if (out.joined) { S.my.sq[m] = nowW(); wire("Squad", `You ${out.first ? "started" : "joined"} the ${tkHTML(tok)} squad. Its tasks are on this page.`, true); }
+    dirty.squads = true; return out;
+  }
+  if (S.my.sq[m]) return { joined: false };
+  const first = !squadOf(m).members.length;
+  S.my.sq[m] = nowW(); persist("members"); postSystem(m, first ? "started the squad" : "joined the squad");
+  wire("Squad", `You ${first ? "started" : "joined"} the ${tkHTML(tok)} squad. Its tasks are on this page.`, true);
+  dirty.squads = true; return { joined: true, first };
+}
+
+/* ---------- wiring ---------- */
+(function initSearch() {
+  const inp = $("searchIn"); if (!inp) return;
+  inp.addEventListener("input", srInput);
+  inp.addEventListener("focus", () => { if (SR.q) srRender(); });
+  inp.addEventListener("blur", () => setTimeout(() => { const l = $("searchList"); if (l && document.activeElement !== inp) l.hidden = true; }, 120));
+  inp.addEventListener("keydown", e => {
+    const n = (SR.items || []).length;
+    if (e.key === "ArrowDown") { e.preventDefault(); SR.sel = Math.min(n - 1, SR.sel + 1); srRender(); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); SR.sel = Math.max(0, SR.sel - 1); srRender(); }
+    else if (e.key === "Enter") { e.preventDefault(); if (n) srPick(SR.sel); }
+    else if (e.key === "Escape") { e.preventDefault(); srClose(true); }
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey) return;
+    const tg = e.target; if (tg && (tg.tagName === "INPUT" || tg.tagName === "TEXTAREA" || tg.isContentEditable)) return;
+    if (root.firstChild) return;
+    e.preventDefault(); inp.focus(); inp.select();
+  });
+})();
 
 /* ================= intro: fifteen coins enter, one squad wins ================= */
 let introRaf = 0, introDone = null;

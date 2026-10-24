@@ -173,7 +173,7 @@ const IMG = {};
 function imgOf(tok) { if (!tok.logo) return null; let im = IMG[tok.m]; if (!im) { im = new Image(); im.decoding = "async"; im.src = tok.logo; IMG[tok.m] = im; } return im.complete && im.naturalWidth ? im : null; }
 function avHTML(tok, size, rw) {
   const src = tok && tok.logo, m = tok ? tok.m : "";
-  return `<span class="av${src ? "" : " mono"}" data-av="${esc(m)}" style="--s:${size}px;--rw:${rw}px;--ring:${ringOf(m)}">${src ? `<img src="${src}" alt="" width="${size}" height="${size}">` : esc((tok && tok.s || "?")[0])}</span>`;
+  return `<span class="av${src ? "" : " mono"}" data-av="${esc(m)}" style="--s:${size}px;--rw:${rw}px;--ring:${ringOf(m)}">${src ? `<img src="${esc(src)}" alt="" width="${size}" height="${size}" loading="lazy" referrerpolicy="no-referrer">` : esc((tok && tok.s || "?")[0])}</span>`;
 }
 const tkHTML = (tok, size = 14) => tok ? `<a class="tk" href="#coin-${esc(tok.m)}">${avHTML(tok, size, 1.5)}<span>${esc(tok.s)}</span></a>` : "";
 async function copyText(text, btn, selEl) {
