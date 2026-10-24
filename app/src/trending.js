@@ -2,6 +2,8 @@
 // The server ranks the young coins it tracks by recent trading (and KOL holders); KOL trades come from the chain, live.
 const TRD = { list: [], at: 0 };
 const KOLS = new Map();                      // mint -> { holders: [...], trades: [...], at }
+// SOL amounts read like a trader would say them: 0.35, 2.4, 25
+const fmtKolSol = v => (v >= 10 ? Math.round(v).toLocaleString("en-US") : v >= 1 ? (+v).toFixed(1) : (+v).toFixed(2)) + " SOL";
 const kolName = k => k.name || (k.x ? "@" + k.x : short(k.w));
 function kolAv(k, size) {
   const init = esc((kolName(k) || "?").replace(/^@/, "")[0] || "?");
@@ -61,7 +63,7 @@ function kolEvent(d) {
   KOLS.set(d.m, k);
   const tok = TL.get(d.m); if (tok) tok.kol = k.holders.length;
   if (coinUI.m === d.m) { renderKolBox(d.m); CH.mkKey = ""; dirty.coin = true; if (CH.prim) CH.prim.req(); }
-  if (tok && (inTop(d.m) || inBench(d.m)) && tr.sol >= 0.5) wire("KOL", `${esc(kolName(tr))} ${tr.side === "buy" ? "bought" : "sold"} ${fmtAmt(tr.sol, "SOL")} of ${tkHTML(tok)}.`, tr.side === "buy");
+  if (tok && (inTop(d.m) || inBench(d.m)) && tr.sol >= 0.5) wire("KOL", `${esc(kolName(tr))} ${tr.side === "buy" ? "bought" : "sold"} ${fmtKolSol(tr.sol)} of ${tkHTML(tok)}.`, tr.side === "buy");
 }
 function renderKolBox(m) {
   const el = $("cKols"); if (!el || coinUI.m !== m) return;
@@ -70,18 +72,7 @@ function renderKolBox(m) {
   if (!on) { el.innerHTML = `<p class="fine">KOL tracking switches on once the server has a KOL list.</p>`; return; }
   if (!k) { el.innerHTML = `<p class="fine">Loading…</p>`; return; }
   const hold = k.holders.slice(0, 12).map(h => `<div class="kol">${kolAv(h, 20)}<span class="kn">${h.x ? `<a href="https://x.com/${esc(h.x)}" target="_blank" rel="noopener">${esc(kolName(h))}</a>` : esc(kolName(h))}</span><span class="num dim">${p ? fmtUsd(h.amt * p) : fmtNum(h.amt)}</span></div>`).join("");
-  const last = k.trades.slice(-6).reverse().map(t => `<div class="kol">${kolAv(t, 16)}<span class="kn">${esc(kolName(t))} <span class="${t.side === "buy" ? "up" : "down"}">${t.side === "buy" ? "bought" : "sold"}</span></span><span class="num dim">${fmtAmt(t.sol, "SOL")} · ${ago(nowW() - t.t)}</span></div>`).join("");
+  const last = k.trades.slice(-6).reverse().map(t => `<div class="kol">${kolAv(t, 16)}<span class="kn">${esc(kolName(t))} <span class="${t.side === "buy" ? "up" : "down"}">${t.side === "buy" ? "bought" : "sold"}</span></span><span class="num dim">${fmtKolSol(t.sol)} · ${ago(nowW() - t.t)}</span></div>`).join("");
   el.innerHTML = (hold || `<p class="fine">No tracked KOL holds it yet.</p>`) + (last ? `<div class="kh">Latest KOL trades</div>${last}` : "");
-}
-// chart markers: KOL buys under the candle, sells above it
-function kolMarkers(tok) {
-  const k = KOLS.get(tok.m); if (!k || !k.trades.length) return [];
-  const out = [];
-  for (const t of k.trades.slice(-80)) {
-    const i = barIndexAt(t.t); if (i < 0) continue;
-    const buy = t.side === "buy", nm = kolName(t);
-    out.push({ time: tsec(CH.bars[i]), position: buy ? "belowBar" : "aboveBar", color: buy ? C.up : C.down, shape: buy ? "arrowUp" : "arrowDown", text: (nm.length > 12 ? nm.slice(0, 11) + "…" : nm) + " " + (t.sol >= 10 ? Math.round(t.sol) : t.sol.toFixed(1)) });
-  }
-  return out;
 }
 const kolKey = m => { const k = KOLS.get(m); return k ? k.trades.length + ":" + (k.trades.length ? k.trades[k.trades.length - 1].t : 0) : "0"; };

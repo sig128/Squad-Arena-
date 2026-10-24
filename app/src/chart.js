@@ -412,7 +412,7 @@ function kolHover(e) {
   const px = localPt(e), hit = (CH.kb || []).slice().reverse().find(b => Math.hypot(b.x - px.x, b.y - px.y) <= b.r);
   if (!hit) { tip.hidden = true; return; }
   const t = hit.t, buy = t.side === "buy";
-  tip.innerHTML = `<b>${esc(kolName(t))}</b> <span class="${buy ? "up" : "down"}">${buy ? "bought" : "sold"}</span> ${fmtAmt(t.sol, "SOL")}${t.px ? " at " + esc(fmtPrice(t.px)) : ""}<br><span class="dim">${esc(local(t.t, true))} · ${ago(nowW() - t.t)}</span>`;
+  tip.innerHTML = `<b>${esc(kolName(t))}</b> <span class="${buy ? "up" : "down"}">${buy ? "bought" : "sold"}</span> ${fmtKolSol(t.sol)}${t.px ? " at " + esc(fmtPrice(t.px)) : ""}<br><span class="dim">${esc(local(t.t, true))} · ${ago(nowW() - t.t)}</span>`;
   tip.hidden = false; const w = $("cChart").clientWidth;
   tip.style.left = Math.min(w - tip.offsetWidth - 8, hit.x + 12) + "px"; tip.style.top = Math.max(4, hit.y - tip.offsetHeight - 8) + "px";
 }
