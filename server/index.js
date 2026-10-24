@@ -23,7 +23,7 @@ function tokOut(tok, full = true) {
     const t = now();
     o.C = chartC(tok, false, t).slice(-150).map(candleOut);
     o.C5 = chartC(tok, true, t).filter(c => c.t >= t - 26 * 3600e3).map(candleOut);
-    o.ticks = tok.ticks.filter(k => k.t >= t - 20 * 60e3).map(k => [k.t, r6(k.p)]);
+    o.ticks = tok.ticks.filter(k => k.t >= t - 20 * 60e3).map(k => k.h != null && (k.h !== k.p || k.l !== k.p) ? [k.t, r6(k.p), r6(k.h), r6(k.l)] : [k.t, r6(k.p)]);
   }
   return o;
 }
@@ -63,7 +63,7 @@ function health() {
 
 /* ---------- live stream batching ---------- */
 const tickBuf = new Map(); let metaDirty = new Set(), sentTok = new Set();
-FEED.onTick = (tok, t, p) => { tickBuf.set(tok.m, [tok.m, t, r6(p)]); };
+FEED.onTick = tok => { const k = tok.ticks[tok.ticks.length - 1]; if (k) tickBuf.set(tok.m, k.h !== k.p || k.l !== k.p ? [tok.m, k.t, r6(k.p), r6(k.h), r6(k.l)] : [tok.m, k.t, r6(k.p)]); };
 FEED.onMeta = list => { for (const tok of list) metaDirty.add(tok.m); };
 FEED.onCandles = (tok, five) => { if (sentTok.has(tok.m)) emit("candles", { m: tok.m, five: !!five, C: (five ? chartC(tok, true).filter(c => c.t >= now() - 26 * 3600e3) : chartC(tok, false).slice(-150)).map(candleOut) }); };
 // every finished 1-minute candle goes out once, so open pages keep their charts current without reloading
@@ -252,6 +252,7 @@ async function main() {
     setInterval(() => gtStep(), 2500);
     setInterval(metaStep, 3000);
     storeInit().then(() => log(STORE.on ? "info" : "warn", STORE.on ? "candle storage ready" : "candle storage off: " + STORE.err));
+    setInterval(() => { if (!STORE.on) storeInit().then(() => { if (STORE.on) log("info", "candle storage ready"); }); }, 60000);   // picks up the table once it exists
     setInterval(loadStep, 700);
     setInterval(() => saveStep(false), 30000);
     setInterval(descStep, 1500);

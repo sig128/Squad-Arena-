@@ -51,8 +51,8 @@ export function firstTime(tok) { let f = Infinity; if (tok.C.length) f = tok.C[0
 // at most one tick per second per coin; ticks older than 2 h fall back to our own candles, built from the same prices
 export function pushTick(tok, t, p, v = 0) {
   const K = tok.ticks, last = K[K.length - 1];
-  if (last && Math.floor(t / 1000) === Math.floor(last.t / 1000)) { last.p = p; last.t = Math.max(last.t, t); }     // one tick per clock second
-  else if (!last || t > last.t) K.push({ t, p });
+  if (last && Math.floor(t / 1000) === Math.floor(last.t / 1000)) { last.p = p; last.t = Math.max(last.t, t); if (p > last.h) last.h = p; if (p < last.l) last.l = p; }     // one tick per clock second, with its high and low
+  else if (!last || t > last.t) K.push({ t, p, h: p, l: p });
   if (K.length > 7600) K.splice(0, K.length - 7200);
   if (!tok.full) { bump(tok.C, 60000, t, p, v, 1500); bump(tok.C5, 300000, t, p, v, 900); }
   if (FEED.onTick) FEED.onTick(tok, t, p);

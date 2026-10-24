@@ -32,7 +32,7 @@ function srvToken(o) {
   if (o.logo && !LOGO[o.m]) tok.logo = o.logo;
   if (o.C) tok.C = o.C.map(cIn);
   if (o.C5) tok.C5 = o.C5.map(cIn);
-  if (o.ticks) { const last = tok.ticks.length ? tok.ticks[tok.ticks.length - 1].t : -Infinity; const fresh = o.ticks.map(k => ({ t: k[0], p: k[1] })); tok.ticks = fresh.concat(tok.ticks.filter(k => k.t > (fresh.length ? fresh[fresh.length - 1].t : -Infinity))); if (!fresh.length && last > -Infinity) {} }
+  if (o.ticks) { const last = tok.ticks.length ? tok.ticks[tok.ticks.length - 1].t : -Infinity; const fresh = o.ticks.map(k => ({ t: k[0], p: k[1], h: k[2] == null ? k[1] : k[2], l: k[3] == null ? k[1] : k[3] })); tok.ticks = fresh.concat(tok.ticks.filter(k => k.t > (fresh.length ? fresh[fresh.length - 1].t : -Infinity))); if (!fresh.length && last > -Infinity) {} }
   tok.lastSeen = nowW(); tok.rpcAt = o.rpc ? nowW() : tok.rpcAt; tok.firstT = firstTime(tok);
   return tok;
 }
@@ -80,7 +80,7 @@ function srvStream() {
   const on = (ev, fn) => es.addEventListener(ev, e => { SRV.lastMsg = nowW(); let d; try { d = JSON.parse(e.data); } catch (_) { return; } try { fn(d); } catch (err) { console.warn("stream " + ev, err); } });
   es.onopen = () => { if (dropped) { dropped = false; srvSnapshot().catch(() => {}); } };
   es.onerror = () => { dropped = true; };
-  on("tick", list => { for (const [m, t, p] of list) { const tok = TL.get(m); if (!tok) continue; const K = tok.ticks; if (!K.length || t > K[K.length - 1].t) K.push({ t, p }); if (K.length > 5000) K.splice(0, 1000); tok.px = p; tok.lastSeen = nowW(); } dirty.coin = dirty.race = true; });
+  on("tick", list => { for (const [m, t, p, h, l] of list) { const tok = TL.get(m); if (!tok) continue; const K = tok.ticks, last = K[K.length - 1], k = { t, p, h: h == null ? p : h, l: l == null ? p : l }; if (last && Math.floor(t / 1000) === Math.floor(last.t / 1000) && t >= last.t) K[K.length - 1] = k; else if (!last || t > last.t) K.push(k); if (K.length > 5000) K.splice(0, 1000); tok.px = p; tok.lastSeen = nowW(); } dirty.coin = dirty.race = true; });
   on("token", o => { srvToken(o); dirty.all = true; });
   on("meta", list => { list.forEach(srvToken); });
   on("candle", list => { for (const [m, c] of list) { const tok = TL.get(m); if (!tok) continue; const x = cIn(c), C = tok.C, last = C[C.length - 1]; if (!last || x.t > last.t) C.push(x); else if (x.t === last.t) C[C.length - 1] = x; if (C.length > 3000) C.splice(0, 600); if (!(tok.firstT <= x.t)) tok.firstT = firstTime(tok); } dirty.coin = dirty.race = true; });

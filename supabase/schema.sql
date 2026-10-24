@@ -246,3 +246,13 @@ grant execute on function sa_add(text,text,numeric,text,text), place_bet(text,te
   settle_bet(uuid,text,numeric,text,text), use_streak_pass(uuid,text,text), topup_practice(text),
   credit_deposit(text,text,text,text,bigint), request_withdrawal(text,text,text,bigint), finish_withdrawal(uuid,text,text,text)
   to service_role;
+
+-- ---------- candles: the round server's own price candles, so charts survive a restart ----------
+create table if not exists candles (
+  mint text primary key,
+  data text not null,                    -- gzipped JSON (1-minute and 5-minute candles), base64
+  updated_at timestamptz not null default now()
+);
+alter table candles enable row level security;
+revoke all on candles from anon, authenticated;
+grant all on candles to service_role;

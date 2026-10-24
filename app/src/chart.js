@@ -33,9 +33,9 @@ const CH = { sd: 4, step: 0, pendLR: null, chart: null, main: null, vol: null, l
 const DW = { tool: "cross", list: [], sel: null, pend: null, hov: null, meas: null, drag: null, down: null, dragEnd: 0, addAt: 0, m: null };
 const tsec = c => Math.floor(c.t / 1000);
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-function tparts(sec) { const d = new Date(sec * 1000), u = S.mode === "replay"; return { h: u ? d.getUTCHours() : d.getHours(), mi: u ? d.getUTCMinutes() : d.getMinutes(), d: u ? d.getUTCDate() : d.getDate(), mo: u ? d.getUTCMonth() : d.getMonth() }; }
-const tickFmt = (sec, kind) => { const p = tparts(+sec); return kind < 3 ? p.d + " " + MON[p.mo] : pad2(p.h) + ":" + pad2(p.mi); };
-const crossTime = sec => { const p = tparts(+sec); return p.d + " " + MON[p.mo] + " " + pad2(p.h) + ":" + pad2(p.mi) + (S.mode === "replay" ? " UTC" : ""); };
+function tparts(sec) { const d = new Date(sec * 1000), u = S.mode === "replay"; return { h: u ? d.getUTCHours() : d.getHours(), mi: u ? d.getUTCMinutes() : d.getMinutes(), s: d.getSeconds(), d: u ? d.getUTCDate() : d.getDate(), mo: u ? d.getUTCMonth() : d.getMonth() }; }
+const tickFmt = (sec, kind) => { const p = tparts(+sec); return kind < 3 ? p.d + " " + MON[p.mo] : pad2(p.h) + ":" + pad2(p.mi) + (kind === 4 ? ":" + pad2(p.s) : ""); };
+const crossTime = sec => { const p = tparts(+sec); return p.d + " " + MON[p.mo] + " " + pad2(p.h) + ":" + pad2(p.mi) + (coinUI.iv < 1 ? ":" + pad2(p.s) : "") + (S.mode === "replay" ? " UTC" : ""); };
 function rgba(col, a) {
   let h = String(col || "").trim(); if (h[0] !== "#") return col;
   h = h.slice(1); if (h.length === 3) h = [...h].map(c => c + c).join("");
@@ -90,7 +90,7 @@ function chartOpts() {
     grid: { vertLines: { color: C.rule }, horzLines: { color: C.rule } },
     crosshair: { mode: L.CrosshairMode.Normal, vertLine: { color: C.faint, width: 1, style: L.LineStyle.Dashed, labelBackgroundColor: C.fg }, horzLine: { color: C.faint, width: 1, style: L.LineStyle.Dashed, labelBackgroundColor: C.fg } },
     rightPriceScale: { borderColor: C.rule2 },
-    timeScale: { borderColor: C.rule2, timeVisible: true, secondsVisible: false, rightOffset: 4, minBarSpacing: 0.5, tickMarkFormatter: tickFmt },
+    timeScale: { borderColor: C.rule2, timeVisible: true, secondsVisible: coinUI.iv < 1, rightOffset: 4, minBarSpacing: 0.5, tickMarkFormatter: tickFmt },
     localization: { timeFormatter: crossTime, locale: "en-US" },
     handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: CH.full },
     handleScale: { axisPressedMouseMove: { time: true, price: true }, axisDoubleClickReset: { time: true, price: true }, mouseWheel: true, pinch: true }

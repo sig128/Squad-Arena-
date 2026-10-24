@@ -49,7 +49,7 @@ function renderLadder() {
 }
 
 /* ---------- coin page ---------- */
-const IVS = [[1, "1M"], [5, "5M"], [15, "15M"], [30, "30M"], [60, "1H"], [240, "4H"]];
+const IVS = [[1 / 60, "1S"], [1, "1M"], [5, "5M"], [15, "15M"], [30, "30M"], [60, "1H"], [240, "4H"]];
 const coinUI = { iv: IVS.some(x => x[0] === store.get("iv", 1)) ? store.get("iv", 1) : 1, span: 90, style: "candles", unit: store.get("unit", "price") === "mc" ? "mc" : "price", cross: null, pan: 0, drag: null, m: null };
 function buildCoin(m) {
   const tok = tokAny(m), el = $("v-coin"); if (!tok) return;
@@ -70,7 +70,7 @@ function buildCoin(m) {
   <div class="c-grid">
     <div class="chart-box" id="cBox">
       <div class="chart-bar"><div class="ohlc" id="cOhlc"></div>
-        <div class="cctl"><div class="seg" id="cIv" role="group" aria-label="Candle interval">${IVS.map(([m, l]) => `<button type="button" data-iv="${m}"${m === 240 && S.mode === "replay" ? ` disabled title="4-hour candles need live data"` : ""}>${l}</button>`).join("")}</div>${lw ? "" : `<div class="seg" id="cSpan"><button type="button" data-s="0">All</button></div>`}
+        <div class="cctl"><div class="seg" id="cIv" role="group" aria-label="Candle interval">${IVS.map(([m, l]) => `<button type="button" data-iv="${m}"${(m === 240 || m < 1) && S.mode === "replay" ? ` disabled title="${m < 1 ? "1-second" : "4-hour"} candles need live data"` : ""}>${l}</button>`).join("")}</div>${lw ? "" : `<div class="seg" id="cSpan"><button type="button" data-s="0">All</button></div>`}
         <div class="seg" id="cStyle" role="group" aria-label="Chart type">${(lw ? STYLES : STYLES.filter(x => x[0] === "candles" || x[0] === "line")).map(([k, l]) => `<button type="button" data-y="${k}">${l}</button>`).join("")}</div>
         <div class="seg" id="cUnit" role="group" aria-label="Chart values"><button type="button" data-u="price">Price</button><button type="button" data-u="mc">Mcap</button></div>
         ${lw ? `<div class="cind"><button class="btn btn-quiet btn-xs" type="button" id="cIndBtn" aria-expanded="false" aria-controls="cIndMenu">Indicators</button><div class="cmenu" id="cIndMenu" role="dialog" aria-label="Indicators" hidden></div></div>` : ""}</div></div>
@@ -97,7 +97,8 @@ function buildCoin(m) {
     <div><div class="sec-h"><div class="t"><h2>Members</h2></div></div><div class="members" id="cMembers"></div></div>
   </div></div>`;
   if (coinUI.iv === 240 && S.mode === "replay") coinUI.iv = 60;
-  qsa("#cIv button").forEach(b => { b.setAttribute("aria-pressed", String(+b.dataset.iv === coinUI.iv)); b.onclick = () => { coinUI.iv = +b.dataset.iv; store.set("iv", coinUI.iv); coinUI.span = 90; coinUI.pan = 0; qsa("#cIv button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); if ($("cSpan")) $("cSpan").firstChild.setAttribute("aria-pressed", "false"); dirty.coin = true; if (S.mode !== "replay") queueHistory(); if (CH.chart) chartSync(true); }; });
+  if (coinUI.iv < 1 && S.mode === "replay") coinUI.iv = 1;
+  qsa("#cIv button").forEach(b => { b.setAttribute("aria-pressed", String(+b.dataset.iv === coinUI.iv)); b.onclick = () => { coinUI.iv = +b.dataset.iv; store.set("iv", coinUI.iv); if (CH.chart) CH.chart.applyOptions({ timeScale: { secondsVisible: coinUI.iv < 1 }, localization: { timeFormatter: crossTime } }); coinUI.span = 90; coinUI.pan = 0; qsa("#cIv button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); if ($("cSpan")) $("cSpan").firstChild.setAttribute("aria-pressed", "false"); dirty.coin = true; if (S.mode !== "replay") queueHistory(); if (CH.chart) chartSync(true); }; });
   qsa("#cUnit button").forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.u === coinUI.unit)); b.onclick = () => { coinUI.unit = b.dataset.u; store.set("unit", coinUI.unit); qsa("#cUnit button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); dirty.coin = true; updateCoin(); if (CH.chart) chartSync(true); }; });
   qsa("#cStyle button").forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.y === coinUI.style)); b.onclick = () => { coinUI.style = b.dataset.y; store.set("cstyle", coinUI.style); qsa("#cStyle button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); dirty.coin = true; if (CH.chart) chartSync(true); }; });
   $("cCopy").onclick = () => copyText(tok.m, $("cCopy"), $("cMint"));
@@ -202,7 +203,20 @@ function hitTask(m, k) {
 }
 
 /* ---------- coin chart: real candles, 1m data aggregated to the chosen interval ---------- */
+// 1-second candles come straight from the live ticks (one per second, with that second's high and low); each opens at the last close
+function candlesSec(tok, tEnd) {
+  const out = [];
+  for (const k of tok.ticks) {
+    if (k.t > tEnd) break;
+    const b = Math.floor(k.t / 1000) * 1000, last = out[out.length - 1];
+    if (last && last.t === b) { last.h = Math.max(last.h, k.h == null ? k.p : k.h, k.p); last.l = Math.min(last.l, k.l == null ? k.p : k.l, k.p); last.c = k.p; continue; }
+    const o = last ? last.c : k.p;
+    out.push({ t: b, o, h: Math.max(o, k.p, k.h == null ? k.p : k.h), l: Math.min(o, k.p, k.l == null ? k.p : k.l), c: k.p, v: 0, open: b + 1000 > tEnd });
+  }
+  return out.length > 3000 ? out.slice(out.length - 3000) : out;
+}
 function candlesIv(tok, tEnd, iv) {
+  if (iv < 1) return candlesSec(tok, tEnd);
   const one = candlesTo(tok, tEnd, 3000);
   let src = one;
   if (iv >= 5 && tok.C5.length) { const first = one.length ? one[0].t : Infinity; src = tok.C5.filter(c => c.t < first && c.t <= tEnd).concat(one); }
