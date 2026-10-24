@@ -93,8 +93,9 @@ export function applyPairs(arr, t) {
     const pass = tok.liq >= GATE.liq && (tok.mc || 0) / Math.max(1, tok.liq) <= GATE.mcLiq && tok.vol[3] * adj / (tok.mc || 1) >= GATE.turn && tok.tx[3] * adj >= GATE.trades && tok.tx[3] >= GATE.tx24;
     if (tok.lastSeen && tok.gate && !tok.rugAt && (tok.ch[0] <= -80 || tok.liq < GATE.liq * 0.6)) { tok.rugAt = t; tok.rugWhy = tok.ch[0] <= -80 ? "price fell " + Math.round(-tok.ch[0]) + "% in 5 min" : "liquidity fell to " + fmtUsd(tok.liq); log("info", "rug filter: " + tok.s + " " + tok.rugWhy); }
     tok.gate = pass || (tok.gate && !!tok.lastSeen && tok.liq >= GATE.liq);
-    // DEX Screener prices are the backbone; the RPC stream adds ticks between them
-    pushTick(tok, t, px);
+    // DEX Screener prices are the backbone, except for coins the RPC stream watches: those pools report every swap,
+    // and DEX Screener's slightly older price in between would make the line zigzag
+    if (!(RPC.live && RPC.watched.has(m) && tok.rpcAt)) pushTick(tok, t, px);
     tok.lastSeen = t;
     if (wasGate !== tok.gate || wasRug !== tok.rugAt) changed.push(tok);
   }
