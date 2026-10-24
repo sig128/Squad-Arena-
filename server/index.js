@@ -13,7 +13,7 @@ import { initMoney, moneyInfo, scanDeposits, recoverWithdrawals, MONEY } from ".
 import { startReplay } from "./lib/replay.js";
 import { KOL, loadKols, kolStep, kolCount, kolWho, kolPrune } from "./lib/kol.js";
 import { BLOCKED } from "./lib/game.js";
-import { MAX_AGE } from "./lib/config.js";
+import { MAX_AGE, GATE } from "./lib/config.js";
 
 const STARTED = now();
 const r6 = v => v == null ? null : +(+v).toPrecision(7);
@@ -81,6 +81,7 @@ function trendStep() {
     if (tok.born && t - tok.born > MAX_AGE) continue;
     if (tok.rugAt && tok.rugAt <= t) continue;
     if ((tok.liq || 0) < 5000 || !tok.lastSeen || t - tok.lastSeen > 30 * 60e3) continue;
+    if ((tok.mc || 0) / Math.max(1, tok.liq) > GATE.mcLiq) continue;                       // a market cap the pool can't back: fake-cap clones
     const [v5, v1, v6, v24] = tok.vol || [0, 0, 0, 0], k = kolCount(tok.m);
     let s = (v5 * 6 + v1 * 4 + v6 * 0.6 + v24 * 0.15) * (1 + 0.12 * Math.min(k, 25));
     if ((tok.ch || [])[1] < -40) s *= 0.5;                                                   // falling apart this hour
