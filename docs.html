@@ -1,0 +1,1023 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Squad Arena docs</title>
+<meta name="description" content="How Squad Arena works: the board, rounds, the four markets, pools and payouts, squads, the SOL wallet and how results are kept fair.">
+<link rel="canonical" href="https://www.squadarena.fun/docs">
+<meta name="theme-color" content="#0b0b0d">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Squad Arena">
+<meta property="og:url" content="https://www.squadarena.fun/docs">
+<meta property="og:title" content="Squad Arena docs">
+<meta property="og:description" content="The board, rounds, the four markets, pools and payouts, squads and the SOL wallet, explained in full.">
+<meta property="og:image" content="https://www.squadarena.fun/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Squad Arena docs">
+<meta name="twitter:description" content="The board, rounds, the four markets, pools and payouts, squads and the SOL wallet, explained in full.">
+<meta name="twitter:image" content="https://www.squadarena.fun/og.png">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Michroma&display=swap">
+<script src="/config.js"></script>
+<style>
+:root{
+  --bg:#fafaf9; --bg2:#f1f1ee; --panel:#ffffff; --ink:#0f0f10; --ink2:#2b2b2f; --dim:#66666c; --faint:#a4a4a9; --rule:#e5e5e2; --rule2:#cfcfcb;
+  --up:#0a8a4a; --down:#c92a2a; --tint-up:rgba(10,138,74,.08); --tint-down:rgba(201,42,42,.07); --win:rgba(15,15,16,.06);
+  --c0:#2a78d6;--c1:#eb6834;--c2:#1baf7a;--c3:#eda100;--c4:#e87ba4;--c5:#008300;--c6:#6250d6;--c7:#be222d;--c8:#1aa1c9;--c9:#8a4b24;--c10:#b082f7;--c11:#97176e;--c12:#868604;--c13:#2d54a0;--c14:#007176;
+  --sans:"Geist",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"Geist Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  --disp:"Michroma","Geist",ui-sans-serif,sans-serif;
+  --top:56px; color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0b0d; --bg2:#121215; --panel:#0f0f12; --ink:#ececee; --ink2:#c9c9ce; --dim:#8d8d94; --faint:#55555c; --rule:#1d1d21; --rule2:#2e2e33;
+  --up:#3ccf86; --down:#ff5c5c; --tint-up:rgba(60,207,134,.09); --tint-down:rgba(255,92,92,.08); --win:rgba(236,236,238,.06);
+  --c0:#3987e5;--c1:#d95926;--c2:#199e70;--c3:#c98500;--c4:#d55181;--c5:#008300;--c6:#9085e9;--c7:#bd1f3d;--c8:#32a0c5;--c9:#a26239;--c10:#c45bd6;--c11:#a8336f;--c12:#8b8c14;--c13:#5468c9;--c14:#017b80;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0b0b0d; --bg2:#121215; --panel:#0f0f12; --ink:#ececee; --ink2:#c9c9ce; --dim:#8d8d94; --faint:#55555c; --rule:#1d1d21; --rule2:#2e2e33;
+  --up:#3ccf86; --down:#ff5c5c; --tint-up:rgba(60,207,134,.09); --tint-down:rgba(255,92,92,.08); --win:rgba(236,236,238,.06);
+  --c0:#3987e5;--c1:#d95926;--c2:#199e70;--c3:#c98500;--c4:#d55181;--c5:#008300;--c6:#9085e9;--c7:#bd1f3d;--c8:#32a0c5;--c9:#a26239;--c10:#c45bd6;--c11:#a8336f;--c12:#8b8c14;--c13:#5468c9;--c14:#017b80;
+  color-scheme:dark}
+
+*{box-sizing:border-box}
+html{scroll-padding-top:calc(var(--top) + 24px);-webkit-text-size-adjust:100%}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font:16px/1.65 var(--sans);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+a{color:inherit;text-decoration-color:var(--rule2);text-underline-offset:3px}
+a:hover{text-decoration-color:var(--ink)}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radius:2px}
+code,.mono{font-family:var(--mono);font-size:.875em;font-variant-numeric:tabular-nums}
+p code,li code,td code{background:var(--bg2);border:1px solid var(--rule);padding:1px 5px;border-radius:4px;white-space:nowrap}
+.up{color:var(--up)} .down{color:var(--down)} .dim{color:var(--dim)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------- top bar ---------- */
+.top{position:sticky;top:0;z-index:30;height:var(--top);background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:saturate(1.4) blur(10px);-webkit-backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--rule)}
+.top-in{height:100%;max-width:1280px;margin:0 auto;padding:0 max(16px,env(safe-area-inset-left));display:flex;align-items:center;gap:18px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+.brand svg{width:22px;height:22px;display:block}
+.brand .word{font-family:var(--disp);font-size:11.5px;letter-spacing:.2em;white-space:nowrap}
+.top .sep{width:1px;height:18px;background:var(--rule2)}
+.top .here{font-size:14px;color:var(--dim)}
+.top .sp{flex:1}
+.btn{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 14px;border:1px solid var(--ink);border-radius:999px;font-size:14px;font-weight:500;text-decoration:none;white-space:nowrap}
+.btn-solid{background:var(--ink);color:var(--bg)}
+.btn-solid:hover{opacity:.88}
+.btn-quiet{border-color:var(--rule2)}
+.btn-quiet:hover{border-color:var(--ink)}
+.toc-btn{display:none}
+.btn .short{display:none}
+
+/* ---------- layout ---------- */
+.layout{max-width:1280px;margin:0 auto;padding:0 max(16px,env(safe-area-inset-left)) 0 max(16px,env(safe-area-inset-left));display:grid;grid-template-columns:232px minmax(0,1fr);gap:64px}
+.side{position:sticky;top:var(--top);align-self:start;height:calc(100vh - var(--top));overflow-y:auto;padding:36px 0 40px;scrollbar-width:thin}
+.side .grp{font-size:13px;color:var(--dim);margin:22px 0 6px}
+.side .grp:first-child{margin-top:0}
+.side a{display:block;font-size:14.5px;line-height:1.35;padding:5px 0 5px 14px;border-left:1px solid var(--rule);text-decoration:none;color:var(--ink2)}
+.side a:hover{color:var(--ink);border-left-color:var(--rule2)}
+.side a[aria-current="true"]{color:var(--ink);border-left:2px solid var(--ink);padding-left:13px;font-weight:500}
+main{min-width:0;padding:56px 0 140px}
+.prose{max-width:680px}
+.wide{max-width:960px}
+
+/* ---------- type ---------- */
+h1{font-family:var(--disp);font-weight:400;font-size:clamp(30px,4.6vw,50px);line-height:1.12;letter-spacing:.01em;margin:0 0 20px}
+.lede{font-size:19px;line-height:1.6;color:var(--ink2);margin:0 0 36px;max-width:640px}
+h2{font-family:var(--disp);font-weight:400;font-size:21px;line-height:1.35;letter-spacing:.02em;margin:0 0 18px}
+section.doc{padding-top:72px;margin-top:72px;border-top:1px solid var(--rule)}
+section.doc.first{margin-top:48px}
+h3{font-size:17.5px;font-weight:600;line-height:1.4;margin:40px 0 8px;letter-spacing:-.005em}
+p{margin:0 0 16px}
+ul,ol{margin:0 0 18px;padding-left:22px}
+li{margin:4px 0}
+li::marker{color:var(--dim)}
+.k{font-weight:600}
+strong{font-weight:600}
+
+/* ---------- blocks ---------- */
+.formula{font-family:var(--mono);font-size:14.5px;line-height:1.7;background:var(--bg2);border:1px solid var(--rule);border-radius:8px;padding:14px 18px;margin:18px 0 22px;overflow-wrap:anywhere}
+.formula .c{color:var(--dim)}
+.note{border-left:2px solid var(--ink);padding:2px 0 2px 16px;margin:22px 0;color:var(--ink2)}
+.note p:last-child{margin:0}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border:1px solid var(--rule);border-radius:10px;margin:8px 0 28px;overflow:hidden}
+.facts div{padding:14px 16px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);margin:0 -1px -1px 0}
+.facts b{display:block;font-family:var(--mono);font-weight:500;font-size:20px;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.facts span{font-size:13.5px;color:var(--dim)}
+
+table{width:100%;border-collapse:collapse;margin:14px 0 26px;font-size:14.5px}
+th{font-weight:500;color:var(--dim);text-align:left;font-size:13px;padding:0 12px 8px 0;border-bottom:1px solid var(--rule2)}
+td{padding:10px 12px 10px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+td.n,th.n{font-family:var(--mono);font-size:13.5px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+td.m{font-family:var(--mono);font-size:13.5px;white-space:nowrap}
+.tbl{overflow-x:auto;margin:0 0 6px}
+.tbl table{min-width:520px}
+
+figure{margin:26px 0 30px}
+figure .fig{border:1px solid var(--rule);border-radius:12px;background:var(--panel);padding:18px 18px 12px;overflow-x:auto}
+figure svg{display:block;width:100%;height:auto;min-width:620px}
+figcaption{font-size:14px;color:var(--dim);margin-top:10px;max-width:680px}
+svg text{font-family:var(--mono);fill:var(--dim)}
+svg .ink{fill:var(--ink)} svg .sink{stroke:var(--ink)} svg .sdim{stroke:var(--dim)} svg .srule{stroke:var(--rule2)} svg .sfaint{stroke:var(--rule)}
+
+.steps{counter-reset:s;list-style:none;padding:0;margin:20px 0 26px}
+.steps li{counter-increment:s;position:relative;padding:0 0 18px 44px;margin:0}
+.steps li::before{content:counter(s);position:absolute;left:0;top:1px;width:26px;height:26px;border:1px solid var(--ink);border-radius:50%;display:grid;place-items:center;font:500 13px/1 var(--mono)}
+.steps li::after{content:"";position:absolute;left:13px;top:32px;bottom:4px;width:1px;background:var(--rule2)}
+.steps li:last-child::after{display:none}
+.steps b{display:block;font-weight:600}
+
+details{border-bottom:1px solid var(--rule)}
+details:first-of-type{border-top:1px solid var(--rule)}
+summary{list-style:none;cursor:pointer;padding:14px 32px 14px 0;font-weight:500;position:relative}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"";position:absolute;right:6px;top:22px;width:8px;height:8px;border-right:1.5px solid var(--dim);border-bottom:1.5px solid var(--dim);transform:rotate(45deg);transition:transform .2s}
+details[open] summary::after{transform:rotate(-135deg);top:26px}
+details > div{padding:0 0 16px;color:var(--ink2)}
+
+/* ---------- live round (hero) ---------- */
+.live{border:1px solid var(--rule2);border-radius:14px;background:var(--panel);margin:0 0 18px;overflow:hidden}
+.live-head{display:flex;flex-wrap:wrap;align-items:stretch;border-bottom:1px solid var(--rule)}
+.live-head .ttl{padding:14px 18px;display:flex;flex-direction:column;justify-content:center;gap:2px;margin-right:auto}
+.live-head .ttl b{font-family:var(--disp);font-weight:400;font-size:13px;letter-spacing:.08em}
+.live-head .ttl span{font-size:13.5px;color:var(--dim)}
+.live-head .st{padding:12px 18px;border-left:1px solid var(--rule);min-width:120px}
+.live-head .st span{display:block;font-size:12.5px;color:var(--dim)}
+.live-head .st b{display:block;font-family:var(--mono);font-weight:500;font-size:16.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--up);margin-right:7px;vertical-align:1px;box-shadow:0 0 0 0 var(--up);animation:pulse 2.4s infinite}
+.dot.off{background:var(--faint);animation:none}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--up) 55%,transparent)}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.live-body{display:grid;grid-template-columns:minmax(0,1fr) 230px}
+#heroChart{padding:10px 0 4px 6px;min-height:320px}
+#heroChart svg{display:block;width:100%;height:320px}
+#heroChart svg text{font-size:11px}
+.stand{border-left:1px solid var(--rule);padding:10px 0;max-height:336px;overflow-y:auto;scrollbar-width:thin}
+.stand .row{display:grid;grid-template-columns:22px 26px 1fr auto;align-items:center;gap:6px;padding:4px 16px 4px 12px;font-size:13.5px}
+.stand .row .r{font-family:var(--mono);font-size:12px;color:var(--faint);text-align:right}
+.stand .row .s{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.stand .row .v{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums}
+.stand .row.out{opacity:.5}
+.stand .row.out .s::after{content:attr(data-out);font-weight:400;color:var(--dim);margin-left:6px;font-size:12px}
+.av{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;overflow:hidden;background:var(--bg2);box-shadow:0 0 0 1.5px var(--ring,var(--faint));font:500 10px/1 var(--mono);color:var(--dim)}
+.av img{width:100%;height:100%;object-fit:cover;display:block}
+.live-foot{display:flex;flex-wrap:wrap;gap:6px 18px;padding:11px 18px;border-top:1px solid var(--rule);font-size:13px;color:var(--dim)}
+.live-foot a{color:var(--dim)}
+.live-foot i{display:inline-block;vertical-align:middle;margin-right:6px}
+.lg-win{width:14px;height:10px;background:var(--win);border:1px solid var(--rule2)}
+.lg-close{width:0;height:12px;border-left:1.5px solid var(--ink)}
+.lg-cp{width:7px;height:7px;border:1px solid var(--dim);background:var(--panel)}
+.lg-x{width:10px;height:10px;position:relative}
+.lg-x::before,.lg-x::after{content:"";position:absolute;left:4px;top:-1px;width:1.5px;height:12px;background:var(--dim);transform:rotate(45deg)}
+.lg-x::after{transform:rotate(-45deg)}
+
+/* ---------- funnel ---------- */
+.funnel{display:grid;gap:10px;margin:22px 0 10px}
+.funnel .f{display:grid;grid-template-columns:190px 1fr 56px;align-items:center;gap:14px;font-size:14px}
+.funnel .bar{height:12px;border-radius:3px;background:var(--bg2);overflow:hidden}
+.funnel .bar i{display:block;height:100%;background:var(--ink);border-radius:3px;transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.funnel .f:nth-child(2) .bar i{background:var(--ink2)}
+.funnel .f:nth-child(n+3) .bar i{background:var(--dim)}
+.funnel .n{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}
+
+/* ---------- calculator ---------- */
+.calc{border:1px solid var(--rule2);border-radius:14px;background:var(--panel);display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);margin:24px 0 30px;overflow:hidden}
+.calc .in{padding:20px 22px;display:grid;gap:14px;align-content:start}
+.calc .out{padding:20px 22px;border-left:1px solid var(--rule);background:var(--bg2);display:grid;gap:12px;align-content:start}
+.calc label{display:grid;gap:6px;font-size:13.5px;color:var(--dim)}
+.calc label span{display:flex;justify-content:space-between;gap:10px}
+.calc label output{font-family:var(--mono);color:var(--ink)}
+.calc input[type=number]{font:500 15px var(--mono);color:var(--ink);background:var(--bg);border:1px solid var(--rule2);border-radius:8px;height:38px;padding:0 12px;width:100%}
+.calc input[type=number]:focus{outline:none;border-color:var(--ink)}
+.calc input[type=range]{width:100%;accent-color:var(--ink)}
+.seg{display:inline-flex;border:1px solid var(--rule2);border-radius:999px;padding:2px;justify-self:start}
+.seg button{font-size:13.5px;padding:5px 14px;border-radius:999px;color:var(--dim)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.calc .o{display:flex;justify-content:space-between;gap:10px;font-size:14px;color:var(--dim);border-bottom:1px solid var(--rule);padding-bottom:10px}
+.calc .o b{font-family:var(--mono);font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums}
+.calc .o.big{border:0;padding:6px 0 0;align-items:baseline}
+.calc .o.big b{font-size:28px;letter-spacing:-.02em}
+.calc .fine{font-size:12.5px;color:var(--dim);margin:0}
+
+/* ---------- arena wallet ---------- */
+.addr{display:flex;flex-wrap:wrap;align-items:center;gap:10px;border:1px solid var(--rule2);border-radius:10px;padding:12px 14px;margin:16px 0 22px;background:var(--panel)}
+.addr code{font-size:13.5px;word-break:break-all;background:none;border:0;padding:0;white-space:normal}
+.addr .lbl{font-size:13px;color:var(--dim);width:100%}
+
+/* ---------- footer ---------- */
+.foot{border-top:1px solid var(--rule);margin-top:96px;padding-top:28px;font-size:14px;color:var(--dim);display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center}
+.foot .sp{flex:1}
+
+/* ---------- small screens ---------- */
+@media (max-width:1020px){
+  .layout{grid-template-columns:1fr;gap:0}
+  .side{display:none}
+  .toc-btn{display:inline-flex}
+  .live-body{grid-template-columns:1fr}
+  .stand{border-left:0;border-top:1px solid var(--rule);max-height:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
+}
+@media (max-width:640px){
+  body{font-size:15.5px}
+  main{padding-top:36px}
+  .lede{font-size:17px}
+  .top .here,.top .sep{display:none}
+  .top-in{gap:10px}
+  .btn{padding:0 12px}
+  .btn .long{display:none} .btn .short{display:inline}
+  .live-head{display:grid;grid-template-columns:1fr 1fr}
+  .live-head .ttl{grid-column:1/-1}
+  .live-head .st{min-width:0;border-left:0;border-top:1px solid var(--rule)}
+  .live-head .st:nth-child(odd){border-left:1px solid var(--rule)}
+  #heroChart{min-height:250px}
+  #heroChart svg{height:250px}
+  .calc{grid-template-columns:1fr}
+  .calc .out{border-left:0;border-top:1px solid var(--rule)}
+  .funnel .f{grid-template-columns:118px 1fr 44px;font-size:13px}
+  section.doc{padding-top:52px;margin-top:52px}
+}
+/* contents sheet on small screens */
+.sheet{position:fixed;inset:0;z-index:50;background:color-mix(in srgb,var(--bg) 60%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;justify-content:flex-end}
+.sheet[hidden]{display:none}
+.sheet .pane{width:min(340px,88vw);height:100%;background:var(--bg);border-left:1px solid var(--rule);padding:18px 22px 40px;overflow-y:auto}
+.sheet .pane .side{display:block;position:static;height:auto;padding:12px 0 0}
+.sheet .x{float:right;font-size:26px;line-height:1;color:var(--dim);padding:2px 6px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <a class="brand" href="/" aria-label="Squad Arena, back to the arena">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="square"><polyline points="5,11.5 16,4 27,11.5"/><polyline points="5,19 16,11.5 27,19"/><polyline points="5,26.5 16,19 27,26.5"/></g></svg>
+      <span class="word">SQUAD ARENA</span>
+    </a>
+    <span class="sep" aria-hidden="true"></span>
+    <span class="here">Docs</span>
+    <span class="sp"></span>
+    <button class="btn btn-quiet toc-btn" type="button" id="tocBtn" aria-expanded="false" aria-controls="sheet">Contents</button>
+    <a class="btn btn-solid" href="/"><span class="long">Open the arena</span><span class="short">Arena</span></a>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="side" id="side" aria-label="Contents">
+    <div class="grp">Start here</div>
+    <a href="#overview">What Squad Arena is</a>
+    <a href="#quick-start">Quick start</a>
+    <div class="grp">The game</div>
+    <a href="#board">The board</a>
+    <a href="#rounds">Rounds</a>
+    <a href="#scoring">How returns are measured</a>
+    <a href="#top-gainer">Top gainer</a>
+    <a href="#last-coin-standing">Last coin standing</a>
+    <a href="#hype-delta">Hype delta</a>
+    <a href="#pools">Pools and payouts</a>
+    <a href="#refunds">Refunds</a>
+    <div class="grp">Squads</div>
+    <a href="#squads">Joining a squad</a>
+    <a href="#tasks">Tasks and proofs</a>
+    <a href="#chat">Chat</a>
+    <div class="grp">Your account</div>
+    <a href="#login">Logging in</a>
+    <a href="#practice">Practice credits</a>
+    <a href="#sol-wallet">The SOL wallet</a>
+    <div class="grp">Trust</div>
+    <a href="#fairness">How results stay fair</a>
+    <a href="#data">Where the data comes from</a>
+    <a href="#risks">Risks</a>
+    <a href="#faq">Questions</a>
+  </nav>
+
+  <main id="main">
+    <div class="prose">
+      <h1>How the arena works</h1>
+      <p class="lede">Fresh pump.fun coins race each other in rounds of 15 minutes, 30 minutes, an hour and a day. You back the coin you think wins, and everyone who backed the winner splits the pool. Below is the round that's running right now, and everything that decides it.</p>
+    </div>
+
+    <div class="live wide" id="live" aria-labelledby="liveTtl">
+      <div class="live-head">
+        <div class="ttl"><b id="liveTtl">15-minute round</b><span id="lvWhen"><i class="dot off" id="lvDot"></i>Connecting to the arena</span></div>
+        <div class="st"><span>Time left</span><b id="lvLeft">--:--</b></div>
+        <div class="st"><span id="lvBetsL">Top gainer bets</span><b id="lvBets">--</b></div>
+        <div class="st"><span>Next checkpoint</span><b id="lvCp">--</b></div>
+        <div class="st"><span>Pools</span><b id="lvPool">--</b></div>
+      </div>
+      <div class="live-body">
+        <div id="heroChart" role="img" aria-label="Each coin's price change since the round opened"></div>
+        <div class="stand" id="stand" aria-label="Standings"></div>
+      </div>
+      <div class="live-foot">
+        <span><i class="lg-win"></i>Opening and closing windows (<a href="#scoring">scoring</a>)</span>
+        <span><i class="lg-close"></i>Bets close at 40% (<a href="#rounds">rounds</a>)</span>
+        <span><i class="lg-cp"></i>Checkpoints C1 to C5 (<a href="#last-coin-standing">bracket</a>)</span>
+        <span><i class="lg-x"></i>Cut from Last coin standing</span>
+      </div>
+    </div>
+
+    <!-- ================= overview ================= -->
+    <section class="doc first prose" id="overview">
+      <h2>What Squad Arena is</h2>
+      <p>Squad Arena turns the newest pump.fun coins into a running competition. A server watches every coin launched in the last 72 hours, keeps the ones with real trading, and lines up the top 15 by market cap. Those 15 are the board.</p>
+      <p>Every round, the board races. You don't buy any coin. You put a stake behind one in a market, such as "which coin gains the most this round", and your stake joins a shared pool. When the round ends, the pool goes to the people who backed the winner, in proportion to what they put in.</p>
+      <p>Backing a coin also makes you part of its squad: the people backing the same coin, who can work together on tasks like memes, lore threads and explainers, and talk in the squad's own chat.</p>
+      <div class="facts" id="facts">
+        <div><b>4</b><span>round lengths, aligned to the clock</span></div>
+        <div><b>4</b><span>markets in every round</span></div>
+        <div><b id="fBoard">15</b><span>coins on the board right now</span></div>
+        <div><b data-cfg="rake">3%</b><span>rake, the only fee</span></div>
+      </div>
+    </section>
+
+    <!-- ================= quick start ================= -->
+    <section class="doc prose" id="quick-start">
+      <h2>Quick start</h2>
+      <ol class="steps">
+        <li><b>Log in</b>Press Log in at the top right. Google creates a Solana wallet for you on the spot. If you already use Phantom, Solflare or Backpack, connect it instead.</li>
+        <li><b>Get your practice credits</b>Every account starts with <span data-cfg="startBalance">25</span> tSOL. They have no value and can't be withdrawn, so you can learn the game without risking anything.</li>
+        <li><b>Pick a round and a coin</b>Choose 15M, 30M, 1H or 24H at the top, then press Back next to a coin. Pick a market, set your stake and check the payout estimate before you place the bet.</li>
+        <li><b>Watch the race</b>The race chart shows every coin's change since the round opened. The round settles 5 seconds after it ends, and winnings land in your balance straight away.</li>
+        <li><b>Find your squad</b>Open the coin's page to see its squad: who's in it, the tasks it's working on, and its chat.</li>
+      </ol>
+      <p>When you're ready for real stakes, switch the account to SOL and deposit from your wallet. The <a href="#sol-wallet">SOL wallet</a> section covers how money moves.</p>
+    </section>
+
+    <!-- ================= board ================= -->
+    <section class="doc prose" id="board">
+      <h2>The board</h2>
+      <p>The board is the list of coins that race. A coin has to pass every one of these tests to get on it:</p>
+      <div class="tbl"><table>
+        <thead><tr><th>Test</th><th>Rule</th><th>Why it's there</th></tr></thead>
+        <tbody>
+          <tr><td>Age</td><td>Launched in the last 72 hours</td><td>The arena is for fresh coins</td></tr>
+          <tr><td>Liquidity</td><td>At least <span class="mono">$25,000</span> in its pool</td><td>A thin pool is cheap to push around</td></tr>
+          <tr><td>Market cap vs liquidity</td><td>No more than <span class="mono">60×</span> its liquidity</td><td>Catches clones with a fake market cap</td></tr>
+          <tr><td>Turnover</td><td>Daily volume of at least <span class="mono">25%</span> of market cap</td><td>The coin is actually traded</td></tr>
+          <tr><td>Trades</td><td>At least <span class="mono">2,000</span> a day and <span class="mono">300</span> in the last 24 hours</td><td>Many traders, not a handful of wallets</td></tr>
+        </tbody>
+      </table></div>
+      <p>Coins younger than a day get their volume and trade count scaled up to a full day. A coin that's 6 hours old with 600 trades counts as 2,400 a day. Once a coin is on the board, it only has to keep its liquidity above <span class="mono">$25,000</span> to stay eligible.</p>
+      <h3>Top 15 and on deck</h3>
+      <p>Coins that pass are ranked by market cap, which is the live price times the coin's supply. The top 15 are the board. The next 10 are <span class="k">on deck</span>: they race in Top gainer and move onto the board the moment they overtake a board coin. When fewer than 16 coins pass the tests, nothing is left over for on deck, and that list stays empty.</p>
+      <div class="funnel" id="funnel" aria-label="Coins passing the board tests right now">
+        <div class="f"><span>Coins being watched</span><div class="bar"><i style="width:100%"></i></div><span class="n" id="fnTracked">--</span></div>
+        <div class="f"><span>Pass every test</span><div class="bar"><i style="width:0"></i></div><span class="n" id="fnPass">--</span></div>
+        <div class="f"><span>On the board</span><div class="bar"><i style="width:0"></i></div><span class="n" id="fnTop">--</span></div>
+        <div class="f"><span>On deck</span><div class="bar"><i style="width:0"></i></div><span class="n" id="fnDeck">--</span></div>
+      </div>
+      <p class="dim" style="font-size:14px">Live from the arena's server. Most coins that fail do so on liquidity: they've lost their pool or never built one.</p>
+      <h3>Leaving the board</h3>
+      <p>A coin leaves when it turns 72 hours old, when another coin overtakes it, or when the <span class="k">rug filter</span> catches it. The filter removes a coin straight away if its price falls 80% or more within 5 minutes, or its liquidity drops below <span class="mono">$15,000</span>. Every open bet on a coin the filter removes is refunded.</p>
+    </section>
+
+    <!-- ================= rounds ================= -->
+    <section class="doc prose" id="rounds">
+      <h2>Rounds</h2>
+      <p>Four round lengths run side by side, all lined up with the clock: 15-minute rounds start on the quarter hour, 30-minute rounds on the hour and half hour, hourly rounds on the hour, and daily rounds at midnight UTC. A new round starts the moment the last one ends.</p>
+      <p>The <span class="k">field</span>, the set of coins that race, is fixed when a round opens: the board and on-deck list at that moment. Coins that join the board later can still enter Last coin standing at its next checkpoint, but they don't race in the other markets until the next round.</p>
+    </section>
+    <figure class="wide">
+      <div class="fig" id="figTimeline"></div>
+      <figcaption>One round from start to end. Top gainer and Hype delta take bets for the first 40%. Last coin standing takes bets on surviving coins until the closing window. Five checkpoints split the round into sixths.</figcaption>
+    </figure>
+    <div class="prose">
+      <div class="tbl"><table>
+        <thead><tr><th>Round</th><th class="n">Bets close</th><th class="n">Checkpoint every</th><th class="n">Measuring window</th></tr></thead>
+        <tbody>
+          <tr><td>15 minutes</td><td class="n">after 6:00</td><td class="n">2:30</td><td class="n">27 s</td></tr>
+          <tr><td>30 minutes</td><td class="n">after 12:00</td><td class="n">5:00</td><td class="n">54 s</td></tr>
+          <tr><td>1 hour</td><td class="n">after 24:00</td><td class="n">10:00</td><td class="n">1 min 48 s</td></tr>
+          <tr><td>24 hours</td><td class="n">after 9 h 36 min</td><td class="n">4 h</td><td class="n">43 min 12 s</td></tr>
+        </tbody>
+      </table></div>
+      <p>"Bets close" applies to Top gainer and both Hype delta markets. Last coin standing stays open on surviving coins until the closing window starts.</p>
+    </div>
+
+    <!-- ================= scoring ================= -->
+    <section class="doc prose" id="scoring">
+      <h2>How returns are measured</h2>
+      <p>Every market starts from the same number: each coin's <span class="k">return</span> over the round. Rather than comparing two single prices, the arena compares two averages. One covers the opening window, the first 3% of the round. The other covers the closing window, the last 3%. Each average is time-weighted, so a price that held for ten seconds counts ten times as much as one that lasted a second.</p>
+      <div class="formula">R = average price in the closing window ÷ average price in the opening window − 1</div>
+      <p>That means a single trade in the final second can't swing a result. To move a coin's score, its price has to hold through the window.</p>
+    </section>
+    <figure class="wide">
+      <div class="fig" id="figTwap"></div>
+      <figcaption id="twapCap">The same price path, scored. The flat lines are the two averages; the return compares them, not the first and last trade.</figcaption>
+    </figure>
+    <div class="prose">
+      <p>Prices come from each coin's own pool on the Solana chain, read on every swap, so everyone in the arena sees the same price at the same moment. A coin that had no price yet when the round opened is measured from its first price. Once a coin's opening window has passed, its opening average is fixed for the rest of the round.</p>
+    </div>
+
+    <!-- ================= top gainer ================= -->
+    <section class="doc prose" id="top-gainer">
+      <h2>Top gainer</h2>
+      <p>The coin with the highest return wins. It's the simplest market and the only one where on-deck coins race too, so up to 25 coins can be in the field.</p>
+      <ul>
+        <li>Bets close at 40% of the round.</li>
+        <li>A coin the rug filter removes during the round can't win. Its bets are refunded.</li>
+        <li>The standings you see during the round use the same return, measured up to that moment.</li>
+      </ul>
+    </section>
+
+    <!-- ================= last coin standing ================= -->
+    <section class="doc prose" id="last-coin-standing">
+      <h2>Last coin standing</h2>
+      <p>The board's 15 coins enter a bracket. At each checkpoint, the coins with the lowest return so far are cut. The number cut is spread so that exactly two coins are left after the fifth checkpoint. Those two duel to the end, and the one with the better return at the close wins.</p>
+      <p>With a full field of 15, the cuts go 3, 3, 3, 2, 2. A smaller field cuts fewer coins per checkpoint but still ends in a duel.</p>
+    </section>
+    <figure class="wide">
+      <div class="fig" id="figBracket"></div>
+      <figcaption>An example bracket. Each line is a coin, ranked by its return at every checkpoint. A cross marks where a coin was cut.</figcaption>
+    </figure>
+    <div class="prose">
+      <h3>Betting on survivors</h3>
+      <p>Unlike the other markets, Last coin standing takes bets for almost the whole round, on any coin still in the bracket. Bets close when the closing window starts. A later bet knows more, so it counts for less. Every bet in every market carries a <span class="k">weight</span> set by how much of the round had passed when you placed it:</p>
+      <div class="formula">weight = 1 ÷ (1 + 2 × share of the round passed)</div>
+    </div>
+    <figure class="wide">
+      <div class="fig" id="figWeight"></div>
+      <figcaption>A bet at the open counts in full. At 40%, when Top gainer and Hype delta close, a bet counts for 0.556 of its stake. In the final duel it counts for about a third.</figcaption>
+    </figure>
+    <div class="prose">
+      <h3>Wildcards</h3>
+      <p>If a coin climbs onto the board mid-round, it joins the bracket at the next checkpoint and has to survive from there. A coin the rug filter removes leaves the bracket immediately.</p>
+      <h3>The streak pass</h3>
+      <p>If the coin you backed survives three checkpoints, you earn a <span class="k">streak pass</span>. You can use it once, before the fifth checkpoint, to move that stake to any other coin still in the bracket. The stake keeps its original weight.</p>
+    </div>
+
+    <!-- ================= hype delta ================= -->
+    <section class="doc prose" id="hype-delta">
+      <h2>Hype delta</h2>
+      <p>Two markets that compare a coin's price with the attention it's getting. Attention is measured as <span class="k">pace growth</span>, written A: how fast the coin is being traded right now compared with its usual rate.</p>
+      <div class="tbl"><table>
+        <thead><tr><th>Round</th><th>Recent pace</th><th>Compared with</th></tr></thead>
+        <tbody>
+          <tr><td>15 and 30 minutes</td><td>Trades in the last 5 minutes</td><td>The last hour</td></tr>
+          <tr><td>1 hour</td><td>The last hour</td><td>The last 6 hours</td></tr>
+          <tr><td>24 hours</td><td>The last 6 hours</td><td>The last 24 hours</td></tr>
+        </tbody>
+      </table></div>
+      <p>An A of +50% means the coin is trading 1.5 times as fast as usual. An A of −40% means it's trading at 60% of its usual rate. Both markets race the board's 15 coins, and both close their bets at 40%.</p>
+      <h3>Most efficient</h3>
+      <p>Pays the coin whose price rose the most for the attention it got. A coin that climbs while trading stays calm beats one that only rises on a rush of trades.</p>
+      <div class="formula">efficiency = R ÷ (1 + A) <span class="c">  A counts as no lower than −90%</span></div>
+      <h3>Biggest bust</h3>
+      <p>Pays the coin whose price fell hardest while attention was rising: trading sped up, and the price went down anyway. Only coins with a negative return and positive pace growth qualify. If none does, every Biggest bust bet in that round is refunded.</p>
+      <div class="formula">bust = A × −R <span class="c">  only when R &lt; 0 and A &gt; 0</span></div>
+    </section>
+    <figure class="wide">
+      <div class="fig" id="figHype"></div>
+      <figcaption>Where coins land on price return and pace growth. Biggest bust only looks at the top-left corner.</figcaption>
+    </figure>
+    <div class="prose">
+      <div class="tbl"><table>
+        <thead><tr><th>Coin</th><th class="n">Return R</th><th class="n">Pace growth A</th><th class="n">Efficiency</th><th class="n">Bust</th></tr></thead>
+        <tbody>
+          <tr><td>A</td><td class="n up">+12.0%</td><td class="n">+20%</td><td class="n">10.0%</td><td class="n dim">no</td></tr>
+          <tr><td>B</td><td class="n up">+8.0%</td><td class="n">−40%</td><td class="n"><b>13.3%</b></td><td class="n dim">no</td></tr>
+          <tr><td>C</td><td class="n down">−15.0%</td><td class="n">+60%</td><td class="n">−9.4%</td><td class="n"><b>0.090</b></td></tr>
+        </tbody>
+      </table></div>
+      <p>Coin A gained more, but coin B wins Most efficient: it rose 8% while its trading slowed. Coin C wins Biggest bust.</p>
+    </div>
+
+    <!-- ================= pools ================= -->
+    <section class="doc prose" id="pools">
+      <h2>Pools and payouts</h2>
+      <p>Every round has a separate pool for each market and each currency: practice tSOL and real SOL never mix. Payouts are <span class="k">pari-mutuel</span>. There are no fixed odds and no bookmaker taking the other side. You're betting against the other players, and the pool is split among whoever backed the winner.</p>
+      <h3>How a payout is worked out</h3>
+      <p>Your <span class="k">share</span> of a pick is your stake times its weight. When the round settles, the whole pool minus the <span data-cfg="rake">3%</span> rake goes to the winning coin, split by share:</p>
+      <div class="formula">payout = pool × (1 − rake) × your share ÷ all shares on the winning coin</div>
+      <p>Each pool also starts with a <span class="k">house seed</span>: <span data-cfg="seedTSOL">0.1 tSOL per coin</span> in practice pools, and <span data-cfg="seedSOL">0.01 SOL per coin</span> in SOL pools. The seed gives every coin a share from the first second, so the house holds a small stake on each coin like any other player.</p>
+      <h3>Try it</h3>
+    </section>
+    <div class="calc wide" id="calc">
+      <div class="in">
+        <div class="seg" role="group" aria-label="Currency"><button type="button" data-cur="tSOL" aria-pressed="true">tSOL</button><button type="button" data-cur="SOL" aria-pressed="false">SOL</button></div>
+        <label for="cStake"><span>Your stake</span><input id="cStake" type="number" min="0" step="0.05" value="1" inputmode="decimal"></label>
+        <label for="cAt"><span>Placed when this much of the round had passed <output id="cAtO">10%</output></span><input id="cAt" type="range" min="0" max="40" step="1" value="10"></label>
+        <label for="cOthers"><span>Everyone else's stakes in this pool</span><input id="cOthers" type="number" min="0" step="0.5" value="8" inputmode="decimal"></label>
+        <label for="cMine"><span>Of that, already on your coin</span><input id="cMine" type="number" min="0" step="0.5" value="2" inputmode="decimal"></label>
+        <label for="cN"><span>Coins in the field</span><input id="cN" type="number" min="2" max="25" step="1" value="15" inputmode="numeric"></label>
+      </div>
+      <div class="out" aria-live="polite">
+        <div class="o"><span>Your weight</span><b id="oW">--</b></div>
+        <div class="o"><span>Pool at the close</span><b id="oP">--</b></div>
+        <div class="o"><span>Your part of the winning side</span><b id="oS">--</b></div>
+        <div class="o"><span>Rake</span><b id="oR">--</b></div>
+        <div class="o big"><span>Payout if your coin wins</span><b id="oPay">--</b></div>
+        <p class="fine" id="oX">--</p>
+        <p class="fine">Assumes the other stakes on your coin were placed at the open and nobody bets after you. Real odds move until bets close, so the bet sheet shows a live estimate.</p>
+      </div>
+    </div>
+    <div class="prose">
+      <h3>Settlement</h3>
+      <p>The server settles a round 5 seconds after it ends. Winnings go straight to your arena balance, and every losing stake stays in the pool it was paid into. Stakes are final once placed: there's no cancelling a bet.</p>
+      <div class="tbl"><table>
+        <thead><tr><th>Limits per bet</th><th class="n">Minimum</th><th class="n">Maximum</th></tr></thead>
+        <tbody>
+          <tr><td>Practice (tSOL)</td><td class="n" data-cfg="minTSOL">0.05 tSOL</td><td class="n" data-cfg="maxTSOL">100 tSOL</td></tr>
+          <tr><td>Real (SOL)</td><td class="n" data-cfg="minSOL">0.01 SOL</td><td class="n" data-cfg="maxSOL">10 SOL</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+
+    <!-- ================= refunds ================= -->
+    <section class="doc prose" id="refunds">
+      <h2>Refunds</h2>
+      <p>A refund returns your full stake to your balance, with no rake. It happens when:</p>
+      <ul>
+        <li><span class="k">The rug filter removes your coin.</span> Refunded the moment it's removed.</li>
+        <li><span class="k">The round isn't scored.</span> The server has to see a round from its first minute. If it started up partway through a round, or restarted during one, that round's bets are refunded because some of its prices are missing.</li>
+        <li><span class="k">There's no result.</span> If a market can't be decided within 2 minutes of the end, for example because no coin had a price, its bets are refunded.</li>
+        <li><span class="k">No coin qualifies for Biggest bust.</span> If no coin's price fell while its pace rose, the whole market is refunded.</li>
+        <li><span class="k">Nobody backed the winner, in a pool without a house seed.</span> Everyone is refunded. In a pool with a seed, the seed holds the only share on the winning coin, so that pool goes to the house.</li>
+      </ul>
+    </section>
+
+    <!-- ================= squads ================= -->
+    <section class="doc prose" id="squads">
+      <h2>Joining a squad</h2>
+      <p>Every coin has a squad. You join one automatically the first time you back that coin in any market, and you stay a member after the round ends. You can also join any Solana coin's squad for free from the search bar, even one that isn't on the board. Betting is still limited to board coins.</p>
+      <p>A squad's page shows its members, ranked by how much they've staked on the coin, the tasks the squad is working on and the proofs posted for them.</p>
+      <h3>Tiers</h3>
+      <p>As a coin's market cap grows, its squad moves up a tier and unlocks bigger tasks.</p>
+      <div class="tbl"><table>
+        <thead><tr><th>Tier</th><th class="n">Market cap</th><th>Tasks it unlocks</th></tr></thead>
+        <tbody>
+          <tr><td>I Ignition</td><td class="n">from $0</td><td>Write the lore, Meme forge, Banner drop</td></tr>
+          <tr><td>II Lift-off</td><td class="n">$500K</td><td>Rally post, Sticker pack, 60-second explainer</td></tr>
+          <tr><td>III Breakout</td><td class="n">$2M</td><td>Host an X Space, Translations, Meme war</td></tr>
+          <tr><td>IV Arena</td><td class="n">$10M</td><td>Mascot in motion, Anthem, Cross-squad collab</td></tr>
+          <tr><td>V Legend</td><td class="n">$50M</td><td>Documentary, Build something, IRL sighting</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ================= tasks ================= -->
+    <section class="doc prose" id="tasks">
+      <h2>Tasks and proofs</h2>
+      <p>A task is something the squad makes together. Each one has a goal, a number of proofs, and fills up as members post them. A proof is a link to what you made.</p>
+      <div class="tbl"><table>
+        <thead><tr><th>Task</th><th>What to post</th><th>Proof</th><th class="n">Goal</th></tr></thead>
+        <tbody>
+          <tr><td>Write the lore</td><td>A thread of 3 or more posts telling the coin's story</td><td>X post</td><td class="n">5</td></tr>
+          <tr><td>Meme forge</td><td>An original meme with the cashtag</td><td>X post</td><td class="n">12</td></tr>
+          <tr><td>Banner drop</td><td>A 1500×500 community banner</td><td>X post</td><td class="n">3</td></tr>
+          <tr><td>Rally post</td><td>Your own take quoting the squad's rally post</td><td>X post</td><td class="n">30</td></tr>
+          <tr><td>Sticker pack</td><td>5 or more reaction stickers or GIFs</td><td>X post</td><td class="n">4</td></tr>
+          <tr><td>60-second explainer</td><td>A short video explaining the coin to someone new</td><td>Video</td><td class="n">5</td></tr>
+          <tr><td>Host an X Space</td><td>A Space about the coin, 20 minutes or longer</td><td>Space link</td><td class="n">2</td></tr>
+          <tr><td>Translations</td><td>The lore thread in another language</td><td>X post</td><td class="n">6</td></tr>
+          <tr><td>Meme war</td><td>A meme tagged #SquadArena against the squad one place above yours</td><td>X post</td><td class="n">40</td></tr>
+          <tr><td>Mascot in motion</td><td>The mascot animated as a GIF or short loop</td><td>X post</td><td class="n">4</td></tr>
+          <tr><td>Anthem</td><td>An original track or jingle</td><td>Video</td><td class="n">2</td></tr>
+          <tr><td>Cross-squad collab</td><td>A joint post with another squad</td><td>X post</td><td class="n">3</td></tr>
+          <tr><td>Documentary</td><td>A video of 3 minutes or more on the coin's run</td><td>Video</td><td class="n">1</td></tr>
+          <tr><td>Build something</td><td>A tool, game or site for the community</td><td>Any link</td><td class="n">2</td></tr>
+          <tr><td>IRL sighting</td><td>A photo of original merch or art in the wild, placed legally</td><td>X post</td><td class="n">10</td></tr>
+        </tbody>
+      </table></div>
+      <p>"Video" means an X post or a YouTube link. Proofs are public and show your name, plus your X handle if you've added one. Your first X proof fills in your handle for you.</p>
+      <h3>The rules for proofs</h3>
+      <ul>
+        <li>You have to be in the squad to post a proof for it.</li>
+        <li>One proof per task per person, and each link can only be used once across the whole arena.</li>
+        <li>Post from your own account. Work must be original, with no bots, no reply spam and no tagging strangers.</li>
+        <li>No buy or sell instructions, ever.</li>
+      </ul>
+      <p>Other squad members can <span class="k">verify</span> a proof they've checked, or <span class="k">flag</span> one that breaks the rules. You can't verify your own. A proof flagged by two members is hidden.</p>
+    </section>
+
+    <!-- ================= chat ================= -->
+    <section class="doc prose" id="chat">
+      <h2>Chat</h2>
+      <p>The rail on the right of the arena has two parts. The upper part, the wire, shows round notes: cuts, big moves and results, written as they happen. Below it is the chat. The Arena channel is open to everyone, and each coin has its own squad channel, which appears when you open the coin or join its squad.</p>
+      <p>You need to be logged in to send messages. Messages are up to 280 characters, and sending too quickly pauses you for a moment. The arena also posts a short note when someone joins a squad or completes a proof.</p>
+    </section>
+
+    <!-- ================= login ================= -->
+    <section class="doc prose" id="login">
+      <h2>Logging in</h2>
+      <p>Logging in runs through Privy, a wallet login service. You have two options:</p>
+      <ul>
+        <li><span class="k">Google.</span> A Solana wallet is created for you the first time you log in and stays linked to your account. You don't need an extension or a seed phrase to get started.</li>
+        <li><span class="k">Your own wallet.</span> Connect Phantom, Solflare or Backpack. That wallet becomes your linked wallet.</li>
+      </ul>
+      <p>Your account keeps your balances, your bets, your squads and your proofs, on every device you log in from. In the account sheet you can also add your X handle, which appears on your proofs.</p>
+    </section>
+
+    <!-- ================= practice ================= -->
+    <section class="doc prose" id="practice">
+      <h2>Practice credits</h2>
+      <p>Practice credits, written tSOL, work exactly like SOL inside the arena: same markets, same pools, same rules. They just aren't worth anything, and they can't be deposited or withdrawn.</p>
+      <ul>
+        <li>Every new account starts with <span data-cfg="startBalance">25</span> tSOL.</li>
+        <li>If your balance drops under 5 tSOL, you can top it back up to <span data-cfg="startBalance">25</span> once a day.</li>
+        <li>Practice pools are separate from SOL pools, so practice bets never touch real money.</li>
+      </ul>
+    </section>
+
+    <!-- ================= sol wallet ================= -->
+    <section class="doc prose" id="sol-wallet">
+      <h2>The SOL wallet</h2>
+      <p>To bet with real SOL, you move SOL from your own wallet into your arena balance, and back out when you're done. The arena runs on Solana <span data-cfg="network">mainnet</span>.</p>
+    </section>
+    <figure class="wide">
+      <div class="fig" id="figMoney"></div>
+      <figcaption>Deposits go from your wallet to the arena wallet. Bets and winnings move inside your arena balance. Withdrawals go from the arena wallet back to a wallet linked to your account.</figcaption>
+    </figure>
+    <div class="prose">
+      <h3>Depositing</h3>
+      <ol>
+        <li>Open your account, switch to SOL and enter an amount. The minimum is <span data-cfg="depositMin">0.01 SOL</span>.</li>
+        <li>The site prepares a transfer from your wallet to the arena wallet. Before your wallet asks you to approve it, the site checks it's a single transfer of exactly that amount to the arena wallet address below. It won't ask you to sign anything else.</li>
+        <li>Approve it in your wallet. Your balance is credited as soon as the network confirms the transfer, usually within seconds.</li>
+      </ol>
+      <p>If you close the page before it's confirmed, nothing is lost. The server watches the arena wallet and credits any deposit from a wallet linked to your account.</p>
+      <div class="addr" id="addr"><span class="lbl">Arena wallet</span><code id="addrV">Checking…</code></div>
+      <h3>While SOL is in the arena</h3>
+      <p>Your arena balance is held in the arena wallet, not in your own. Bets and winnings move inside your balance instantly, without network fees. Keep only what you're playing with in the arena.</p>
+      <h3>Withdrawing</h3>
+      <ul>
+        <li>Withdrawals only go to a wallet linked to your account.</li>
+        <li>Each withdrawal is between <span data-cfg="withdrawMin">0.01 SOL</span> and <span data-cfg="withdrawMax">25 SOL</span>, with up to <span data-cfg="withdrawDaily">50 SOL</span> a day.</li>
+        <li>Your balance is reduced first, then the SOL is sent. If the network rejects the transfer, your balance is restored right away. If a transfer never lands, it's refunded automatically after a few minutes.</li>
+        <li>The arena pays the network fee on withdrawals. Your wallet pays the small network fee on deposits.</li>
+      </ul>
+    </div>
+
+    <!-- ================= fairness ================= -->
+    <section class="doc prose" id="fairness">
+      <h2>How results stay fair</h2>
+      <ul>
+        <li><span class="k">One referee.</span> A single round server decides every round for everyone. Your browser only shows what the server decided, so two players can never see different results.</li>
+        <li><span class="k">Fields are fixed at the open</span> and saved, so the coins in a round can't change after bets come in.</li>
+        <li><span class="k">Prices come from the chain.</span> Each coin's price is read from its own pool on every swap, the same source for every player.</li>
+        <li><span class="k">Averages, not single trades.</span> Returns compare time-weighted averages over the opening and closing windows.</li>
+        <li><span class="k">Late bets count less.</span> The weight on every bet falls as the round goes on, so waiting for more information has a cost.</li>
+        <li><span class="k">Missing data means a refund.</span> A round the server didn't watch from its first minute isn't scored.</li>
+        <li><span class="k">Receipts.</span> Every settled market gets a SHA-256 fingerprint of its round, market, field, winners, top three returns, rake and seed. Change any of those and the fingerprint changes.</li>
+        <li><span class="k">Deposits are checked before you sign.</span> The site refuses to ask your wallet to sign anything other than a plain transfer of the exact amount to the arena wallet.</li>
+      </ul>
+    </section>
+
+    <!-- ================= data ================= -->
+    <section class="doc prose" id="data">
+      <h2>Where the data comes from</h2>
+      <div class="tbl"><table>
+        <thead><tr><th>What</th><th>Source</th></tr></thead>
+        <tbody>
+          <tr><td>New coins</td><td>pump.fun coins found through GeckoTerminal's PumpSwap pools and DEX Screener's latest lists</td></tr>
+          <tr><td>Market cap, liquidity, volume, trades</td><td>DEX Screener, refreshed every few seconds</td></tr>
+          <tr><td>Live prices</td><td>Each coin's PumpSwap pool, read through a Solana RPC on every swap</td></tr>
+          <tr><td>Price history for charts</td><td>GeckoTerminal 1- and 5-minute candles</td></tr>
+          <tr><td>Logins and wallets</td><td>Privy</td></tr>
+          <tr><td>Accounts, bets, squads, chat</td><td>The arena's database</td></tr>
+        </tbody>
+      </table></div>
+      <p>Coin names, logos and descriptions come from their creators. The arena doesn't check them and doesn't endorse any coin.</p>
+    </section>
+
+    <!-- ================= risks ================= -->
+    <section class="doc prose" id="risks">
+      <h2>Risks</h2>
+      <div class="note">
+        <p>Betting with real SOL can lose everything you stake. Coins this new can fall 90% in minutes. Only bet what you can afford to lose.</p>
+      </div>
+      <ul>
+        <li>Nothing in Squad Arena is financial advice. The arena doesn't sell coins and never tells anyone to buy or sell one.</li>
+        <li>Real-money betting is regulated, and some countries restrict or forbid it. Check the rules where you live before you deposit.</li>
+        <li>SOL in your arena balance is held in the arena wallet until you withdraw it.</li>
+        <li>Squad tasks are about making things. Anything that pushes people to buy a coin breaks the rules and gets flagged.</li>
+      </ul>
+    </section>
+
+    <!-- ================= faq ================= -->
+    <section class="doc prose" id="faq">
+      <h2>Questions</h2>
+      <details><summary>Do I own the coin I back?</summary><div>No. Backing a coin is a stake in the arena's pool. You never buy or hold the coin itself.</div></details>
+      <details><summary>Why is the on-deck list empty?</summary><div>On deck shows coins ranked 16 to 25 among the coins that pass the board tests. When 15 or fewer coins pass, they're all on the board and on deck stays empty. It fills up again when more coins qualify, which usually happens during busier trading hours.</div></details>
+      <details><summary>Why was my bet refunded?</summary><div>Your coin was removed by the rug filter, the round wasn't scored, no result could be worked out, Biggest bust had no qualifying coin, or nobody backed the winner in a pool without a house seed. The <a href="#refunds">refunds</a> section explains each one.</div></details>
+      <details><summary>Can I bet after 40% of the round?</summary><div>Only in Last coin standing, on coins still in the bracket, until the closing window. Top gainer and both Hype delta markets close at 40%.</div></details>
+      <details><summary>Can I cancel a bet?</summary><div>No. A stake is final once it's placed.</div></details>
+      <details><summary>Why can't I bet on a coin I found in search?</summary><div>Only coins in a round's field can be bet on. You can still join any coin's squad from search, and if it makes the board, its squad will already be waiting.</div></details>
+      <details><summary>How long does a withdrawal take?</summary><div>Usually under a minute. If the network is slow, the withdrawal is checked again automatically, and it's refunded if it never lands.</div></details>
+      <details><summary>Are practice credits worth anything?</summary><div>No. tSOL can't be deposited, withdrawn or exchanged. It exists so anyone can play.</div></details>
+    </section>
+
+    <footer class="foot prose">
+      <span>Squad Arena</span><span class="sp"></span>
+      <a href="/">Open the arena</a>
+      <a href="#overview">Back to the top</a>
+    </footer>
+  </main>
+</div>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="pane" role="dialog" aria-modal="true" aria-label="Contents">
+    <button class="x" type="button" id="sheetX" aria-label="Close contents">×</button>
+    <div id="sheetNav"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+"use strict";
+const $ = id => document.getElementById(id);
+const API = String((window.SA_CONFIG && window.SA_CONFIG.api) || "").replace(/\/+$/, "");
+const PIN = String((window.SA_CONFIG && window.SA_CONFIG.treasury) || "").trim();
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const C = i => `var(--c${((i % 15) + 15) % 15})`;
+const pad = n => String(n).padStart(2, "0");
+const clock = ms => { ms = Math.max(0, ms); const s = Math.floor(ms / 1000); return (s >= 3600 ? Math.floor(s / 3600) + ":" + pad(Math.floor(s / 60) % 60) : Math.floor(s / 60)) + ":" + pad(s % 60); };
+const hm = t => { const d = new Date(t); return pad(d.getHours()) + ":" + pad(d.getMinutes()); };
+const pct = (v, d = 2) => (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(d) + "%";
+const amt = (v, cur) => (cur === "SOL" ? (+v).toFixed(4).replace(/(\.\d*?[1-9])0+$|\.0+$/, "$1") : Number.isInteger(+v) ? String(+v) : (+v).toFixed(2)) + " " + cur;
+
+/* ---------- live settings ---------- */
+let cfg = { rake: 0.03, seed: { tSOL: 0.1, SOL: 0.01 }, minStake: { tSOL: 0.05, SOL: 0.01 }, maxStake: { tSOL: 100, SOL: 10 }, startBalance: 25,
+  money: { enabled: true, network: "mainnet", treasury: null, depositMin: 0.01, withdrawMin: 0.01, withdrawMax: 25, withdrawDaily: 50 } };
+function fillCfg() {
+  const m = cfg.money || {}, v = {
+    rake: Math.round(cfg.rake * 1000) / 10 + "%", startBalance: String(cfg.startBalance),
+    seedTSOL: cfg.seed.tSOL > 0 ? amt(cfg.seed.tSOL, "tSOL") + " per coin" : "nothing", seedSOL: cfg.seed.SOL > 0 ? amt(cfg.seed.SOL, "SOL") + " per coin" : "nothing",
+    minTSOL: amt(cfg.minStake.tSOL, "tSOL"), maxTSOL: amt(cfg.maxStake.tSOL, "tSOL"), minSOL: amt(cfg.minStake.SOL, "SOL"), maxSOL: amt(cfg.maxStake.SOL, "SOL"),
+    network: m.network === "mainnet" ? "mainnet" : "devnet, the test network", depositMin: amt(m.depositMin, "SOL"), withdrawMin: amt(m.withdrawMin, "SOL"),
+    withdrawMax: amt(m.withdrawMax, "SOL"), withdrawDaily: amt(m.withdrawDaily, "SOL")
+  };
+  document.querySelectorAll("[data-cfg]").forEach(el => { const k = el.dataset.cfg; if (v[k] != null) el.textContent = v[k]; });
+  const live = m.treasury && (!PIN || m.treasury === PIN), a = $("addrV");
+  if (live) a.innerHTML = `${esc(m.treasury)} <a href="https://solscan.io/account/${esc(m.treasury)}${m.network === "mainnet" ? "" : "?cluster=devnet"}" target="_blank" rel="noopener noreferrer" style="font-family:var(--sans);margin-left:6px">View on Solscan</a>`;
+  else a.textContent = "Being set up. Deposits are paused until it's live.";
+  calc();
+}
+
+/* ---------- the live round ---------- */
+const W15 = 15 * 60e3, WIN = Math.max(5000, W15 * 0.03);
+const H = { off: 0, toks: new Map(), field: [], lcs: null, pools: {}, scored: true, r: null, example: false, ok: false, last: 0 };
+const nowS = () => Date.now() + H.off;
+const roundAt = t => { const s = Math.floor(t / W15) * W15; return { s, e: s + W15, key: "L.15m." + s }; };
+
+async function getJSON(path) { const r = await fetch(API + path, { cache: "no-store" }); if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }
+async function loadSnap() {
+  if (!API) throw new Error("no server");
+  const s = await getJSON("/snapshot");
+  H.off = (s.now || Date.now()) - Date.now();
+  cfg = Object.assign(cfg, s.cfg || {}); fillCfg();
+  H.toks = new Map((s.tokens || []).map(t => [t.m, { s: t.s, logo: t.logo, ticks: (t.ticks || []).map(k => ({ t: k[0], p: k[1] })) }]));
+  const r = roundAt(nowS()), rs = (s.rounds || {})[r.key];
+  H.r = r; H.field = rs ? rs.field.top : (s.board && s.board.top) || []; H.bench = rs ? rs.field.bench : (s.board && s.board.bench) || []; H.lcs = rs ? rs.lcs : null; H.pools = rs ? rs.pools || {} : {}; H.scored = rs ? !!rs.live : false;
+  H.board = s.board || { top: [], bench: [] }; H.ok = true; H.example = false; H.last = Date.now();
+  $("fBoard").textContent = H.board.top.length;
+  funnel();
+}
+let es = null;
+function stream() {
+  if (!API || es || typeof EventSource === "undefined") return;
+  try {
+    es = new EventSource(API + "/stream");
+    es.addEventListener("tick", e => { let list; try { list = JSON.parse(e.data); } catch (_) { return; } for (const [m, t, p] of list) { const k = H.toks.get(m); if (!k) continue; const K = k.ticks; if (!K.length || t > K[K.length - 1].t) K.push({ t, p }); } H.last = Date.now(); });
+    es.addEventListener("round", e => { let d; try { d = JSON.parse(e.data); } catch (_) { return; } if (d && H.r && d.key === H.r.key) { H.lcs = d.lcs; H.pools = d.pools || {}; if (d.field) H.field = d.field.top; H.scored = !!d.live; } });
+    es.onerror = () => {};
+  } catch (_) { es = null; }
+}
+
+// a made-up round, only shown when the arena can't be reached
+function example() {
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const r = roundAt(Date.now()), names = ["Coin A", "Coin B", "Coin C", "Coin D", "Coin E", "Coin F", "Coin G", "Coin H", "Coin I", "Coin J", "Coin K", "Coin L"];
+  H.toks = new Map(); H.field = [];
+  names.forEach((n, i) => { const m = "ex" + i, K = []; let p = 1, d = (rnd() - .5) * .0006; for (let t = r.s - 60e3; t <= Date.now(); t += 4000) { d = d * .97 + (rnd() - .5) * .0009; p *= 1 + d + (rnd() - .5) * .004; K.push({ t, p }); } H.toks.set(m, { s: n, logo: null, ticks: K }); H.field.push(m); });
+  H.r = r; H.lcs = null; H.pools = {}; H.scored = true; H.example = true; H.ok = true;
+}
+
+function seriesOf(k, r, t) {
+  const K = k.ticks; if (!K.length) return null;
+  let before = null, open = null, n = 0, sum = 0;
+  for (const x of K) { if (x.t < r.s) before = x; else if (x.t <= r.s + WIN) { sum += x.p; n++; } }
+  open = n ? sum / n : before ? before.p : (K.find(x => x.t >= r.s) || {}).p;
+  if (!open) return null;
+  const pts = [];
+  if (before) pts.push({ t: r.s, R: before.p / open - 1 });
+  for (const x of K) if (x.t >= r.s && x.t <= t) pts.push({ t: x.t, R: x.p / open - 1 });
+  if (!pts.length) return null;
+  const last = pts[pts.length - 1]; if (last.t < t) pts.push({ t, R: last.R });
+  return pts;
+}
+const Rat = (pts, t) => { let v = pts[0].R; for (const p of pts) { if (p.t > t) break; v = p.R; } return v; };
+function niceStep(span) { const raw = span / 4, p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p; return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p; }
+
+function drawHero() {
+  const box = $("heroChart"); if (!box || !H.ok) return;
+  const t = nowS(), r = H.r || roundAt(t);
+  if (t >= r.e + 6000 && !H.example) { reload(); }
+  const Wd = Math.max(300, box.clientWidth - 6), Ht = window.innerWidth <= 640 ? 250 : 320;
+  const L = 44, Rm = 14, T = 26, B = 26, w = Wd - L - Rm, h = Ht - T - B;
+  const X = tt => L + (tt - r.s) / W15 * w;
+  const cut = new Map(); if (H.lcs && H.lcs.out) for (const o of H.lcs.out) cut.set(o.m, o);
+  const lines = [];
+  H.field.forEach((m, i) => { const k = H.toks.get(m); if (!k) return; const pts = seriesOf(k, r, Math.min(t, r.e)); if (pts) lines.push({ m, i, k, pts, R: pts[pts.length - 1].R }); });
+  let lo = -0.01, hi = 0.01; for (const l of lines) for (const p of l.pts) { if (p.R < lo) lo = p.R; if (p.R > hi) hi = p.R; }
+  const padY = (hi - lo) * .12; lo -= padY; hi += padY;
+  const Y = v => T + (hi - v) / (hi - lo) * h, step = niceStep(hi - lo);
+  let g = "";
+  // grid
+  for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-12; v += step) { const y = Y(v).toFixed(1), z = Math.abs(v) < step / 2; g += `<line x1="${L}" x2="${L + w}" y1="${y}" y2="${y}" style="stroke:var(--rule)" ${z ? 'stroke-dasharray="3 4" ' : ""}/><text x="${L - 8}" y="${+y + 4}" text-anchor="end">${z ? "0%" : (v > 0 ? "+" : "−") + Math.abs(v * 100).toFixed(step < .01 ? 1 : 0) + "%"}</text>`; }
+  // windows, bets close, checkpoints
+  g += `<rect x="${X(r.s)}" y="${T}" width="${X(r.s + WIN) - X(r.s)}" height="${h}" style="fill:var(--win)"/><rect x="${X(r.e - WIN)}" y="${T}" width="${X(r.e) - X(r.e - WIN)}" height="${h}" style="fill:var(--win)"/>`;
+  const bx = X(r.s + .4 * W15); g += `<line x1="${bx}" x2="${bx}" y1="${T - 6}" y2="${T + h}" style="stroke:var(--ink)" stroke-width="1.2"/><text x="${bx + 6}" y="${T - 10}" class="ink">Bets close</text>`;
+  for (let k = 1; k <= 5; k++) { const x = X(r.s + k * W15 / 6), past = t >= r.s + k * W15 / 6; g += `<line x1="${x}" x2="${x}" y1="${T}" y2="${T + h}" style="stroke:var(--rule2)" stroke-dasharray="2 4"/><rect x="${x - 3.5}" y="${T + h + 5}" width="7" height="7" style="fill:${past ? "var(--ink)" : "var(--panel)"};stroke:var(--dim)"/><text x="${x}" y="${T + h + 22}" text-anchor="middle">C${k}</text>`; }
+  g += `<text x="${L}" y="${T + h + 22}">${hm(r.s)}</text><text x="${L + w}" y="${T + h + 22}" text-anchor="end">${hm(r.e)}</text>`;
+  // lines
+  for (const l of lines) {
+    const o = cut.get(l.m), tc = o ? r.s + Math.floor(o.k) * W15 / 6 : Infinity;
+    const a = [], b = []; for (const p of l.pts) (p.t <= tc ? a : b).push(p);
+    if (b.length && a.length) b.unshift(a[a.length - 1]);
+    const pl = arr => arr.map(p => X(p.t).toFixed(1) + "," + Y(p.R).toFixed(1)).join(" ");
+    if (a.length > 1) g += `<polyline points="${pl(a)}" fill="none" style="stroke:${C(l.i)}" stroke-width="1.6" stroke-linejoin="round" ${o ? 'opacity=".95"' : ""}/>`;
+    if (b.length > 1) g += `<polyline points="${pl(b)}" fill="none" style="stroke:${C(l.i)}" stroke-width="1.2" opacity=".28"/>`;
+    if (o && tc < Infinity && tc <= t) { const x = X(tc), y = Y(Rat(l.pts, tc)); g += `<path d="M${x - 4},${y - 4}L${x + 4},${y + 4}M${x + 4},${y - 4}L${x - 4},${y + 4}" style="stroke:${C(l.i)}" stroke-width="1.8"/>`; }
+    const lp = l.pts[l.pts.length - 1]; if (!o) g += `<circle cx="${X(lp.t).toFixed(1)}" cy="${Y(lp.R).toFixed(1)}" r="3" style="fill:${C(l.i)}"/>`;
+  }
+  // now
+  if (t < r.e) { const nx = X(t); g += `<line x1="${nx}" x2="${nx}" y1="${T}" y2="${T + h}" style="stroke:var(--dim)" stroke-width="1"/><text x="${nx}" y="${T - 10}" text-anchor="${nx > L + w - 60 ? "end" : "middle"}">now</text>`; }
+  if (!lines.length) g += `<text x="${L + w / 2}" y="${T + h / 2}" text-anchor="middle">Waiting for the first prices of this round</text>`;
+  box.innerHTML = `<svg viewBox="0 0 ${Wd} ${Ht}" preserveAspectRatio="none" aria-hidden="true">${g}</svg>`;
+  // standings
+  const rows = lines.slice().sort((a, b) => { const ca = cut.has(a.m), cb = cut.has(b.m); return ca !== cb ? (ca ? 1 : -1) : b.R - a.R; });
+  $("stand").innerHTML = rows.map((l, n) => { const o = cut.get(l.m); return `<div class="row${o ? " out" : ""}"><span class="r">${o ? "" : n + 1}</span><span class="av" style="--ring:${C(l.i)}">${l.k.logo ? `<img src="${esc(l.k.logo)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : esc((l.k.s || "?")[0])}</span><span class="s" ${o ? `data-out="${o.why === "rug" ? "rug" : "out at C" + Math.floor(o.k)}"` : ""}>${esc(l.k.s)}</span><span class="v ${l.R >= 0 ? "up" : "down"}">${pct(l.R, 1)}</span></div>`; }).join("") || `<div class="row"><span></span><span></span><span class="s dim">No coins yet</span><span></span></div>`;
+  // header
+  const el = (t - r.s) / W15, cp = Math.min(5, Math.floor(el * 6) + 1);
+  $("liveTtl").textContent = H.example ? "Example round" : "15-minute round";
+  $("lvWhen").innerHTML = H.example ? `<i class="dot off"></i>Live data didn't load, so this is a made-up round` : `<i class="dot${Date.now() - H.last < 30000 ? "" : " off"}"></i>Live now, ${hm(r.s)} to ${hm(r.e)}${H.scored ? "" : ". This round isn't scored"}`;
+  $("lvLeft").textContent = clock(r.e - t);
+  $("lvBets").textContent = el < .4 ? "close in " + clock(r.s + .4 * W15 - t) : "closed";
+  $("lvCp").textContent = el >= 5 / 6 ? "final duel" : "C" + cp + " in " + clock(r.s + cp * W15 / 6 - t);
+  let P = 0; for (const mk of ["top", "lcs", "eff", "bust"]) { const pl = (H.pools || {})[mk + "|tSOL"]; P += pl ? pl.P : cfg.seed.tSOL * (H.field.length + (mk === "top" ? (H.bench || []).length : 0)); }
+  $("lvPool").textContent = H.example || !P ? "--" : amt(P, "tSOL");
+}
+let reloading = false;
+async function reload() { if (reloading) return; reloading = true; try { await loadSnap(); } catch (_) {} reloading = false; }
+
+/* ---------- board funnel ---------- */
+async function funnel() {
+  let tracked = null; try { const h = await getJSON("/health"); tracked = h.coins; } catch (_) {}
+  const top = H.board.top.length, deck = H.board.bench.length, pass = top + deck, max = Math.max(tracked || pass, 1);
+  const set = (id, n) => { const el = $(id); el.textContent = n == null ? "--" : n; el.previousElementSibling.firstElementChild.style.width = n == null ? "0" : Math.max(n ? 1.5 : 0, n / max * 100) + "%"; };
+  set("fnTracked", tracked); set("fnPass", pass); set("fnTop", top); set("fnDeck", deck);
+}
+
+/* ---------- figures ---------- */
+const svg = (w, h, body, label) => `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(label)}">${body}</svg>`;
+function figTimeline() {
+  const L = 40, Wd = 820, x = f => L + Wd * f, y = 96; let g = "";
+  g += `<rect x="${x(0)}" y="${y - 16}" width="${x(.03) - x(0)}" height="32" style="fill:var(--win)"/><rect x="${x(.97)}" y="${y - 16}" width="${x(1) - x(.97)}" height="32" style="fill:var(--win)"/>`;
+  g += `<line x1="${x(0)}" x2="${x(1)}" y1="${y}" y2="${y}" style="stroke:var(--ink)" stroke-width="2"/>`;
+  g += `<line x1="${x(0)}" x2="${x(0)}" y1="${y - 10}" y2="${y + 10}" style="stroke:var(--ink)" stroke-width="2"/><line x1="${x(1)}" x2="${x(1)}" y1="${y - 10}" y2="${y + 10}" style="stroke:var(--ink)" stroke-width="2"/>`;
+  // top bracket: bets for Top gainer and Hype delta
+  g += `<path d="M${x(0)},${y - 30}V${y - 38}H${x(.4)}V${y - 30}" fill="none" style="stroke:var(--ink)" stroke-width="1.4"/><text x="${x(0)}" y="${y - 48}" class="ink" font-size="13">Top gainer and Hype delta take bets</text>`;
+  g += `<line x1="${x(.4)}" x2="${x(.4)}" y1="${y - 38}" y2="${y + 16}" style="stroke:var(--ink)" stroke-width="1.4"/><text x="${x(.4) + 8}" y="${y - 22}" font-size="12">40%</text>`;
+  // checkpoints
+  for (let k = 1; k <= 5; k++) { const cx = x(k / 6); g += `<rect x="${cx - 5}" y="${y - 5}" width="10" height="10" style="fill:var(--panel);stroke:var(--ink)" stroke-width="1.4"/><text x="${cx}" y="${y + 30}" text-anchor="middle" font-size="12.5" class="ink">C${k}</text>`; }
+  g += `<text x="${(x(5 / 6) + x(1)) / 2}" y="${y - 22}" text-anchor="middle" font-size="12">final duel</text>`;
+  g += `<text x="${x(0)}" y="${y + 30}" font-size="12.5">start</text><text x="${x(1)}" y="${y + 30}" text-anchor="end" font-size="12.5">end</text>`;
+  // bottom bracket: LCS
+  g += `<path d="M${x(0)},${y + 46}V${y + 54}H${x(.97)}V${y + 46}" fill="none" style="stroke:var(--dim)" stroke-width="1.4"/><text x="${x(0)}" y="${y + 74}" font-size="13" class="ink">Last coin standing takes bets on surviving coins</text>`;
+  g += `<text x="${x(1)}" y="${y + 74}" text-anchor="end" font-size="12">settles 5 s after the end</text>`;
+  $("figTimeline").innerHTML = svg(900, 190, g, "Timeline of a round: bets for Top gainer and Hype delta close at 40%, checkpoints at each sixth, Last coin standing bets close at 97%.");
+}
+function figTwap() {
+  let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const N = 220, pts = []; let p = 1;
+  for (let i = 0; i < N; i++) { p *= 1 + (rnd() - .47) * .012; pts.push(p); }
+  pts[N - 1] = pts[N - 2] * 1.07; pts[N - 3] *= .985;                 // a last-second spike that the window shrugs off
+  const win = Math.round(N * .03) + 3, o = pts.slice(0, win).reduce((a, b) => a + b) / win, c = pts.slice(N - win).reduce((a, b) => a + b) / win;
+  const lo = Math.min(...pts) * .99, hi = Math.max(...pts) * 1.01, L = 40, Wd = 820, T = 20, Hh = 170;
+  const X = i => L + i / (N - 1) * Wd, Y = v => T + (hi - v) / (hi - lo) * Hh;
+  let g = `<rect x="${X(0)}" y="${T}" width="${X(win - 1) - X(0)}" height="${Hh}" style="fill:var(--win)"/><rect x="${X(N - win)}" y="${T}" width="${X(N - 1) - X(N - win)}" height="${Hh}" style="fill:var(--win)"/>`;
+  g += `<polyline points="${pts.map((v, i) => X(i).toFixed(1) + "," + Y(v).toFixed(1)).join(" ")}" fill="none" style="stroke:var(--c0)" stroke-width="1.6" stroke-linejoin="round"/>`;
+  g += `<line x1="${X(0)}" x2="${X(win - 1)}" y1="${Y(o)}" y2="${Y(o)}" style="stroke:var(--ink)" stroke-width="2.4"/><line x1="${X(N - win)}" x2="${X(N - 1)}" y1="${Y(c)}" y2="${Y(c)}" style="stroke:var(--ink)" stroke-width="2.4"/>`;
+  g += `<line x1="${X(win - 1)}" x2="${X(N - win)}" y1="${Y(o)}" y2="${Y(o)}" style="stroke:var(--rule2)" stroke-dasharray="3 5"/>`;
+  g += `<text x="${X(win - 1) + 10}" y="${Y(o) - 8}" font-size="12.5" class="ink">opening average</text><text x="${X(N - win) - 10}" y="${Y(c) - 10}" text-anchor="end" font-size="12.5" class="ink">closing average</text>`;
+  g += `<circle cx="${X(N - 1)}" cy="${Y(pts[N - 1])}" r="3.5" style="fill:var(--c0)"/><text x="${X(N - 1) - 8}" y="${Y(pts[N - 1]) + 4}" text-anchor="end" font-size="11.5">last trade</text>`;
+  $("figTwap").innerHTML = svg(900, 210, g, "A price path with the opening and closing windows shaded and their averages drawn as flat lines.");
+  const R = c / o - 1, Rl = pts[N - 1] / pts[0] - 1;
+  $("twapCap").textContent = `The same price path, scored. Compared trade to trade, it looks like ${pct(Rl, 1)}. Compared average to average, the return is ${pct(R, 1)}: the last-second spike barely counts.`;
+}
+function figBracket() {
+  let seed = 3; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const n = 15, R = Array.from({ length: n }, () => 0), cuts = [3, 3, 3, 2, 2], cols = 7, L = 70, Wd = 760, T = 40, row = 17.5;
+  const X = c => L + c * Wd / (cols - 1), alive = new Set([...Array(n).keys()]), pos = [];
+  const rankOf = () => [...alive].sort((a, b) => R[b] - R[a]);
+  pos.push(new Map(rankOf().map((i, r) => [i, r])));
+  const outAt = new Map();
+  for (let k = 1; k <= 6; k++) {
+    for (const i of alive) R[i] += (rnd() - .5) * .08 + (i % 4 === 0 ? .01 : 0);
+    const rk = rankOf(); pos.push(new Map(rk.map((i, r) => [i, r])));
+    if (k <= 5) rk.slice(rk.length - cuts[k - 1]).forEach(i => { alive.delete(i); outAt.set(i, k); });
+    else rk.slice(1).forEach(i => { alive.delete(i); outAt.set(i, 6); });
+  }
+  const winner = [...alive][0];
+  let g = "";
+  const heads = ["start", "C1", "C2", "C3", "C4", "C5", "close"], subs = ["15 coins", "3 out", "3 out", "3 out", "2 out", "2 out", "1 winner"];
+  heads.forEach((h, c) => { g += `<text x="${X(c)}" y="14" text-anchor="middle" font-size="13" class="ink">${h}</text><text x="${X(c)}" y="30" text-anchor="middle" font-size="11.5">${subs[c]}</text>`; });
+  for (let i = 0; i < n; i++) {
+    const last = outAt.get(i) ?? 6, ys = [];
+    for (let c = 0; c <= last; c++) ys.push([X(c), T + 14 + pos[c].get(i) * row]);
+    g += `<polyline points="${ys.map(p => p.join(",")).join(" ")}" fill="none" style="stroke:${C(i)}" stroke-width="${i === winner ? 2.6 : 1.5}" opacity="${i === winner ? 1 : .8}" stroke-linejoin="round"/>`;
+    ys.forEach(([x, y], c) => { if (c === last && i !== winner) g += `<path d="M${x - 5},${y - 5}L${x + 5},${y + 5}M${x + 5},${y - 5}L${x - 5},${y + 5}" style="stroke:${C(i)}" stroke-width="2"/>`; else if (c < last || i === winner) g += `<circle cx="${x}" cy="${y}" r="${i === winner && c === last ? 7 : 3.4}" style="fill:${i === winner && c === last ? "var(--panel)" : C(i)};stroke:${C(i)}" stroke-width="${i === winner && c === last ? 2.6 : 0}"/>`; });
+  }
+  const wy = T + 14 + pos[6].get(winner) * row; g += `<text x="${X(6) + 14}" y="${wy + 4}" font-size="12.5" class="ink">winner</text>`;
+  $("figBracket").innerHTML = svg(900, T + 14 + n * row + 10, g, "A Last coin standing bracket: 15 coins, cut by 3, 3, 3, 2 and 2 at the five checkpoints, then a final duel.");
+}
+function figWeight() {
+  const L = 60, Wd = 790, T = 18, Hh = 180, X = e => L + e * Wd, Y = v => T + (1 - v) * Hh, f = e => 1 / (1 + 2 * e);
+  let g = `<rect x="${X(0)}" y="${T}" width="${X(.4) - X(0)}" height="${Hh}" style="fill:var(--win)"/>`;
+  [0, .25, .5, .75, 1].forEach(v => { g += `<line x1="${L}" x2="${L + Wd}" y1="${Y(v)}" y2="${Y(v)}" style="stroke:var(--rule)"/><text x="${L - 10}" y="${Y(v) + 4}" text-anchor="end" font-size="12">${v.toFixed(2)}</text>`; });
+  [0, .2, .4, .6, .8, 1].forEach(e => { g += `<text x="${X(e)}" y="${T + Hh + 20}" text-anchor="middle" font-size="12">${e * 100}%</text>`; });
+  const pts = []; for (let i = 0; i <= 100; i++) { const e = i / 100 * .97; pts.push(X(e).toFixed(1) + "," + Y(f(e)).toFixed(1)); }
+  g += `<polyline points="${pts.join(" ")}" fill="none" style="stroke:var(--ink)" stroke-width="2.2"/>`;
+  [[0, "1.000 at the open", 9, -10, ""], [.4, "0.556 when bets close", 9, -10, ""], [5 / 6, "0.375 at C5", 0, 24, "middle"], [.97, "0.340 at the closing window", -4, -14, "end"]].forEach(([e, t, dx, dy, an]) => { const x = X(e), y = Y(f(e)); g += `<circle cx="${x}" cy="${y}" r="4" style="fill:var(--panel);stroke:var(--ink)" stroke-width="2"/><text x="${x + dx}" y="${y + dy}" ${an ? `text-anchor="${an}"` : ""} font-size="12.5" class="ink">${t}</text>`; });
+  g += `<text x="${X(.2)}" y="${T + Hh - 10}" text-anchor="middle" font-size="12">all four markets open</text><text x="${X(.7)}" y="${T + Hh - 10}" text-anchor="middle" font-size="12">Last coin standing only</text>`;
+  g += `<text x="${L + Wd / 2}" y="${T + Hh + 40}" text-anchor="middle" font-size="12">share of the round passed when the bet was placed</text>`;
+  $("figWeight").innerHTML = svg(900, T + Hh + 50, g, "Bet weight falls from 1 at the open to about 0.34 at the end of betting.");
+}
+function figHype() {
+  const L = 40, Wd = 820, T = 16, Hh = 320, cx = L + Wd / 2, cy = T + Hh / 2;
+  let g = `<rect x="${L}" y="${T}" width="${Wd / 2}" height="${Hh / 2}" style="fill:var(--tint-down)"/><rect x="${cx}" y="${cy}" width="${Wd / 2}" height="${Hh / 2}" style="fill:var(--tint-up)"/>`;
+  g += `<line x1="${L}" x2="${L + Wd}" y1="${cy}" y2="${cy}" style="stroke:var(--rule2)"/><line x1="${cx}" x2="${cx}" y1="${T}" y2="${T + Hh}" style="stroke:var(--rule2)"/>`;
+  g += `<text x="${L + Wd - 4}" y="${cy - 8}" text-anchor="end" font-size="12">price return R</text><text x="${cx + 8}" y="${T + 14}" font-size="12">pace growth A</text>`;
+  g += `<text x="${L + 14}" y="${T + 24}" font-size="13" class="ink">Biggest bust</text><text x="${L + 14}" y="${T + 42}" font-size="12">trading sped up, price fell</text>`;
+  g += `<text x="${L + Wd - 14}" y="${T + Hh - 30}" text-anchor="end" font-size="13" class="ink">Most efficient territory</text><text x="${L + Wd - 14}" y="${T + Hh - 12}" text-anchor="end" font-size="12">price rose, trading calmed</text>`;
+  g += `<text x="${L + Wd - 14}" y="${T + 24}" text-anchor="end" font-size="12">rising on a rush of trades</text><text x="${L + 14}" y="${T + Hh - 12}" font-size="12">falling quietly</text>`;
+  const sx = v => cx + v / .2 * (Wd / 2), sy = v => cy - v / 1 * (Hh / 2);
+  [["A", .12, .2, 0], ["B", .08, -.4, 1], ["C", -.15, .6, 2]].forEach(([n, R, A, i]) => { g += `<circle cx="${sx(R)}" cy="${sy(A)}" r="7" style="fill:${C(i * 3)}"/><text x="${sx(R) + 12}" y="${sy(A) + 4}" font-size="13" class="ink">${n}</text>`; });
+  $("figHype").innerHTML = svg(900, T + Hh + 8, g, "A grid of price return against pace growth, with coins A, B and C from the example placed on it.");
+}
+function figMoney() {
+  const box = (x, y, w, h, t, s) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="10" style="fill:var(--bg2);stroke:var(--rule2)"/><text x="${x + w / 2}" y="${y + h / 2 - 3}" text-anchor="middle" font-size="14" class="ink">${t}</text><text x="${x + w / 2}" y="${y + h / 2 + 16}" text-anchor="middle" font-size="11.5">${s}</text>`;
+  let g = `<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" style="fill:var(--ink)"/></marker></defs>`;
+  g += box(20, 40, 250, 96, "Your wallet", "made by Google, or your own");
+  g += `<rect x="560" y="18" width="310" height="140" rx="12" style="fill:none;stroke:var(--ink)" stroke-width="1.4"/><text x="715" y="42" text-anchor="middle" font-size="14" class="ink">Arena wallet</text>`;
+  g += box(585, 58, 125, 80, "Your balance", "in the arena") + box(722, 58, 125, 80, "Pools", "bets and winnings");
+  g += `<line x1="712" x2="720" y1="90" y2="90" style="stroke:var(--ink)" marker-end="url(#ah)" marker-start="url(#ah)"/>`;
+  g += `<line x1="276" x2="554" y1="68" y2="68" style="stroke:var(--ink)" stroke-width="1.6" marker-end="url(#ah)"/><text x="415" y="58" text-anchor="middle" font-size="13" class="ink">Deposit</text><text x="415" y="86" text-anchor="middle" font-size="11.5">you sign one plain transfer</text>`;
+  g += `<line x1="554" x2="276" y1="118" y2="118" style="stroke:var(--ink)" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#ah)"/><text x="415" y="108" text-anchor="middle" font-size="13" class="ink">Withdraw</text><text x="415" y="136" text-anchor="middle" font-size="11.5">only to a linked wallet</text>`;
+  $("figMoney").innerHTML = svg(900, 176, g, "Money flow: deposits from your wallet to the arena wallet, bets inside your arena balance, withdrawals back to your linked wallet.");
+}
+
+/* ---------- payout calculator ---------- */
+let cur = "tSOL";
+function calc() {
+  const s = Math.max(0, +$("cStake").value || 0), e = (+$("cAt").value || 0) / 100, others = Math.max(0, +$("cOthers").value || 0), onMine = Math.min(others, Math.max(0, +$("cMine").value || 0)), n = Math.max(2, Math.min(25, Math.round(+$("cN").value || 15)));
+  const w = 1 / (1 + 2 * e), seed = (cfg.seed && cfg.seed[cur]) || 0, rake = cfg.rake;
+  const P = others + s + seed * n, mineShares = seed + onMine, my = s * w, share = my / (mineShares + my || 1), pay = P * (1 - rake) * share;
+  $("cAtO").textContent = Math.round(e * 100) + "%";
+  $("oW").textContent = "×" + w.toFixed(3);
+  $("oP").textContent = amt(P, cur);
+  $("oS").textContent = s > 0 ? (share * 100).toFixed(1) + "%" : "--";
+  $("oR").textContent = amt(P * rake, cur);
+  $("oPay").textContent = s > 0 ? amt(pay, cur) : "--";
+  $("oX").textContent = s > 0 ? `That's ${(pay / s).toFixed(2)}× your stake. ` + (seed > 0 ? `The pool includes a house seed of ${amt(seed * n, cur)}: ${amt(seed, cur)} on each of ${n} coins.` : "This pool has no house seed.") : "Enter a stake to see the payout.";
+}
+document.querySelectorAll("#calc .seg button").forEach(b => b.onclick = () => {
+  cur = b.dataset.cur; document.querySelectorAll("#calc .seg button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  const sol = cur === "SOL"; $("cStake").value = sol ? "0.1" : "1"; $("cStake").step = sol ? "0.01" : "0.05"; $("cOthers").value = sol ? "0.8" : "8"; $("cMine").value = sol ? "0.2" : "2"; $("cOthers").step = $("cMine").step = sol ? "0.05" : "0.5"; calc();
+});
+["cStake", "cAt", "cOthers", "cMine", "cN"].forEach(id => $(id).addEventListener("input", calc));
+
+/* ---------- contents: active section and the small-screen sheet ---------- */
+const links = [...document.querySelectorAll("#side a")], secs = links.map(a => document.querySelector(a.getAttribute("href"))).filter(Boolean);
+function spy() {
+  const y = window.scrollY + 140; let cur = secs[0];
+  for (const s of secs) if (s.offsetTop <= y) cur = s;
+  links.forEach(a => a.setAttribute("aria-current", String(a.getAttribute("href") === "#" + cur.id)));
+}
+window.addEventListener("scroll", () => requestAnimationFrame(spy), { passive: true });
+const sheet = $("sheet");
+$("sheetNav").innerHTML = $("side").outerHTML.replace('id="side"', 'id="side2"');
+const openSheet = on => { sheet.hidden = !on; $("tocBtn").setAttribute("aria-expanded", String(on)); if (on) $("sheetX").focus(); else $("tocBtn").focus(); };
+$("tocBtn").onclick = () => openSheet(true);
+$("sheetX").onclick = () => openSheet(false);
+sheet.addEventListener("click", e => { if (e.target === sheet || e.target.closest("a")) openSheet(false); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !sheet.hidden) openSheet(false); });
+
+/* ---------- start ---------- */
+figTimeline(); figTwap(); figBracket(); figWeight(); figHype(); figMoney(); calc(); fillCfg(); spy();
+(async () => {
+  try { await loadSnap(); stream(); }
+  catch (_) { example(); H.board = { top: [], bench: [] }; }
+  drawHero();
+  setInterval(() => { if (!document.hidden) drawHero(); }, 1000);
+  setInterval(() => { if (!document.hidden && !H.example) reload(); }, 60000);
+})();
+let rt = null; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(drawHero, 120); });
+})();
+</script>
+</body>
+</html>

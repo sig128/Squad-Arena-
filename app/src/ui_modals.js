@@ -119,6 +119,7 @@ function openProof(m, k) {
 /* ---------- rules + data panels ---------- */
 function openRules() {
   modal(`${head("How Squad Arena works", "Markets, scoring and squads")}
+  <p class="fine" style="margin:12px 0 0">The short version. <a href="/docs">Read the full docs</a> for every rule, with diagrams and a payout calculator.</p>
   <div class="rules">
     <h4>The board</h4><p>pump.fun coins launched in the last 72 hours, filtered for real trading: at least $25K liquidity, a market cap no bigger than 60× its liquidity (fake-cap clones fail this), daily turnover of 25% of market cap, 2,000 trades a day (both adjusted for age) and 300 trades in the last 24 hours. The top 15 by market cap are on the board; the next 10 are on deck and still bettable. A coin leaves when it turns 72 hours old or when the rug filter catches it (liquidity under the floor, or a fall of 80% in 5 minutes). Bets on removed coins are refunded.</p>
     <h4>Rounds</h4><p>15-minute, 30-minute, 1-hour and 24-hour rounds, aligned to the clock. Every round runs the same three markets.</p>
@@ -235,7 +236,7 @@ $("autoBtn").addEventListener("click", () => { const on = $("autoBtn").getAttrib
 /* ---------- footer ---------- */
 function renderFoot() {
   $("foot").innerHTML = `${S.srv ? "Squad Arena. Coins, prices and launch data are real Solana mainnet data from pump.fun, DEX Screener, GeckoTerminal and the Solana RPC. Practice credits (tSOL) for everyone; SOL bets only where the SOL wallet is on. Nothing here is financial advice. Real-money betting is regulated, and some countries block or forbid it." : "Squad Arena prototype. Coins, prices and launch data are real Solana mainnet data from pump.fun, DEX Screener and GeckoTerminal. Bets use practice credits; no SOL moves and nothing here is financial advice. Real-money prediction markets are regulated, and some countries block unlicensed ones."}
-  <br><button type="button" class="link" id="fRules">How it works</button> · <button type="button" class="link" id="fData">Data</button> · <button type="button" class="link" id="fIntro">Replay intro</button>`;
+  <br><a class="link" href="/docs">Docs</a> · <button type="button" class="link" id="fRules">How it works</button> · <button type="button" class="link" id="fData">Data</button> · <button type="button" class="link" id="fIntro">Replay intro</button>`;
   $("fRules").onclick = openRules; $("fData").onclick = openData; $("fIntro").onclick = () => playIntro(true);
 }
 
