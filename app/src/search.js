@@ -25,17 +25,19 @@ async function remoteSearch(q) {
     const m = p.baseToken.address, cur = best.get(m), liq = (p.liquidity && p.liquidity.usd) || 0;
     if (!cur || liq > ((cur.liquidity && cur.liquidity.usd) || 0)) best.set(m, p);
   }
-  return [...best.values()].sort((a, b) => ((b.liquidity && b.liquidity.usd) || 0) - ((a.liquidity && a.liquidity.usd) || 0)).slice(0, 10);
+  // real trading first: 24 h volume (liquidity alone is easy to fake), with fake-cap clones (market cap over 60× liquidity) pushed down
+  const score = p => { const liq = (p.liquidity && p.liquidity.usd) || 0, mc = +(p.marketCap || p.fdv) || 0, vol = (p.volume && p.volume.h24) || 0; return (mc / Math.max(1, liq) > 60 ? 0.001 : 1) * (vol + Math.min(liq, vol * 5) * 0.01 + 1e-6 * liq); };
+  return [...best.values()].sort((a, b) => score(b) - score(a)).slice(0, 10);
 }
 function squadSize(m) { try { return squadOf(m).members.length; } catch (_) { return 0; } }
 function srRow(item, i) {
   if (item.tok) {
     const tok = item.tok, ti = S.board.top.findIndex(t => t.m === tok.m), bi = S.board.bench.findIndex(t => t.m === tok.m), n = squadSize(tok.m);
     const tag = ti >= 0 ? "#" + (ti + 1) : bi >= 0 ? "On deck" : n ? "Squad" : "";
-    return `<button type="button" role="option" class="s-row" data-i="${i}" aria-selected="${i === SR.sel}">${avHTML(tok, 22, 1.5)}<span class="s-nm"><b>$${esc(tok.s)}</b><span>${esc(tok.n || "")}</span></span><span class="s-mc">${fmtUsd(mcAt(tok, tokTime(tok)) || tok.mc)}</span><span class="s-tag">${tag}${n ? ` · ${n} in squad` : ""}</span></button>`;
+    return `<button type="button" role="option" class="s-row" data-i="${i}" aria-selected="${i === SR.sel}">${avHTML(tok, 22, 1.5)}<span class="s-nm"><b>$${esc(tok.s)}</b><span>${esc(tok.n || "")}</span></span><span class="s-mc">${fmtUsd(mcAt(tok, tokTime(tok)) || tok.mc)}</span><span class="s-tag">${[tag, n ? n + " in squad" : "", short(tok.m)].filter(Boolean).join(" · ")}</span></button>`;
   }
   const p = item.pair, b = p.baseToken, mc = +(p.marketCap || p.fdv) || 0, age = p.pairCreatedAt ? ageShort(nowW() - p.pairCreatedAt) : "";
-  return `<button type="button" role="option" class="s-row" data-i="${i}" aria-selected="${i === SR.sel}">${avHTML({ m: b.address, s: b.symbol || "?", logo: (p.info && p.info.imageUrl) || null }, 22, 1.5)}<span class="s-nm"><b>$${esc(b.symbol || "?")}</b><span>${esc(b.name || "")}</span></span><span class="s-mc">${mc ? fmtUsd(mc) : "—"}</span><span class="s-tag">${esc(age)}${p.dexId ? " · " + esc(p.dexId) : ""}</span></button>`;
+  return `<button type="button" role="option" class="s-row" data-i="${i}" aria-selected="${i === SR.sel}">${avHTML({ m: b.address, s: b.symbol || "?", logo: (p.info && p.info.imageUrl) || null }, 22, 1.5)}<span class="s-nm"><b>$${esc(b.symbol || "?")}</b><span>${esc(b.name || "")}</span></span><span class="s-mc">${mc ? fmtUsd(mc) : "—"}</span><span class="s-tag">${esc(short(b.address))}${age ? " · " + esc(age) : ""}${p.volume && p.volume.h24 ? " · " + fmtUsd(p.volume.h24) + " vol 24h" : ""}</span></button>`;
 }
 const ageShort = ms => { const h = ms / 3600e3; return h < 1 ? Math.max(1, Math.round(h * 60)) + "m old" : h < 48 ? Math.round(h) + "h old" : Math.round(h / 24) + "d old"; };
 function srRender() {
@@ -98,7 +100,11 @@ async function watchTick() {
     WATCH.last = nowW();
     try { const r = await fetch("https://api.dexscreener.com/tokens/v1/solana/" + m); if (r.ok) applyPairs(await r.json(), nowW()); dirty.coin = true; } catch (_) {}
   }
-  if (!tok.C.length && tok.pool && nowW() - WATCH.hist > 15000) {
+  if (!tok.C.length && S.srv && nowW() - WATCH.hist > 15000) {
+    WATCH.hist = nowW();
+    try { const r = await fetch(SRV.url + "/candles?m=" + encodeURIComponent(m)); if (r.ok) { const j = await r.json(); tok.C = (j.C || []).map(cIn); tok.C5 = (j.C5 || []).map(cIn); tok.firstT = firstTime(tok); dirty.coin = true; } } catch (_) {}
+  }
+  else if (!tok.C.length && tok.pool && nowW() - WATCH.hist > 15000) {
     WATCH.hist = nowW();
     for (const five of [false, true]) {
       try {

@@ -65,7 +65,7 @@ function buildCoin(m) {
       <div class="sub"><span>${esc(tok.n)}</span><span id="cAge"></span><span>${esc(tok.dex || "")}${tok.quote && tok.quote !== "SOL" ? " · paired with " + esc(tok.quote) : ""}</span><span id="cRank"></span></div></div>
     <div class="px"><b id="cPx">—</b><span id="cPct" class="num"></span></div>
   </div>
-  <div class="c-links"><button class="btn btn-solid btn-xs" type="button" id="cCaBtn" aria-label="Copy contract address">Copy CA</button>${A("https://pump.fun/coin/" + tok.m, "pump.fun")}${A("https://dexscreener.com/solana/" + (tok.pool || tok.m), "DEX Screener")}${A("https://solscan.io/token/" + tok.m, "Solscan")}${meta ? `<span class="lbl">Links set by the coin's creator</span>${meta}` : ""}</div>
+  <div class="c-links"><button class="btn btn-solid btn-xs" type="button" id="cCaBtn" aria-label="Copy contract address">Copy CA</button>${/pump$/.test(tok.m) || /pump/.test(tok.dex || "") ? A("https://pump.fun/coin/" + tok.m, "pump.fun") : ""}${A("https://dexscreener.com/solana/" + (tok.pool || tok.m), "DEX Screener")}${A("https://solscan.io/token/" + tok.m, "Solscan")}${meta ? `<span class="lbl">Links set by the coin's creator</span>${meta}` : ""}</div>
   ${tok.ds ? `<p class="desc">${esc(tok.ds.slice(0, 360))}</p>` : ""}
   <div class="c-grid">
     <div class="chart-box" id="cBox">

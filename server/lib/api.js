@@ -7,6 +7,8 @@ import { authed } from "./auth.js";
 import { attach, online } from "./hub.js";
 import { log, rateOk } from "./util.js";
 import * as A from "./actions.js";
+import { TL, applyPairs, fetchCandles } from "./market.js";
+import { getJSON, isAddress } from "./util.js";
 
 const POST = {
   "/bet": A.placeBet, "/squad": A.joinSquadAction, "/pass": A.streakPass, "/topup": A.topup, "/profile": A.setHandle, "/proof": A.postProof, "/mark": A.markProof, "/chat": A.chat,
@@ -56,6 +58,16 @@ export function makeServer({ snapshot, health }) {
       if (req.method === "GET" && path === "/health") return send(req, res, 200, { ...health(), online: online() }, origin);
       if (req.method === "GET" && path === "/snapshot") { if (!rateOk("snap:" + ip, 30, 10)) throw Object.assign(new Error("Too many requests."), { status: 429 }); return send(req, res, 200, snapshot(), origin); }
       if (req.method === "GET" && path === "/stream") { if (!rateOk("sse:" + ip, 20, 8)) throw Object.assign(new Error("Too many connections."), { status: 429 }); return attach(req, res, origin); }
+      if (req.method === "GET" && path === "/candles") {
+        if (!rateOk("candles:" + ip, 30, 10)) throw Object.assign(new Error("Too many requests."), { status: 429 });
+        const m = String(url.searchParams.get("m") || ""); if (!isAddress(m)) throw Object.assign(new Error("Not a coin address."), { status: 400 });
+        let tok = TL.get(m);
+        if (!tok) { try { applyPairs(await getJSON("https://api.dexscreener.com/tokens/v1/solana/" + m), Date.now()); } catch (_) {} tok = TL.get(m); }
+        if (!tok || !tok.pool) throw Object.assign(new Error("Couldn't find that coin trading on Solana."), { status: 404 });
+        try { await fetchCandles(tok, false); await fetchCandles(tok, true); } catch (_) {}
+        const c = x => [x.t, x.o, x.h, x.l, x.c, Math.round(x.v || 0)];
+        return send(req, res, 200, { m, C: tok.C.slice(-200).map(c), C5: tok.C5.map(c) }, origin);
+      }
       if (req.method === "GET" && GET_AUTH[path]) { const u = await userOf(req); return send(req, res, 200, await GET_AUTH[path](u), origin); }
       if (req.method === "POST" && POST[path]) { const body = await readBody(req); const u = await userOf(req); return send(req, res, 200, await POST[path](u, body), origin); }
       return send(req, res, 404, { error: "Not found." }, origin);

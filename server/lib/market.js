@@ -145,6 +145,14 @@ export async function jobHistory() {
   catch (e) { FEED.lastHist = now() + 8000; throw e; }
   applyCandles(tok, j && j.data && j.data.attributes && j.data.attributes.ohlcv_list, it.five);
 }
+// candles for one coin on request (a coin page for a coin off the board), cached for 5 minutes
+export async function fetchCandles(tok, five) {
+  const at = five ? tok.hist5At : tok.histAt;
+  if (at && now() - at < 300e3 && (five ? tok.C5 : tok.C).length) return;
+  const q = five ? "minute?aggregate=5&limit=300" : "minute?aggregate=1&limit=200";
+  const j = await fetchJSON(`https://api.geckoterminal.com/api/v2/networks/solana/pools/${tok.pool}/ohlcv/${q}&currency=usd&token=base`);
+  applyCandles(tok, j && j.data && j.data.attributes && j.data.attributes.ohlcv_list, five);
+}
 // coins on the board get 1-minute candles refreshed every 10 min and 5-minute candles every 30 min (the 24 h rounds need them)
 export function queueHistory(list) {
   const t = now();
