@@ -3,7 +3,7 @@
 import { CFG, TF, TFK, MKS, CURRENCIES, checkConfig } from "./lib/config.js";
 import { log, now } from "./lib/util.js";
 import { DB } from "./lib/db.js";
-import { TL, FEED, RPC, jobPrices, jobValidate, jobDiscover, jobHistory, queueHistory, prune, rpcStart, rpcWatch } from "./lib/market.js";
+import { TL, FEED, RPC, jobPrices, jobValidate, jobDiscover, jobHistory, queueHistory, prune, rpcStart, rpcWatch, pumpOff } from "./lib/market.js";
 import { G, roundAt, roundOfKey, refreshBoard, ensureFields, lcs, lcsJSON, lcsFromJSON, resultOf, decide, roundsWithOpenBets, indexBet, roundState } from "./lib/game.js";
 import { SOC, betIn, joinSquad, pushDoc, allDocs, peopleOut } from "./lib/social.js";
 import { emit, online } from "./lib/hub.js";
@@ -52,7 +52,7 @@ function snapshot() {
 }
 function health() {
   return { ok: true, time: now(), up: Math.round((now() - STARTED) / 1000), feed: CFG.feed, coins: TL.size, board: G.board.top.length, rpc: RPC.live, rpcCoins: RPC.watched.size,
-    db: DB.kind, money: moneyInfo(), treasurySol: MONEY.treasuryLamports == null ? null : MONEY.treasuryLamports / 1e9, calls: FEED.calls, errors: FEED.errs, lastError: FEED.lastErr || null, discovery: FEED.pumpBlocked ? "geckoterminal" : "pump.fun", lastPrice: FEED.lastPrice };
+    db: DB.kind, money: moneyInfo(), treasurySol: MONEY.treasuryLamports == null ? null : MONEY.treasuryLamports / 1e9, calls: FEED.calls, errors: FEED.errs, lastError: FEED.lastErr || null, discovery: pumpOff() ? "geckoterminal" : "pump.fun", lastPrice: FEED.lastPrice };
 }
 
 /* ---------- live stream batching ---------- */
@@ -119,17 +119,29 @@ async function settleTick(t) {
 }
 
 /* ---------- loops ---------- */
-let feedBusy = false;
+// prices and pump.fun on one loop, GeckoTerminal (discovery fallback, candles) on another
+const discEvery = () => G.board.top.length < 15 ? 4000 : 20000;        // fill the board fast after a restart
+let feedBusy = false, gtBusy = false;
 async function feedStep() {
   if (feedBusy) return; feedBusy = true;
   const t = now(), keep = keepSet(t);
   try {
     if (t - FEED.lastPrice > 4000) await jobPrices([...keep].slice(0, 360));
     else if (FEED.pending.length) await jobValidate();
-    else if (t - FEED.lastDisc > (G.board.top.length < 15 ? 4000 : 20000)) await jobDiscover();   // fill the board fast after a restart
-    else { queueHistory([...keep].map(m => TL.get(m)).filter(Boolean)); if (FEED.histQ.length && t - FEED.lastHist > 2500) await jobHistory(); }
+    else if (!pumpOff() && t - FEED.lastDisc > discEvery()) await jobDiscover();
   } catch (e) { if (t - FEED.lastPrice > 4000) FEED.lastPrice = t - 2000; log("warn", "feed: " + e.message); }
   finally { feedBusy = false; }
+}
+async function gtStep() {
+  if (gtBusy) return; gtBusy = true;
+  const t = now();
+  try {
+    const short = G.board.top.length < 15;
+    if (pumpOff() && t - FEED.lastDisc > discEvery()) await jobDiscover();
+    else if (short && pumpOff()) return;                                  // candles wait until the board is full
+    else { queueHistory([...keepSet(t)].map(m => TL.get(m)).filter(Boolean)); if (FEED.histQ.length && t - FEED.lastHist > 2500) await jobHistory(); }
+  } catch (e) { log("warn", "feed: " + e.message); }
+  finally { gtBusy = false; }
 }
 function engineStep() {
   const t = now();
@@ -150,6 +162,8 @@ async function loadState() {
   for (const row of await DB.loadBets(since)) indexBet(betIn(row));
   for (const s of await DB.loadSquads()) { const ts = Date.parse(s.joined_at); joinSquad(s.user_id, s.mint, ts); G.followed.set(s.mint, Math.max(G.followed.get(s.mint) || 0, ts)); }
   for (const m of G.followed.keys()) if (!TL.has(m)) FEED.pending.push(m);
+  // coins from the last few hours of rounds go straight back to DEX Screener, so a restart doesn't start from an empty board
+  for (const f of G.fields.values()) if (t - f.at < 6 * 3600e3) for (const m of [...f.top, ...f.bench]) if (!TL.has(m) && !FEED.pending.includes(m)) FEED.pending.push(m);
   for (const p of await DB.loadProofs(t - 30 * 86400e3)) SOC.proofs.set(p.id, { id: p.id, uid: p.user_id, m: p.mint, k: p.task, u: p.url, ts: Date.parse(p.created_at) });
   for (const k of await DB.loadMarks()) { if (!SOC.proofs.has(k.proof_id)) continue; let mk = SOC.marks.get(k.proof_id); if (!mk) SOC.marks.set(k.proof_id, mk = { v: new Map(), f: new Map() }); (k.kind === "flag" ? mk.f : mk.v).set(k.user_id, Date.parse(k.created_at) || t); }
   SOC.chat = (await DB.loadChat(t - 3 * 86400e3)).reverse().map(c => ({ id: "c" + c.id, uid: c.user_id, c: c.chan, x: c.body, ts: Date.parse(c.created_at), sys: !!c.sys }));
@@ -165,6 +179,7 @@ async function main() {
   if (CFG.feed === "replay") startReplay(process.env.REPLAY_FILE || new URL("./replay.json", import.meta.url).pathname);
   else {
     setInterval(() => feedStep(), 1000);
+    setInterval(() => gtStep(), 1000);
     rpcStart(() => {});
     setInterval(() => { if (!RPC.live) return; const next = [...keepSet(now())].map(m => TL.get(m)).find(tok => tok && !RPC.watched.has(tok.m) && tok.dex === "pumpswap" && tok.quote === "SOL"); if (next) rpcWatch(next).catch(e => log("warn", "rpc watch: " + e.message)); }, 1500);
     setInterval(() => prune(keepSet(now())), 60000);

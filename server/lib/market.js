@@ -52,12 +52,13 @@ export function pushTick(tok, t, p) {
 }
 
 /* ---------- transport: GeckoTerminal allows ~30 calls a minute, so its calls are spaced and backed off ---------- */
-let chain = Promise.resolve();
-const serial = fn => { const p = chain.then(fn, fn); chain = p.catch(() => {}); return p; };
+// two queues: GeckoTerminal backing off never holds up DEX Screener prices
+const chains = { gt: Promise.resolve(), other: Promise.resolve() };
+const serial = (k, fn) => { const p = chains[k].then(fn, fn); chains[k] = p.catch(() => {}); return p; };
 const isGT = u => u.includes("geckoterminal.com");
-const fetchJSON = url => serial(async () => {
+const fetchJSON = url => serial(isGT(url) ? "gt" : "other", async () => {
   if (isGT(url)) { const wait = FEED.gtNext - now(); if (wait > 0) await sleep(Math.min(wait, 30000)); }
-  try { const j = await getJSON(url); FEED.calls++; if (isGT(url)) FEED.gtNext = now() + 2200; return j; }
+  try { const j = await getJSON(url); FEED.calls++; if (isGT(url)) FEED.gtNext = now() + 3000; return j; }
   catch (e) { FEED.errs++; FEED.lastErr = { at: now(), msg: String(e.message || e).slice(0, 160) }; if (isGT(url)) FEED.gtNext = now() + (e.status === 429 ? 30000 : 5000); throw e; }
 });
 
@@ -115,9 +116,11 @@ export async function jobValidate() {
   const batch = FEED.pending.splice(0, 30); if (!batch.length) return;
   applyPairs(await fetchJSON("https://api.dexscreener.com/tokens/v1/solana/" + batch.join(",")), now());
 }
+// pump.fun first; if it refuses this server three times, GeckoTerminal's PumpSwap pools for 30 minutes, then pump.fun again
+export const pumpOff = () => FEED.pumpBlocked && now() - FEED.pumpBlockedAt < 1800e3;
 export async function jobDiscover() {
   const t = now(); FEED.lastDisc = t;
-  if (!FEED.pumpBlocked) {
+  if (!pumpOff()) {
     try {
       const off = FEED.page * 50; FEED.page = (FEED.page + 1) % FEED.pages;
       const arr = await fetchJSON(`https://frontend-api-v3.pump.fun/coins?offset=${off}&limit=50&sort=market_cap&order=DESC&includeNsfw=false`);
@@ -127,7 +130,11 @@ export async function jobDiscover() {
         else { const tok = TL.get(c.mint); if (tok && !tok.logo && c.image_uri) tok.logo = c.image_uri; }
       }
       return;
-    } catch (e) { FEED.pumpFails = (FEED.pumpFails || 0) + 1; if (FEED.pumpFails >= 3) { FEED.pumpBlocked = true; log("warn", "pump.fun API unavailable, discovering through GeckoTerminal: " + e.message); } }
+    } catch (e) {
+      FEED.pumpFails = (FEED.pumpFails || 0) + 1;
+      if (FEED.pumpFails >= 3) { FEED.pumpBlocked = true; FEED.pumpBlockedAt = t; FEED.pumpFails = 0; log("warn", "pump.fun API unavailable, discovering through GeckoTerminal: " + e.message); }
+      return;
+    }
   }
   const pg = FEED.gtPage; FEED.gtPage = pg % 5 + 1;
   const j = await fetchJSON(`https://api.geckoterminal.com/api/v2/networks/solana/dexes/pumpswap/pools?page=${pg}&sort=h24_tx_count_desc`);
