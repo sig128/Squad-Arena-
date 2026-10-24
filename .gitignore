@@ -1,0 +1,7 @@
+# local-only files (secrets, machine config)
+config.local.js
+.env
+.env.*
+.vercel
+.DS_Store
+node_modules
