@@ -1543,7 +1543,7 @@ function route() {
   S.view = v; S.coin = v === "coin" ? m : null;
   qsa(".nav a").forEach(a => { if (a.dataset.v === v) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
   const show = () => {
-    if (prevEl && prevEl !== nextEl) prevEl.hidden = true;
+    qsa("section.view").forEach(el => { if (el !== nextEl) el.hidden = true; });     // only one view at a time, also when a link opens a coin page directly
     if (v === "coin") buildCoin(m);
     nextEl.hidden = false; enterAnim(nextEl);
     if (prevEl) window.scrollTo(0, 0);
