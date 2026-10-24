@@ -190,6 +190,7 @@ async function main() {
     setInterval(() => prune(keepSet(now())), 60000);
   }
   setInterval(engineStep, 1000);
+  setInterval(() => { const t = now(); for (const k of G.opens.keys()) { const r = roundOfKey(k.split("|")[0]); if (!r || t - r.e > 26 * 3600e3) G.opens.delete(k); } }, 600e3);
   if (MONEY.enabled) {
     setInterval(() => scanDeposits().catch(e => log("warn", "deposit scan: " + e.message)), 30000);
     setInterval(() => recoverWithdrawals().catch(e => log("warn", "withdrawal check: " + e.message)), 60000);

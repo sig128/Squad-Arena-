@@ -10,6 +10,7 @@ export const G = {
   fields: new Map(),          // round key -> { top: [mint], bench: [mint], live, at }
   lcs: new Map(),             // round key -> bracket state
   results: new Map(),         // round key | market -> result
+  opens: new Map(),           // round key | mint -> opening price, kept once the opening window has passed
   settled: new Set(),         // round keys paid out
   bets: new Map(),            // bet id -> bet
   followed: new Map(),        // mint -> last join ms: coins with a squad, tracked even when they are off the board
@@ -64,7 +65,11 @@ export function retOf(tok, r, wEnd) {
   const win = winOf(r), te = Math.min(wEnd, r.e), ft = firstTime(tok);
   const a0 = Math.max(r.rs, ft === Infinity ? r.rs : ft);
   if (a0 > te - 2000) return null;
-  const o = twap(tok, a0, Math.min(a0 + win, te)), c = twap(tok, Math.max(a0, te - win), te);
+  // the opening price is fixed once its window has passed: ticks older than 2 h fall back to candles from another
+  // source, and a long round must compare its close with the same prices it opened on
+  const ok = r.key + "|" + tok.m; let o = G.opens.get(ok);
+  if (o == null) { o = twap(tok, a0, Math.min(a0 + win, te)); if (o && te >= a0 + win) G.opens.set(ok, o); }
+  const c = twap(tok, Math.max(a0, te - win), te);
   return o && c ? c / o - 1 : null;
 }
 function distribute(n, parts) { const b = Math.floor(n / parts), rem = n % parts; return Array.from({ length: parts }, (_, i) => b + (i < rem ? 1 : 0)); }
