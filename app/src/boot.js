@@ -118,6 +118,8 @@ function tick(force) {
   renderStrip(w); updateRows(w); fillLens();
   if (S.view === "markets") { renderMarkets(w); renderMyBets(w); renderSettled(w); }
   if (S.view === "squads") renderSquads();
+  if (S.view === "trending") renderTrending();
+  if (S.view === "coin") kolTick();
   if (S.view === "coin") updateCoin();
   if (dirty.chat) { dirty.chat = false; renderChat(); renderChatTabs(); }
   if (dirty.online) { dirty.online = false; const n = S.peers ? S.peers.length : 0; $("onlineTxt").textContent = n ? n + " online" : ""; }

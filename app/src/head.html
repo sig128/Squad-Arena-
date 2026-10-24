@@ -209,6 +209,19 @@ body.rail-off .railtab{transform:translate(0,-50%);transition-delay:.25s}
 .tk-cell{display:flex;align-items:center;gap:9px;min-width:0}
 .tk-cell b{font-weight:600;font-size:12.5px;white-space:nowrap}
 .tk-cell .nm{color:var(--dim);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.trend{border-top:1px solid var(--rule)}
+.trend .tr{display:grid;grid-template-columns:26px minmax(160px,1.7fr) 52px 78px 62px 78px 78px 46px 62px 58px;align-items:center;gap:12px;padding:9px 6px;border-bottom:1px solid var(--rule);cursor:pointer;font-size:12px}
+.trend .tr:hover{background:var(--hover)}
+.trend .tr.th{cursor:default;color:var(--dim);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;padding-top:0}
+.trend .tr.th:hover{background:none}
+.trend .tk-cell .badge{color:var(--dim)}
+@media (max-width:860px){.trend .tr{grid-template-columns:22px minmax(120px,1fr) 70px 56px 70px 40px 52px}.trend .c-age,.trend .c-v24,.trend .c-hold{display:none}}
+.kol{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;padding:4px 0;font-size:11.5px}
+.kol .kn{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kol .kn a{color:inherit;text-decoration:none}
+.kol .kn a:hover{text-decoration:underline}
+.kh{margin:10px 0 2px;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.kolb{font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;padding:1px 4px;white-space:nowrap;line-height:1.3;flex:none;background:var(--fg);color:var(--bg)}
 .badge{font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;border:1px solid currentColor;padding:1px 4px;white-space:nowrap;line-height:1.3;flex:none}
 .badge.solid{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .badge.down{color:var(--down)}
@@ -535,7 +548,7 @@ body.chart-full{overflow:hidden}
       <span class="word" id="brandWord">SQUAD ARENA</span>
     </a>
     <nav class="nav" aria-label="Sections">
-      <a href="#arena" data-v="arena">Arena</a><a href="#markets" data-v="markets">Markets</a><a href="#squads" data-v="squads">Squads</a><a href="/docs">Docs</a>
+      <a href="#arena" data-v="arena">Arena</a><a href="#trending" data-v="trending">Trending</a><a href="#markets" data-v="markets">Markets</a><a href="#squads" data-v="squads">Squads</a><a href="/docs">Docs</a>
     </nav>
     <div class="search" id="search">
       <svg class="s-ic" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="7" cy="7" r="4.6"/><path d="M10.4 10.4L14 14"/></svg>
@@ -553,7 +566,7 @@ body.chart-full{overflow:hidden}
 </header>
 <div class="subnav wrap">
   <nav class="nav" aria-label="Sections">
-    <a href="#arena" data-v="arena">Arena</a><a href="#markets" data-v="markets">Markets</a><a href="#squads" data-v="squads">Squads</a><a href="/docs">Docs</a>
+    <a href="#arena" data-v="arena">Arena</a><a href="#trending" data-v="trending">Trending</a><a href="#markets" data-v="markets">Markets</a><a href="#squads" data-v="squads">Squads</a><a href="/docs">Docs</a>
   </nav>
   <div class="seg tf" role="group" aria-label="Round length"></div>
 </div>
@@ -612,6 +625,13 @@ body.chart-full{overflow:hidden}
       <div class="sec">
         <div class="sec-h"><div class="t"><h2 data-scr>Tier ladder</h2><p>Each tier unlocks new tasks. Earlier tasks stay open.</p></div></div>
         <div class="ladder" id="ladder"></div>
+      </div>
+    </section>
+
+    <section class="view" id="v-trending" data-view="trending" hidden>
+      <div class="sec">
+        <div class="sec-h"><div class="t"><h2 data-scr>Trending</h2><p>Solana coins under 72 hours old, ranked by trading in the last hour and day. Every KOL holding a coin lifts it.</p></div><span class="meta cap dim" id="trendMeta"></span></div>
+        <div class="trend" id="trendRows"></div>
       </div>
     </section>
 

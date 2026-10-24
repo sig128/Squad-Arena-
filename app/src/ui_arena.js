@@ -3,7 +3,7 @@ let curView = null;
 function parseHash() {
   const h = decodeURIComponent((location.hash || "").slice(1));
   if (h.startsWith("coin-")) return { v: "coin", m: h.slice(5) };
-  if (h === "arena" || h === "markets" || h === "squads") return { v: h };
+  if (h === "arena" || h === "markets" || h === "squads" || h === "trending") return { v: h };
   return { v: "arena" };
 }
 const tokAny = m => T.get(m) || TR.get(m) || TL.get(m);
@@ -21,7 +21,7 @@ function route() {
   qsa(".nav a").forEach(a => { if (a.dataset.v === v) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
   const show = () => {
     qsa("section.view").forEach(el => { if (el !== nextEl) el.hidden = true; });     // only one view at a time, also when a link opens a coin page directly
-    if (v === "coin") buildCoin(m);
+    if (v === "coin") { buildCoin(m); loadKolsFor(m); }
     nextEl.hidden = false; enterAnim(nextEl);
     if (prevEl) window.scrollTo(0, 0);
     dirty.all = true; hideLens();
@@ -268,6 +268,9 @@ function updateRows(w) {
     const isNew = tok.firstT !== Infinity && tNow - tok.firstT < 10 * 60e3 && tNow - tok.firstT >= 0;
     if (isNew && !has) { const b = document.createElement("span"); b.className = "badge"; b.textContent = "New"; nm.insertBefore(b, nm.querySelector(".nm")); }
     if (!isNew && has) has.remove();
+    let kb = nm.querySelector(".kolb"); const kn = tok.kol || 0;                                // KOLs holding it
+    if (kn && !kb) { kb = document.createElement("span"); kb.className = "kolb"; kb.title = "KOLs holding this coin"; nm.insertBefore(kb, nm.querySelector(".nm")); }
+    if (kb) { if (kn) kb.textContent = kn + " KOL"; else kb.remove(); }
   });
   $("cutNote").textContent = S.board.bench.length ? S.board.bench.length + " coins" : "";
 }

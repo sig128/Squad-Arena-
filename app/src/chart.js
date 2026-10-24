@@ -243,8 +243,8 @@ function barIndexAt(t) { const ts = CH.times, n = ts.length; if (!n || t < ts[0]
 function markersSync(tok) {
   const L = LW(); if (!L.createSeriesMarkers || !CH.main) return;
   const mine = S.my.b.filter(b => b.m === tok.m && b.md === S.mode).slice(0, 40);
-  const key = mine.map(b => b.id).join() + "|" + CH.n + "|" + CH.first + "|" + CH.iv + "|" + CH.rk; if (key === CH.mkKey) return; CH.mkKey = key;
-  const ms = [];
+  const key = mine.map(b => b.id).join() + "|" + kolKey(tok.m) + "|" + CH.n + "|" + CH.first + "|" + CH.iv + "|" + CH.rk; if (key === CH.mkKey) return; CH.mkKey = key;
+  const ms = kolMarkers(tok);
   for (const b of mine) {
     let t = b.ts; if (S.mode === "replay") { try { t = recOf(roundAt(b.tf, b.ts, b.md), b.ts); } catch (_) { continue; } }
     const i = barIndexAt(t); if (i < 0) continue;

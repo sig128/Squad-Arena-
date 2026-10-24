@@ -8,6 +8,7 @@ import { attach, online } from "./hub.js";
 import { log, rateOk } from "./util.js";
 import * as A from "./actions.js";
 import { TL, FEED, applyPairs, chartC, quickHistory } from "./market.js";
+import { kolOut } from "./kol.js";
 import { getJSON, isAddress } from "./util.js";
 
 const POST = {
@@ -69,6 +70,11 @@ export function makeServer({ snapshot, health }) {
         if (!tok.C.length && !tok.CH.length) await quickHistory(tok);
         const c = x => [x.t, x.o, x.h, x.l, x.c, Math.round(x.v || 0)];
         return send(req, res, 200, { m, C: chartC(tok, false).slice(-300).map(c), C5: chartC(tok, true).map(c) }, origin);
+      }
+      if (req.method === "GET" && path === "/kols") {
+        if (!rateOk("kols:" + ip, 60, 10)) throw Object.assign(new Error("Too many requests."), { status: 429 });
+        const m = String(url.searchParams.get("m") || ""); if (!isAddress(m)) throw Object.assign(new Error("Not a coin address."), { status: 400 });
+        return send(req, res, 200, { m, ...kolOut(m) }, origin);
       }
       if (req.method === "GET" && GET_AUTH[path]) { const u = await userOf(req); return send(req, res, 200, await GET_AUTH[path](u), origin); }
       if (req.method === "POST" && POST[path]) { const body = await readBody(req); const u = await userOf(req); return send(req, res, 200, await POST[path](u, body), origin); }

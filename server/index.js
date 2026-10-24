@@ -11,6 +11,9 @@ import { emit, online } from "./lib/hub.js";
 import { makeServer } from "./lib/api.js";
 import { initMoney, moneyInfo, scanDeposits, recoverWithdrawals, MONEY } from "./lib/money.js";
 import { startReplay } from "./lib/replay.js";
+import { KOL, loadKols, kolStep, kolCount, kolWho, kolPrune } from "./lib/kol.js";
+import { BLOCKED } from "./lib/game.js";
+import { MAX_AGE } from "./lib/config.js";
 
 const STARTED = now();
 const r6 = v => v == null ? null : +(+v).toPrecision(7);
@@ -18,7 +21,7 @@ const candleOut = c => [c.t, r6(c.o), r6(c.h), r6(c.l), r6(c.c), Math.round(c.v 
 function tokOut(tok, full = true) {
   const o = { m: tok.m, s: tok.s, n: tok.n, born: tok.born, supply: tok.supply, px: r6(tok.px), mc: tok.mc, liq: tok.liq, vol: tok.vol, tx: tok.tx, bs: tok.bs, ch: tok.ch,
     pool: tok.pool, dex: tok.dex, quote: tok.quote, pa: tok.pa, x: tok.x, tg: tok.tg, dc: tok.dc, w: tok.w, ds: (tok.ds || "").slice(0, 360), logo: tok.logo,
-    gate: tok.gate, rugAt: tok.rugAt, rugWhy: tok.rugWhy, rpc: !!tok.rpcAt };
+    gate: tok.gate, rugAt: tok.rugAt, rugWhy: tok.rugWhy, rpc: !!tok.rpcAt, kol: kolCount(tok.m), holders: tok.holders || null };
   if (full) {
     const t = now();
     o.C = chartC(tok, false, t).slice(-150).map(candleOut);
@@ -34,6 +37,8 @@ function keepSet(t) {
   for (const b of G.bets.values()) if (b.st === "open") keep.add(b.m);
   // coins with a squad, most recently joined first
   [...G.followed].sort((a, b) => b[1] - a[1]).slice(0, 300).forEach(([m]) => keep.add(m));
+  // the trending list
+  for (const m of TREND.list) keep.add(m);
   // coins someone has open on a coin page right now
   for (const [m, at] of FEED.viewed) { if (t - at < 600e3) keep.add(m); else FEED.viewed.delete(m); }
   return keep;
@@ -47,8 +52,8 @@ function snapshot() {
   }
   return {
     v: 1, now: t, started: STARTED,
-    cfg: { rake: CFG.rake, seed: CFG.seed, betWindow: CFG.betWindow, minStake: CFG.minStake, maxStake: CFG.maxStake, currencies: CURRENCIES(), startBalance: CFG.startBalance, money: moneyInfo(), rpc: RPC.live },
-    board: { top: G.board.top.map(x => x.m), bench: G.board.bench.map(x => x.m) },
+    cfg: { kols: KOL.list.size, rake: CFG.rake, seed: CFG.seed, betWindow: CFG.betWindow, minStake: CFG.minStake, maxStake: CFG.maxStake, currencies: CURRENCIES(), startBalance: CFG.startBalance, money: moneyInfo(), rpc: RPC.live },
+    board: { top: G.board.top.map(x => x.m), bench: G.board.bench.map(x => x.m) }, trending: TREND.list,
     tokens: [...keep].map(m => TL.get(m)).filter(Boolean).map(tok => tokOut(tok)),
     rounds, results, docs: allDocs(), people: peopleOut()
   };
@@ -57,12 +62,37 @@ function health() {
   return { ok: true, time: now(), up: Math.round((now() - STARTED) / 1000), feed: CFG.feed, coins: TL.size, board: G.board.top.length, rpc: RPC.live, rpcCoins: RPC.watched.size,
     db: DB.kind, money: moneyInfo(), treasurySol: MONEY.treasuryLamports == null ? null : MONEY.treasuryLamports / 1e9, calls: FEED.calls, errors: FEED.errs, lastError: FEED.lastErr || null, lastPrice: FEED.lastPrice,
     discovery: { pools: FEED.sample.pools, fresh: FEED.sample.fresh, ago: FEED.sample.at ? Math.round((now() - FEED.sample.at) / 1000) : null, err: FEED.sample.err, pending: FEED.pending.length, pumpfun: !pumpOff() },
+    kols: { list: KOL.list.size, ...KOL.stats, coins: KOL.byMint.size, queue: KOL.queue.length }, trending: TREND.list.length,
     charts: { withHistory: [...TL.values()].filter(x => x.C.length > 1).length, backfilled: FEED.backfilled, backfill: CFG.gtBackfill, gtPausedFor: Math.max(0, Math.round((FEED.gtPauseUntil - now()) / 1000)),
       stored: { on: STORE.on, saved: STORE.saved, loaded: STORE.loaded, err: STORE.err } } };
 }
 
 /* ---------- live stream batching ---------- */
 const tickBuf = new Map(); let metaDirty = new Set(), sentTok = new Set();
+
+/* ---------- trending: young coins ranked by recent trading, the way trending boards rank them ---------- */
+// Recent volume counts most (5 min and 1 h), the day's volume a little; every KOL holding the coin adds 12% (up to 25 KOLs).
+// Coins on PUMP/ANSEM/KIMCHI, older than 72 h, rugged, with under $5k liquidity or stale numbers are left out.
+const TREND = { list: [], sig: "", at: 0 };
+function trendStep() {
+  const t = now(), rows = [];
+  for (const tok of TL.values()) {
+    if (BLOCKED(tok) || !(tok.px > 0) || tok.full) continue;
+    if (tok.born && t - tok.born > MAX_AGE) continue;
+    if (tok.rugAt && tok.rugAt <= t) continue;
+    if ((tok.liq || 0) < 5000 || !tok.lastSeen || t - tok.lastSeen > 30 * 60e3) continue;
+    const [v5, v1, v6, v24] = tok.vol || [0, 0, 0, 0], k = kolCount(tok.m);
+    let s = (v5 * 6 + v1 * 4 + v6 * 0.6 + v24 * 0.15) * (1 + 0.12 * Math.min(k, 25));
+    if ((tok.ch || [])[1] < -40) s *= 0.5;                                                   // falling apart this hour
+    rows.push([tok.m, s]);
+  }
+  TREND.list = rows.sort((a, b) => b[1] - a[1]).slice(0, 30).map(x => x[0]); TREND.at = t;
+  const sig = TREND.list.join();
+  if (sig !== TREND.sig) { TREND.sig = sig; emit("trending", TREND.list); }
+}
+setInterval(trendStep, 10000);
+// a KOL trade on a coin pages are showing goes out at once (it also changes the coin's KOL count)
+KOL.onTrade = (m, tr) => { metaDirty.add(m); if (keepNow().has(m)) emit("kol", { m, tr: { t: tr.t, side: tr.side, sol: tr.sol, px: tr.px, amt: tr.amt, sig: tr.sig, hold: tr.hold, ...kolWho(tr.w) } }); };
 FEED.onTick = tok => { const k = tok.ticks[tok.ticks.length - 1]; if (k) tickBuf.set(tok.m, k.h !== k.p || k.l !== k.p ? [tok.m, k.t, r6(k.p), r6(k.h), r6(k.l)] : [tok.m, k.t, r6(k.p)]); };
 FEED.onMeta = list => { for (const tok of list) metaDirty.add(tok.m); };
 FEED.onCandles = (tok, five) => { if (sentTok.has(tok.m)) emit("candles", { m: tok.m, five: !!five, C: (five ? chartC(tok, true).filter(c => c.t >= now() - 26 * 3600e3) : chartC(tok, false).slice(-150)).map(candleOut) }); };
@@ -254,6 +284,11 @@ async function main() {
     setInterval(() => feedStep(), 1000);
     setInterval(() => gtStep(), 2500);
     setInterval(metaStep, 3000);
+    // KOLs: the list now and twice a day, their transactions decoded as they arrive
+    loadKols().then(n => log(n ? "info" : "warn", n ? `KOLs: ${n} wallets from ${KOL.stats.source}` : "KOLs off: " + KOL.stats.err));
+    setInterval(() => loadKols().catch(() => {}), 12 * 3600e3);
+    setInterval(() => kolStep(() => FEED.sol), 250);
+    setInterval(() => kolPrune(keepSet(now())), 600e3);
     storeInit().then(() => log(STORE.on ? "info" : "warn", STORE.on ? "candle storage ready" : "candle storage off: " + STORE.err));
     setInterval(() => { if (!STORE.on) storeInit().then(() => { if (STORE.on) log("info", "candle storage ready"); }); }, 60000);   // picks up the table once it exists
     setInterval(loadStep, 700);

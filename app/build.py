@@ -11,7 +11,7 @@ ROOT = os.path.dirname(APP)
 SRC, DATA = os.path.join(APP, "src"), os.path.join(APP, "data")
 LWC = ('<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.0.9/dist/lightweight-charts.standalone.production.js" '
        'integrity="sha384-6/iv/tWhS2LqjhNmDWcisQfhsuS0IqxtaOo1ZnA8dzgpK1sYsn8Al1icSvt0qirp" crossorigin="anonymous"></script>')
-ORDER = ["core.js", "engine.js", "social.js", "ui_arena.js", "ui_markets.js", "ui_squads.js", "chart.js", "ui_modals.js", "live.js", "srv.js", "search.js", "boot.js"]
+ORDER = ["core.js", "engine.js", "social.js", "ui_arena.js", "ui_markets.js", "ui_squads.js", "chart.js", "ui_modals.js", "live.js", "srv.js", "search.js", "trending.js", "boot.js"]
 
 # ---------- recorded hour (the replay) and logos ----------
 data = json.load(open(os.path.join(DATA, "data.json"), encoding="utf-8"))

@@ -83,6 +83,7 @@ function buildCoin(m) {
     <div class="side">
       <div class="box"><h4>Back ${esc(tok.s)}</h4><div id="cBack"></div></div>
       <div class="box"><h4>Your position</h4><div class="pos" id="cPos"></div></div>
+      ${S.srv ? `<div class="box"><h4>KOL holders <span id="cKolN" class="dim"></span></h4><div id="cKols"><p class="fine">Loading…</p></div></div>` : ""}
       <div class="box"><h4>Stats</h4><dl class="kv" id="cKv"></dl>
         <div class="mint"><code id="cMint">${esc(tok.m)}</code><button class="btn btn-quiet btn-xs" type="button" id="cCopy">Copy</button></div></div>
     </div>

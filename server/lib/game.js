@@ -25,7 +25,7 @@ const winOf = r => Math.max(5000, r.W * 0.03);
 /* ---------- board ---------- */
 // never on the board: pump.fun's own PUMP token, and tickers left off on purpose (BOARD_EXCLUDE, default PUMP, ANSEM, KIMCHI)
 const PUMP_MINT = "pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn";
-const BLOCKED = tok => tok.m === PUMP_MINT || CFG.boardExclude.includes(String(tok.s || "").toUpperCase());
+export const BLOCKED = tok => tok.m === PUMP_MINT || CFG.boardExclude.includes(String(tok.s || "").toUpperCase());
 export function computeBoard(t) {
   const list = [];
   for (const tok of TL.values()) {

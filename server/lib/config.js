@@ -35,6 +35,12 @@ export const CFG = {
   // Game rules (the site reads these from /snapshot so both sides agree).
   // SEED_SOL is house money added to every coin in a real-SOL pool; 0 makes the pools pure (the house only earns the rake)
   // and refunds everyone when nobody backed the winner.
+  // KOLs: the list from Solana Tracker (free key) or KOL_WALLETS, their trades from a Solana WebSocket and RPC
+  solanaTrackerKey: env("SOLANATRACKER_API_KEY"),
+  kolPages: num("KOL_PAGES", 3),                         // 100 KOLs per page, most active over the last 7 days first
+  kolWs: env("KOL_WS", "wss://api.mainnet-beta.solana.com"),
+  kolRpc: env("KOL_RPC", "https://api.mainnet-beta.solana.com"),
+  kolPerSocket: num("KOL_PER_SOCKET", 100),
   boardExclude: env("BOARD_EXCLUDE", "PUMP,ANSEM,KIMCHI").split(",").map(x => x.trim().toUpperCase()).filter(Boolean),
   rake: num("RAKE", 0.03),
   seed: { tSOL: num("SEED_TSOL", 0.1), SOL: num("SEED_SOL", 0.01) },
@@ -45,6 +51,7 @@ export const CFG = {
 };
 if (CFG.discoveryWs === "off") CFG.discoveryWs = "";
 if (CFG.gtProxy === "off") CFG.gtProxy = "";
+if (CFG.kolWs === "off") CFG.kolWs = "";
 CFG.moneyRpc = CFG.solanaRpc || (CFG.network === "mainnet" ? CFG.quicknode : "https://api.devnet.solana.com");
 
 // TIME_SCALE and SCORE_LATE_ROUNDS exist for local tests only (short rounds, score a round the server joined late)
