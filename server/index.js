@@ -102,10 +102,10 @@ KOL.poolMint = pool => {
   if (poolIx.n !== FEED.pools.size || now() - poolIx.at > 30000) { poolIx = { n: FEED.pools.size, at: now(), map: new Map() }; for (const [m, x] of FEED.pools) if (x && x.pool) poolIx.map.set(x.pool, m); }
   return poolIx.map.get(pool) || null;
 };
-// board, on-deck and trending coins get their KOL history once, as they show up (within the daily request budget)
+// board, on-deck and trending coins get their KOL history as they show up, then every 15 minutes (within the daily budget)
 function kolHistStep() {
-  const want = [...G.board.top.map(x => x.m), ...G.board.bench.map(x => x.m), ...TREND.list];
-  const m = want.find(kolHistDue); if (m) kolHistory(m);
+  const want = [...new Set([...G.board.top.map(x => x.m), ...G.board.bench.map(x => x.m), ...TREND.list])];
+  for (const m of want.filter(kolHistDue).slice(0, 2)) kolHistory(m);
 }
 FEED.onMeta = list => { for (const tok of list) metaDirty.add(tok.m); };
 FEED.onCandles = (tok, five) => { if (sentTok.has(tok.m)) emit("candles", { m: tok.m, five: !!five, C: (five ? chartC(tok, true).filter(c => c.t >= now() - 26 * 3600e3) : chartC(tok, false).slice(-150)).map(candleOut) }); };
@@ -302,7 +302,7 @@ async function main() {
     setInterval(() => loadKols().catch(() => {}), 12 * 3600e3);
     setInterval(() => kolStep(() => FEED.sol), 250);
     setInterval(() => kolPrune(keepSet(now())), 600e3);
-    setInterval(kolHistStep, 15000);
+    setInterval(kolHistStep, 5000);
     storeInit().then(() => log(STORE.on ? "info" : "warn", STORE.on ? "candle storage ready" : "candle storage off: " + STORE.err));
     setInterval(() => { if (!STORE.on) storeInit().then(() => { if (STORE.on) log("info", "candle storage ready"); }); }, 60000);   // picks up the table once it exists
     setInterval(loadStep, 700);

@@ -406,12 +406,12 @@ function paintKols(x, ms) {
     t.px = t.pa > 0 ? t.pv / t.pa : null;
     const p = t.px || pAt(tok, t.t); if (!p) continue;
     const q = pt({ t: t.t, p }); if (!q || q.x < -10 || q.x > ms.width + 10 || q.y < -10 || q.y > ms.height + 10) continue;
-    const r = 6 + Math.min(4, Math.log10(1 + (t.sol || 0)) * 3), buy = t.side === "buy", ring = buy ? C.up : C.down, im = kolImg(t);
+    const r = 9 + Math.min(6, Math.log10(1 + (t.sol || 0)) * 4), buy = t.side === "buy", ring = buy ? C.up : C.down, im = kolImg(t);
     x.save(); x.beginPath(); x.arc(q.x, q.y, r, 0, Math.PI * 2); x.closePath();
     if (im) { x.clip(); x.drawImage(im, q.x - r, q.y - r, r * 2, r * 2); }
     else { x.fillStyle = rgba(ring, 0.85); x.fill(); x.fillStyle = C.bg; x.font = `600 ${Math.round(r)}px ${MONO}`; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText((kolName(t).replace(/^@/, "")[0] || "?").toUpperCase(), q.x, q.y + 0.5); }
     x.restore();
-    x.beginPath(); x.arc(q.x, q.y, r + 1, 0, Math.PI * 2); x.strokeStyle = ring; x.lineWidth = 2; x.stroke();
+    x.beginPath(); x.arc(q.x, q.y, r + 1, 0, Math.PI * 2); x.strokeStyle = ring; x.lineWidth = 2.5; x.stroke();
     CH.kb.push({ x: q.x, y: q.y, r: r + 2, t });
   }
 }

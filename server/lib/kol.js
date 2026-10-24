@@ -201,8 +201,8 @@ export async function kolStep(solUsd) {
 }
 
 /* ---------- a coin's KOL history from Solana Tracker ---------- */
-// One request returns the last 250 KOL trades on the coin. Each coin is asked at most every KOL_HISTORY_EVERY
-// (10 minutes), and never more than KOL_HISTORY_DAILY requests a day (the free plan allows about 330 a day).
+// One request returns the last 250 KOL trades on the coin. An open coin page asks at most every KOL_HISTORY_EVERY
+// (3 minutes), and the server never makes more than KOL_HISTORY_DAILY requests a day (5,000 by default).
 export function kolHistory(m) {
   const h = KOL.hist, t = now(), day = new Date(t).toISOString().slice(0, 10);
   if (!CFG.solanaTrackerKey || !isAddress(m)) return null;
@@ -221,7 +221,9 @@ export function kolHistory(m) {
   h.pending.set(m, p); return p;
 }
 export const kolHistBudget = () => ({ used: KOL.hist.used, daily: CFG.kolHistDaily, coins: KOL.hist.at.size, added: KOL.hist.added, err: KOL.hist.err, pausedFor: Math.max(0, Math.round((KOL.hist.pauseUntil - now()) / 1000)) });
-export const kolHistDue = m => !!CFG.solanaTrackerKey && !KOL.hist.at.has(m) && KOL.hist.used < CFG.kolHistDaily * 0.6 && now() >= KOL.hist.pauseUntil;
+// board coins: first time as soon as they show up, then every KOL_HISTORY_BOARD_EVERY, while under 60% of the day's budget
+// (the rest is kept for coin pages people open)
+export const kolHistDue = m => !!CFG.solanaTrackerKey && now() - (KOL.hist.at.get(m) || 0) >= CFG.kolHistBoardEvery && KOL.hist.used < CFG.kolHistDaily * 0.6 && now() >= KOL.hist.pauseUntil;
 function mergeHistory(m, list) {
   let st = KOL.byMint.get(m); if (!st) KOL.byMint.set(m, st = { trades: [], hold: new Map() });
   const have = new Set(st.trades.map(x => x.sig + x.w)), net = new Map(); let added = 0;
