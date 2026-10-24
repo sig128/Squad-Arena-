@@ -23,10 +23,13 @@ export const roundOfKey = key => { const [, tfk, s] = String(key).split("."); re
 const winOf = r => Math.max(5000, r.W * 0.03);
 
 /* ---------- board ---------- */
+// never on the board: pump.fun's own PUMP token, and tickers left off on purpose (BOARD_EXCLUDE, default PUMP, ANSEM, KIMCHI)
+const PUMP_MINT = "pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn";
+const BLOCKED = tok => tok.m === PUMP_MINT || CFG.boardExclude.includes(String(tok.s || "").toUpperCase());
 export function computeBoard(t) {
   const list = [];
   for (const tok of TL.values()) {
-    if (!tok.gate) continue;
+    if (!tok.gate || BLOCKED(tok)) continue;
     if (tok.rugAt && t >= tok.rugAt) continue;
     if (tok.born && t - tok.born > MAX_AGE) continue;
     const p = pAt(tok, t); if (p == null) continue;

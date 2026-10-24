@@ -35,6 +35,7 @@ export const CFG = {
   // Game rules (the site reads these from /snapshot so both sides agree).
   // SEED_SOL is house money added to every coin in a real-SOL pool; 0 makes the pools pure (the house only earns the rake)
   // and refunds everyone when nobody backed the winner.
+  boardExclude: env("BOARD_EXCLUDE", "PUMP,ANSEM,KIMCHI").split(",").map(x => x.trim().toUpperCase()).filter(Boolean),
   rake: num("RAKE", 0.03),
   seed: { tSOL: num("SEED_TSOL", 0.1), SOL: num("SEED_SOL", 0.01) },
   betWindow: 0.4,
