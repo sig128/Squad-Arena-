@@ -41,6 +41,8 @@ export const CFG = {
   kolWs: env("KOL_WS", "wss://api.mainnet-beta.solana.com"),
   kolRpc: env("KOL_RPC", "https://api.mainnet-beta.solana.com"),
   kolPerSocket: num("KOL_PER_SOCKET", 100),
+  kolHistDaily: num("KOL_HISTORY_DAILY", 300),          // Solana Tracker requests a day for coin history (free plan: 10,000 a month)
+  kolHistEvery: num("KOL_HISTORY_EVERY", 600) * 1000,    // seconds before the same coin's history is asked again
   boardExclude: env("BOARD_EXCLUDE", "PUMP,ANSEM,KIMCHI").split(",").map(x => x.trim().toUpperCase()).filter(Boolean),
   rake: num("RAKE", 0.03),
   seed: { tSOL: num("SEED_TSOL", 0.1), SOL: num("SEED_SOL", 0.01) },

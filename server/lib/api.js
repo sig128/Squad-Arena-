@@ -8,7 +8,7 @@ import { attach, online } from "./hub.js";
 import { log, rateOk } from "./util.js";
 import * as A from "./actions.js";
 import { TL, FEED, applyPairs, chartC, quickHistory } from "./market.js";
-import { kolOut } from "./kol.js";
+import { kolOut, kolHistory } from "./kol.js";
 import { getJSON, isAddress } from "./util.js";
 
 const POST = {
@@ -74,6 +74,8 @@ export function makeServer({ snapshot, health }) {
       if (req.method === "GET" && path === "/kols") {
         if (!rateOk("kols:" + ip, 60, 10)) throw Object.assign(new Error("Too many requests."), { status: 429 });
         const m = String(url.searchParams.get("m") || ""); if (!isAddress(m)) throw Object.assign(new Error("Not a coin address."), { status: 400 });
+        // the coin's KOL history comes in with the first answer (a fresh coin waits up to 5 s for it)
+        const h = kolHistory(m); if (h) await Promise.race([h, new Promise(r => setTimeout(r, 5000))]);
         return send(req, res, 200, { m, ...kolOut(m) }, origin);
       }
       if (req.method === "GET" && GET_AUTH[path]) { const u = await userOf(req); return send(req, res, 200, await GET_AUTH[path](u), origin); }

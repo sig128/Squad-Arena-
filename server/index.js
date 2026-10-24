@@ -11,7 +11,7 @@ import { emit, online } from "./lib/hub.js";
 import { makeServer } from "./lib/api.js";
 import { initMoney, moneyInfo, scanDeposits, recoverWithdrawals, MONEY } from "./lib/money.js";
 import { startReplay } from "./lib/replay.js";
-import { KOL, loadKols, kolStep, kolCount, kolWho, kolPrune } from "./lib/kol.js";
+import { KOL, loadKols, kolStep, kolCount, kolWho, kolPrune, kolHistory, kolHistDue, kolHistBudget } from "./lib/kol.js";
 import { BLOCKED } from "./lib/game.js";
 import { MAX_AGE, GATE } from "./lib/config.js";
 
@@ -62,7 +62,7 @@ function health() {
   return { ok: true, time: now(), up: Math.round((now() - STARTED) / 1000), feed: CFG.feed, coins: TL.size, board: G.board.top.length, rpc: RPC.live, rpcCoins: RPC.watched.size,
     db: DB.kind, money: moneyInfo(), treasurySol: MONEY.treasuryLamports == null ? null : MONEY.treasuryLamports / 1e9, calls: FEED.calls, errors: FEED.errs, lastError: FEED.lastErr || null, lastPrice: FEED.lastPrice,
     discovery: { pools: FEED.sample.pools, fresh: FEED.sample.fresh, ago: FEED.sample.at ? Math.round((now() - FEED.sample.at) / 1000) : null, err: FEED.sample.err, pending: FEED.pending.length, pumpfun: !pumpOff() },
-    kols: { list: KOL.list.size, ...KOL.stats, coins: KOL.byMint.size, queue: KOL.queue.length }, trending: TREND.list.length,
+    kols: { list: KOL.list.size, ...KOL.stats, coins: KOL.byMint.size, queue: KOL.queue.length, history: kolHistBudget() }, trending: TREND.list.length,
     charts: { withHistory: [...TL.values()].filter(x => x.C.length > 1).length, backfilled: FEED.backfilled, backfill: CFG.gtBackfill, gtPausedFor: Math.max(0, Math.round((FEED.gtPauseUntil - now()) / 1000)),
       stored: { on: STORE.on, saved: STORE.saved, loaded: STORE.loaded, err: STORE.err } } };
 }
@@ -95,6 +95,18 @@ setInterval(trendStep, 10000);
 // a KOL trade on a coin pages are showing goes out at once (it also changes the coin's KOL count)
 KOL.onTrade = (m, tr) => { metaDirty.add(m); if (keepNow().has(m)) emit("kol", { m, tr: { t: tr.t, side: tr.side, sol: tr.sol, px: tr.px, amt: tr.amt, sig: tr.sig, hold: tr.hold, ...kolWho(tr.w) } }); };
 FEED.onTick = tok => { const k = tok.ticks[tok.ticks.length - 1]; if (k) tickBuf.set(tok.m, k.h !== k.p || k.l !== k.p ? [tok.m, k.t, r6(k.p), r6(k.h), r6(k.l)] : [tok.m, k.t, r6(k.p)]); };
+KOL.onHistory = m => { metaDirty.add(m); };
+// PumpSwap pool -> coin, from the pools discovery already knows (KOL swaps name the pool, not the coin)
+let poolIx = { n: -1, at: 0, map: new Map() };
+KOL.poolMint = pool => {
+  if (poolIx.n !== FEED.pools.size || now() - poolIx.at > 30000) { poolIx = { n: FEED.pools.size, at: now(), map: new Map() }; for (const [m, x] of FEED.pools) if (x && x.pool) poolIx.map.set(x.pool, m); }
+  return poolIx.map.get(pool) || null;
+};
+// board, on-deck and trending coins get their KOL history once, as they show up (within the daily request budget)
+function kolHistStep() {
+  const want = [...G.board.top.map(x => x.m), ...G.board.bench.map(x => x.m), ...TREND.list];
+  const m = want.find(kolHistDue); if (m) kolHistory(m);
+}
 FEED.onMeta = list => { for (const tok of list) metaDirty.add(tok.m); };
 FEED.onCandles = (tok, five) => { if (sentTok.has(tok.m)) emit("candles", { m: tok.m, five: !!five, C: (five ? chartC(tok, true).filter(c => c.t >= now() - 26 * 3600e3) : chartC(tok, false).slice(-150)).map(candleOut) }); };
 // every finished 1-minute candle goes out once, so open pages keep their charts current without reloading
@@ -290,6 +302,7 @@ async function main() {
     setInterval(() => loadKols().catch(() => {}), 12 * 3600e3);
     setInterval(() => kolStep(() => FEED.sol), 250);
     setInterval(() => kolPrune(keepSet(now())), 600e3);
+    setInterval(kolHistStep, 15000);
     storeInit().then(() => log(STORE.on ? "info" : "warn", STORE.on ? "candle storage ready" : "candle storage off: " + STORE.err));
     setInterval(() => { if (!STORE.on) storeInit().then(() => { if (STORE.on) log("info", "candle storage ready"); }); }, 60000);   // picks up the table once it exists
     setInterval(loadStep, 700);
