@@ -186,9 +186,12 @@ export async function jobDiscover() {
 
 /* ---------- discovery from the chain: every PumpSwap pool that trades during a short listen ---------- */
 const PUMPSWAP = "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA", POOL_TAG = "hQrXeCntzbV", WSOL = "So11111111111111111111111111111111111111112";
+// tries each WebSocket in DISCOVERY_WS (comma-separated) in turn; one that delivers nothing is skipped next time
 export function samplePools(ms) {
-  if (FEED.sample.running || !CFG.discoveryWs || typeof WebSocket === "undefined") return Promise.resolve(0);
-  FEED.sample.running = true; const seen = new Map(), t0 = now(); let live = 0;
+  const urls = CFG.discoveryWs.split(",").map(x => x.trim()).filter(Boolean);
+  if (FEED.sample.running || !urls.length || typeof WebSocket === "undefined") return Promise.resolve(0);
+  const url = urls[(FEED.sample.ix || 0) % urls.length];
+  FEED.sample.running = true; const seen = new Map(), t0 = now(); let live = 0, opened = false, msgs = 0, sub = null;
   return new Promise(resolve => {
     let ws, done = false;
     const finish = err => {
@@ -203,17 +206,19 @@ export function samplePools(ms) {
       }
       if (FEED.pools.size > 20000) FEED.pools = new Map([...FEED.pools].slice(-10000));
       if (FEED.reject.size > 50000) for (const [m, until] of FEED.reject) if (until < t) FEED.reject.delete(m);
-      Object.assign(FEED.sample, { at: t, running: false, pools: seen.size, fresh: fresh + live, ms: t - t0, err: err || "" });
+      if (!seen.size) FEED.sample.ix = (FEED.sample.ix || 0) + 1;
+      Object.assign(FEED.sample, { at: t, running: false, pools: seen.size, fresh: fresh + live, ms: t - t0, err: err || (seen.size ? "" : `nothing from ${url.replace(/^wss?:\/\//, "").split("/")[0]} (opened ${opened}, subscription ${sub}, ${msgs} messages)`) });
       resolve(fresh + live);
     };
     const timer = setTimeout(() => finish(), ms);
-    try { ws = new WebSocket(CFG.discoveryWs); } catch (e) { return finish("could not open: " + e.message); }
-    ws.onopen = () => ws.send(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "programSubscribe", params: [PUMPSWAP, { encoding: "base64", commitment: "confirmed", filters: [{ memcmp: { offset: 0, bytes: POOL_TAG } }, { memcmp: { offset: 75, bytes: WSOL } }] }] }));
+    try { ws = new WebSocket(url); } catch (e) { return finish("could not open: " + e.message); }
+    ws.onopen = () => (opened = true) && ws.send(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "programSubscribe", params: [PUMPSWAP, { encoding: "base64", commitment: "confirmed", filters: [{ memcmp: { offset: 0, bytes: POOL_TAG } }, { memcmp: { offset: 75, bytes: WSOL } }] }] }));
     ws.onerror = () => finish("connection error");
     ws.onclose = () => finish(seen.size ? "" : "closed early");
     ws.onmessage = ev => {
+      msgs++;
       let j; try { j = JSON.parse(typeof ev.data === "string" ? ev.data : Buffer.from(ev.data).toString()); } catch (_) { return; }
-      if (j.id === 1 && j.error) return finish("refused: " + (j.error.message || "error"));
+      if (j.id === 1) { if (j.error) return finish("refused: " + (j.error.message || "error")); sub = j.result; return; }
       if (j.method !== "programNotification") return;
       const v = j.params && j.params.result && j.params.result.value; if (!v || !v.account || !v.account.data) return;
       const d = Buffer.from(v.account.data[0], "base64"); if (d.length < 203) return;

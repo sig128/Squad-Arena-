@@ -18,7 +18,7 @@ export const CFG = {
   // Market data
   quicknode: env("QUICKNODE_RPC_URL"),                  // mainnet RPC: streams pool balances for prices
   feed: env("FEED", "live"),                            // "live" or "replay" (recorded hour, for local tests)
-  discoveryWs: env("DISCOVERY_WS", "wss://solana-rpc.publicnode.com"),   // free Solana WebSocket for the pool stream (new coins); "off" to skip
+  discoveryWs: env("DISCOVERY_WS", "wss://solana-rpc.publicnode.com,wss://api.mainnet-beta.solana.com"),   // free Solana WebSockets for the pool stream (new coins), tried in turn; "off" to skip
   gtBackfill: env("GT_BACKFILL", "on") !== "off",       // older chart history from GeckoTerminal, in the background
 
   // Money
