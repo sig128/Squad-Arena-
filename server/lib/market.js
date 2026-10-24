@@ -58,7 +58,7 @@ const isGT = u => u.includes("geckoterminal.com");
 const fetchJSON = url => serial(async () => {
   if (isGT(url)) { const wait = FEED.gtNext - now(); if (wait > 0) await sleep(Math.min(wait, 30000)); }
   try { const j = await getJSON(url); FEED.calls++; if (isGT(url)) FEED.gtNext = now() + 2200; return j; }
-  catch (e) { FEED.errs++; if (isGT(url)) FEED.gtNext = now() + (e.status === 429 ? 30000 : 5000); throw e; }
+  catch (e) { FEED.errs++; FEED.lastErr = { at: now(), msg: String(e.message || e).slice(0, 160) }; if (isGT(url)) FEED.gtNext = now() + (e.status === 429 ? 30000 : 5000); throw e; }
 });
 
 /* ---------- applying DEX Screener pairs ---------- */

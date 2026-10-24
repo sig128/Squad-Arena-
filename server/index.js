@@ -52,7 +52,7 @@ function snapshot() {
 }
 function health() {
   return { ok: true, time: now(), up: Math.round((now() - STARTED) / 1000), feed: CFG.feed, coins: TL.size, board: G.board.top.length, rpc: RPC.live, rpcCoins: RPC.watched.size,
-    db: DB.kind, money: moneyInfo(), treasurySol: MONEY.treasuryLamports == null ? null : MONEY.treasuryLamports / 1e9, calls: FEED.calls, errors: FEED.errs, lastPrice: FEED.lastPrice };
+    db: DB.kind, money: moneyInfo(), treasurySol: MONEY.treasuryLamports == null ? null : MONEY.treasuryLamports / 1e9, calls: FEED.calls, errors: FEED.errs, lastError: FEED.lastErr || null, discovery: FEED.pumpBlocked ? "geckoterminal" : "pump.fun", lastPrice: FEED.lastPrice };
 }
 
 /* ---------- live stream batching ---------- */
@@ -126,7 +126,7 @@ async function feedStep() {
   try {
     if (t - FEED.lastPrice > 4000) await jobPrices([...keep].slice(0, 360));
     else if (FEED.pending.length) await jobValidate();
-    else if (t - FEED.lastDisc > 20000) await jobDiscover();
+    else if (t - FEED.lastDisc > (G.board.top.length < 15 ? 4000 : 20000)) await jobDiscover();   // fill the board fast after a restart
     else { queueHistory([...keep].map(m => TL.get(m)).filter(Boolean)); if (FEED.histQ.length && t - FEED.lastHist > 2500) await jobHistory(); }
   } catch (e) { if (t - FEED.lastPrice > 4000) FEED.lastPrice = t - 2000; log("warn", "feed: " + e.message); }
   finally { feedBusy = false; }
