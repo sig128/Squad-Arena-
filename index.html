@@ -3655,7 +3655,7 @@ function loadPrivy() {
     const dark = getComputedStyle(document.documentElement).getPropertyValue("--mode").trim() === "dark";
     D.createRoot(host).render(R.createElement(P.PrivyProvider, { appId, config: {
       loginMethods: ["google", "wallet"],
-      appearance: { theme: dark ? "dark" : "light", walletChainType: "solana-only", showWalletLoginFirst: false, landingHeader: "Log in to Squad Arena", loginMessage: "Google creates a Solana wallet for you. Or connect Phantom, Solflare or Backpack." },
+      appearance: { theme: dark ? "#111114" : "#fafaf9", accentColor: dark ? "#ececee" : "#0f0f10", walletChainType: "solana-only", showWalletLoginFirst: false, landingHeader: "Log in to Squad Arena", loginMessage: "Google creates a Solana wallet for you. Or connect Phantom, Solflare or Backpack." },
       embeddedWallets: { solana: { createOnLogin: "users-without-wallets" }, ethereum: { createOnLogin: "off" } },
       externalWallets: { solana: { connectors: PS.toSolanaWalletConnectors() } } } }, R.createElement(Bridge)));
   })().catch(e => { PV.failed = "Login couldn't load (" + (e && e.message || e) + ")."; PV.loading = null; throw e; });
@@ -3728,6 +3728,7 @@ async function srvStart() {
   S.mode = "live"; T = TL; LIVE.on = false; resetMemos();
   S.my = { v: 1, bal: 0, b: [], sq: {}, h: "" }; S.dbReady = true;
   renderTf(); renderMode();
+  const feed = $("feed"); if (feed) feed.textContent = "";        // drop lines from the replay clock
   wire("Live", "Connecting to the round server…");
   try { await srvSnapshot(); }
   catch (e) { wire("Live", esc(e.message) + " Retrying."); setTimeout(srvStart, 8000); return; }
