@@ -2,3 +2,5 @@
 app/
 server/
 supabase/
+package.json
+railway.json

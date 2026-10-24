@@ -1,0 +1,11 @@
+{
+  "name": "squad-arena",
+  "private": true,
+  "description": "Squad Arena. The website is static (index.html); the round server is in server/ and runs on Railway.",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node server/index.js",
+    "keygen": "node server/keygen.js"
+  }
+}
