@@ -207,7 +207,7 @@ function chartSync(force) {
       setAll(b, ind);
       if (n) {
         if (keep) { const d = keep.to >= CH.n - 1.5 ? n - CH.n : pre; setLR(() => ({ from: keep.from + d, to: keep.to + d })); }
-        else setLR(() => { const span = viewSpan(CH.n); return { from: CH.n + 4 - span, to: CH.n + 4 }; });
+        else setLR(() => { const span = viewSpan(n); return { from: n + 4 - span, to: n + 4 }; });   // this build's bar count (CH.n is still the old one here)
       }
       CH.vk = vk; CH.fullAt = now;
     } else if (n) {
@@ -394,7 +394,15 @@ function paintKols(x, ms) {
   CH.kb = [];
   if (!chartPref.kols || !coinUI.m) return;
   const k = KOLS.get(coinUI.m), tok = tokAny(coinUI.m); if (!k || !k.trades.length || !tok) return;
-  for (const t of k.trades.slice(-150)) {
+  // one bubble per KOL, side and candle: several fills in the same candle add up
+  const iv = (CH.iv || 1) * 60000, groups = new Map();
+  for (const t of k.trades.slice(-400)) {
+    const key = t.w + t.side + Math.floor(t.t / iv), g = groups.get(key), a = t.amt || 0;
+    if (!g) groups.set(key, { ...t, sol: t.sol || 0, n: 1, amt: a, pa: t.px ? a : 0, pv: t.px ? t.px * a : 0 });
+    else { g.sol += t.sol || 0; g.n++; g.amt += a; if (t.px) { g.pa += a; g.pv += t.px * a; } g.t = Math.max(g.t, t.t); }
+  }
+  for (const t of [...groups.values()].slice(-150)) {
+    t.px = t.pa > 0 ? t.pv / t.pa : null;
     const p = t.px || pAt(tok, t.t); if (!p) continue;
     const q = pt({ t: t.t, p }); if (!q || q.x < -10 || q.x > ms.width + 10 || q.y < -10 || q.y > ms.height + 10) continue;
     const r = 6 + Math.min(4, Math.log10(1 + (t.sol || 0)) * 3), buy = t.side === "buy", ring = buy ? C.up : C.down, im = kolImg(t);
@@ -412,7 +420,7 @@ function kolHover(e) {
   const px = localPt(e), hit = (CH.kb || []).slice().reverse().find(b => Math.hypot(b.x - px.x, b.y - px.y) <= b.r);
   if (!hit) { tip.hidden = true; return; }
   const t = hit.t, buy = t.side === "buy";
-  tip.innerHTML = `<b>${esc(kolName(t))}</b> <span class="${buy ? "up" : "down"}">${buy ? "bought" : "sold"}</span> ${fmtKolSol(t.sol)}${t.px ? " at " + esc(fmtPrice(t.px)) : ""}<br><span class="dim">${esc(local(t.t, true))} · ${ago(nowW() - t.t)}</span>`;
+  tip.innerHTML = `<b>${esc(kolName(t))}</b> <span class="${buy ? "up" : "down"}">${buy ? "bought" : "sold"}</span> ${fmtKolSol(t.sol)}${t.n > 1 ? ` in ${t.n} trades` : ""}${t.px ? " at " + esc(coinUI.unit === "mc" && CH.K ? fmtUsd(t.px * CH.K) + " mcap" : fmtPrice(t.px)) : ""}<br><span class="dim">${esc(local(t.t, true))} · ${ago(nowW() - t.t)}</span>`;
   tip.hidden = false; const w = $("cChart").clientWidth;
   tip.style.left = Math.min(w - tip.offsetWidth - 8, hit.x + 12) + "px"; tip.style.top = Math.max(4, hit.y - tip.offsetHeight - 8) + "px";
 }
