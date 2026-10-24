@@ -2657,7 +2657,8 @@ function applyHeights() {
 }
 function pf() {
   const mc = coinUI.unit === "mc", last = Math.max(CH.lastC || 1, 1e-12);
-  return { type: "custom", minMove: mc ? 1 : Math.pow(10, Math.floor(Math.log10(last)) - 4), formatter: unitFmt() };
+  const f = unitFmt();
+  return { type: "custom", minMove: mc ? 1 : Math.pow(10, Math.floor(Math.log10(last)) - 4), formatter: v => v < 0 ? "" : f(v) };   // a price is never below zero: no "$-40K" in the volume margin
 }
 function rebuildSeries() {
   const L = LW(), ch = CH.chart;
