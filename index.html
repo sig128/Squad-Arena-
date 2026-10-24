@@ -1,4 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}body{margin:0;font:14px system-ui}img{max-width:100%}[hidden]{display:none!important}</style><script src="config.js"></script></head><body><title>Squad Arena</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b0b0d'/%3E%3Cg transform='translate(4 4.6) scale(.75)' fill='none' stroke='%23f3f3f2' stroke-width='3.4' stroke-linecap='square'%3E%3Cpolyline points='5,11.5 16,4 27,11.5'/%3E%3Cpolyline points='5,19 16,11.5 27,19'/%3E%3Cpolyline points='5,26.5 16,19 27,26.5'/%3E%3C/g%3E%3C/svg%3E">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -845,9 +846,8 @@ function scramble(el, text, durMs = 650) {
   requestAnimationFrame(step);
 }
 function markSVG(color) {
-  const ticks = []; for (let i = 0; i < 15; i++) { const a = (-90 + i * 24) * Math.PI / 180, r1 = i ? 9.2 : 2.2, r2 = 12.2;
-    ticks.push(`<line x1="${(16 + r1 * Math.cos(a)).toFixed(2)}" y1="${(16 + r1 * Math.sin(a)).toFixed(2)}" x2="${(16 + r2 * Math.cos(a)).toFixed(2)}" y2="${(16 + r2 * Math.sin(a)).toFixed(2)}"/>`); }
-  return `<g fill="none" stroke="${color || "currentColor"}" stroke-linecap="round"><circle cx="16" cy="16" r="14.6" stroke-width="1.4"/><g stroke-width="1.5">${ticks.join("")}</g><circle cx="16" cy="16" r="1.6" fill="${color || "currentColor"}" stroke="none"/></g>`;
+  /* three stacked chevrons: the squad leader's stripes */
+  return `<g fill="none" stroke="${color || "currentColor"}" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter">${[4, 11.5, 19].map(y => `<polyline points="5,${y + 7.5} 16,${y} 27,${y + 7.5}"/>`).join("")}</g>`;
 }
 
 /* ================= engine: board, rounds, markets, pools, settlement ================= */
@@ -3405,10 +3405,15 @@ function playIntro(manual) {
   const r = roundAt(TFK.includes(S.tf) && tfOk(S.tf) ? S.tf : "15m", nowW());
   const coins = S.board.top.slice(0, 15).map(t => ({ tok: t, R: retOf(t, r, nowW()) ?? 0 }));
   while (coins.length < 15) coins.push({ tok: null, R: -1 });
-  const order = coins.map((c, i) => ({ i, R: c.R })).sort((a, b) => a.R - b.R).map(x => x.i);   // worst first
-  const groups = [3, 3, 3, 2, 2], cutAt = new Map(); let p = 0; groups.forEach((g, k) => { for (let j = 0; j < g; j++) cutAt.set(order[p++], k); });
-  const finalists = order.slice(13), winner = finalists[1], loser = finalists[0];
-  const T0 = performance.now(), CUT0 = 1750, CUTDT = 320, DUEL = CUT0 + 5 * CUTDT, END = DUEL + 3700;
+  /* the formation is the logo: three stripes of five. Best coin on the apex of the top stripe, the back stripe fills first. */
+  const rank = coins.map((_, i) => i).sort((a, b) => coins[b].R - coins[a].R), slot = new Array(15);
+  rank.forEach((ci, k) => { slot[ci] = k; });
+  const U = [0, -1, 1, -2, 2], spot = k => { const st = Math.floor(k / 5), u = U[k % 5]; return { mx: 16 + u * 5.5, my: 4 + st * 7.5 + Math.abs(u) * 3.75 }; };
+  const worstFirst = rank.slice().reverse(), groups = [3, 3, 3, 2, 2], cutAt = new Map(); let q = 0;
+  groups.forEach((g, k) => { for (let j = 0; j < g; j++) cutAt.set(worstFirst[q++], k); });
+  const winner = rank[0], loser = rank[1];
+  const seed = rng(hashStr(coins.map(c => c.tok ? c.tok.m : "-").join())), from = coins.map(() => ({ dx: seed() - 0.5, dy: seed() }));
+  const T0 = performance.now(), CUT0 = 1800, CUTDT = 330, DUEL = CUT0 + 5 * CUTDT, MORPH = DUEL + 820, END = DUEL + 3800;
   let textStage = 0, finished = false;
   const hud = [["SQUAD ARENA // ROUND ENGINE", "tl"], [new Date().toISOString().slice(0, 16).replace("T", " ") + " UTC", "tr"], ["PUMP.FUN · SOLANA MAINNET", "bl"], ["15 COINS · 3 MARKETS · 4 ROUND LENGTHS", "br"]];
   const finish = () => {
@@ -3422,61 +3427,68 @@ function playIntro(manual) {
   introDone = finish;
   const draw = now => {
     const t = now - T0, { ctx, w: W, h: H } = fit(cv); ctx.clearRect(0, 0, W, H);
-    const R = clamp(Math.min(W, H) * 0.17, 70, 150), cx = W / 2, cy = Math.min(H * 0.42, H / 2 - 40);
-    const fg = C.stageFg, dim = C.stageDim, rule = C.stageRule;
-    // HUD frame
-    ctx.globalAlpha = ease(t / 500); ctx.strokeStyle = rule; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(0, Math.round(cy) + .5); ctx.lineTo(W, Math.round(cy) + .5); ctx.moveTo(Math.round(cx) + .5, 0); ctx.lineTo(Math.round(cx) + .5, H); ctx.stroke();
-    const inset = 22, br = 14; ctx.strokeStyle = dim;
-    [[inset, inset, 1, 1], [W - inset, inset, -1, 1], [inset, H - inset, 1, -1], [W - inset, H - inset, -1, -1]].forEach(([x, y, sx, sy]) => { ctx.beginPath(); ctx.moveTo(x + .5 * sx, y + br * sy); ctx.lineTo(x + .5 * sx, y + .5 * sy); ctx.lineTo(x + br * sx, y + .5 * sy); ctx.stroke(); });
-    ctx.font = `10px ${MONO}`; ctx.fillStyle = dim;
+    const fg = C.stageFg, dim = C.stageDim, guide = mixHex(C.stageRule, C.stageDim, 0.45);
+    // corner captions, typed in
+    ctx.font = `10px ${MONO}`; ctx.fillStyle = dim; ctx.globalAlpha = ease(t / 400);
     hud.forEach(([txt, pos], k) => {
       if (W < 640 && pos[1] === "r") return;
-      const shown = Math.floor(clamp((t - 200 - k * 120) / 500, 0, 1) * txt.length);
+      const shown = Math.floor(clamp((t - 150 - k * 120) / 500, 0, 1) * txt.length);
       let s = txt.slice(0, shown); if (shown < txt.length && shown > 0) s += GLYPHS[(Math.random() * GLYPHS.length) | 0];
       ctx.textAlign = pos[1] === "l" ? "left" : "right"; ctx.textBaseline = pos[0] === "t" ? "top" : "bottom";
-      ctx.fillText(s, pos[1] === "l" ? inset + 22 : W - inset - 22, pos[0] === "t" ? inset + 2 : H - inset - 2);
+      ctx.fillText(s, pos[1] === "l" ? 24 : W - 24, pos[0] === "t" ? 24 : H - 24);
     });
     ctx.globalAlpha = 1;
-    // rotation that brings the winner to the top at the end
-    const wa = -Math.PI / 2 + winner * (Math.PI * 2 / 15), rot = (-Math.PI / 2 - wa) * easeIO((t - DUEL - 500) / 700);
-    // ring
-    const ringP = ease((t - 250) / 800);
-    ctx.strokeStyle = fg; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(cx, cy, R, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * ringP); ctx.stroke();
-    // ticks + logos
-    let alive = 15;
-    for (let i = 0; i < 15; i++) {
-      const a = -Math.PI / 2 + i * (Math.PI * 2 / 15) + rot, c = coins[i], col = c.tok ? colorOf(c.tok.m) || pal[i] : pal[i];
-      const appear = ease((t - 550 - i * 55) / 240);
-      let len = appear, alpha = appear, flash = 0, inner = R * 0.62, logoA = ease((t - 610 - i * 55) / 260);
-      const k = cutAt.get(i);
-      if (k != null) {
-        const tk = CUT0 + k * CUTDT;
-        if (t >= tk) { flash = t < tk + 140 ? 1 : 0; const out = ease((t - tk - 140) / 260); len *= 1 - out; logoA *= 1 - out; }
-        if (t >= tk + 140) alive--;
+    // scale: the formation shrinks into the logo during the morph
+    const S1 = clamp(Math.min(W * 0.78 / 22, H * 0.4 / 22.5), 6, 18), S2 = S1 * 0.62, m = easeIO((t - MORPH) / 700), Sc = S1 + (S2 - S1) * m;
+    const cx = W / 2, cy = Math.min(H * 0.37, H / 2 - 60), X = mx => cx + (mx - 16) * Sc, Y = my => cy + (my - 15.25) * Sc, rc = clamp(S1 * 1.45, 9, 21);
+    // the three stripes: hairline guides that thicken into the mark
+    const lineP = ease((t - 200) / 750);
+    if (lineP > 0) {
+      ctx.lineCap = m > 0 ? "square" : "round"; ctx.lineJoin = "miter";
+      ctx.strokeStyle = m > 0 ? mixHex(guide, fg, m) : guide; ctx.lineWidth = 1 + (3 * Sc - 1) * m;
+      for (let st = 0; st < 3; st++) {
+        const y0 = 4 + st * 7.5, p = clamp(lineP * 1.25 - st * 0.12, 0, 1), ax = X(16), ay = Y(y0);
+        if (p <= 0) continue;
+        ctx.beginPath(); ctx.moveTo(ax + (X(5) - ax) * p, ay + (Y(y0 + 7.5) - ay) * p); ctx.lineTo(ax, ay); ctx.lineTo(ax + (X(27) - ax) * p, ay + (Y(y0 + 7.5) - ay) * p); ctx.stroke();
       }
-      if (i === loser && t > DUEL + 380) { const out = ease((t - DUEL - 380) / 220); len *= 1 - out; logoA *= 1 - out; }
-      if (i === loser && t > DUEL + 380) alive--;
-      if (i === winner && t > DUEL + 380) inner = R * 0.62 - (R * 0.62 - R * 0.07) * easeIO((t - DUEL - 380) / 360);
-      if ((i === winner || i === loser) && t > DUEL && t < DUEL + 380) flash = Math.floor((t - DUEL) / 95) % 2 === (i === winner ? 0 : 1) ? 1 : 0;
-      const reform = ease((t - DUEL - 900) / 500), mono = ease((t - DUEL - 700) / 600);
-      if (k != null || i === loser) { len = Math.max(len, reform); alpha = Math.max(alpha * (1 - reform), reform); }
-      const outer = R * 0.84, r1 = outer - (outer - inner) * len;
-      if (len > 0.01) {
-        ctx.strokeStyle = flash ? fg : mono > 0 ? mixHex(col, fg, mono) : col; ctx.globalAlpha = Math.max(alpha, len > 0 ? 1 : 0); ctx.lineWidth = flash ? 3.4 : 2.6; ctx.lineCap = "round";
-        ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); ctx.lineTo(cx + Math.cos(a) * outer, cy + Math.sin(a) * outer); ctx.stroke(); ctx.globalAlpha = 1;
-      }
-      const la = logoA * (1 - ease((t - DUEL - 600) / 500));
-      if (la > 0.01 && c.tok) logoDot(ctx, c.tok, cx + Math.cos(a) * R * 1.3, cy + Math.sin(a) * R * 1.3, Math.max(7, R * 0.1), col, la);
     }
-    // counter / center
-    const cnt = t < CUT0 ? 15 : t < DUEL + 380 ? alive : 1, cA = ease((t - 900) / 400) * (1 - ease((t - DUEL - 700) / 300));
-    if (cA > 0.01) { ctx.globalAlpha = cA; ctx.fillStyle = fg; ctx.font = `${Math.round(R * 0.3)}px ${DISP}`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(String(cnt), cx, cy + 1); ctx.globalAlpha = 1; }
-    const dotA = ease((t - DUEL - 700) / 300); if (dotA > 0) { ctx.globalAlpha = dotA; ctx.fillStyle = fg; ctx.beginPath(); ctx.arc(cx, cy, R * 0.07, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; }
+    // coins
+    let alive = 15;
+    const fade = 1 - ease((t - MORPH) / 450);
+    for (let i = 0; i < 15; i++) {
+      const c = coins[i], k = slot[i], sp = spot(k), col = c.tok ? colorOf(c.tok.m) || pal[i % pal.length] : pal[i % pal.length];
+      const t0 = 420 + (14 - k) * 60, a = ease((t - t0) / 560);
+      if (a <= 0) continue;
+      let x = X(sp.mx), y = Y(sp.my), alpha = Math.min(1, a * 1.6) * fade, flash = 0, scale = 1;
+      x += (1 - a) * from[i].dx * W * 0.7; y += (1 - a) * (H * 0.65 + from[i].dy * H * 0.3);
+      const ck = cutAt.get(i);
+      let out = 0;
+      if (ck != null) { const tk = CUT0 + ck * CUTDT; if (t >= tk) { flash = t < tk + 130 ? 1 : 0; out = clamp((t - tk - 130) / 520, 0, 1); } if (t >= tk + 130) alive--; }
+      if (i === loser && t >= DUEL + 420) { out = clamp((t - DUEL - 420) / 520, 0, 1); alive--; }
+      if ((i === winner || i === loser) && t > DUEL && t < DUEL + 420) flash = Math.floor((t - DUEL) / 105) % 2 === (i === winner ? 0 : 1) ? 1 : 0;
+      if (i === winner && t > DUEL + 420) scale = 1 + 0.28 * easeIO((t - DUEL - 420) / 300);
+      if (out > 0) {
+        // knocked out: falls away, leaves an empty slot behind
+        ctx.globalAlpha = ease(out) * fade * 0.8; ctx.strokeStyle = dim; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(X(sp.mx), Y(sp.my), rc * 0.26, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
+        y += out * out * H * 0.5; x += out * (from[i].dx > 0 ? 1 : -1) * rc * 1.5; alpha *= 1 - out;
+      }
+      if (alpha <= 0.01) continue;
+      const rr = rc * scale * (Sc / S1);
+      if (c.tok) logoDot(ctx, c.tok, x, y, rr, col, alpha); else { ctx.globalAlpha = alpha; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, rr * 0.7, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; }
+      if (flash) { ctx.globalAlpha = alpha; ctx.strokeStyle = fg; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, rr + 4, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }
+    }
+    // count under the formation
+    const cA = ease((t - 900) / 400) * (1 - ease((t - MORPH) / 300));
+    if (cA > 0.01) {
+      const k = groups.reduce((n, g, j) => n + (t >= CUT0 + j * CUTDT + 130 ? 1 : 0), 0);
+      const label = t >= DUEL ? (t >= DUEL + 420 ? "1 LEFT · WINNER" : "FINAL · 2 LEFT") : k ? `CUT ${k}/5 · ${alive} LEFT` : "15 COINS IN";
+      ctx.globalAlpha = cA; ctx.fillStyle = dim; ctx.font = `10.5px ${MONO}`; ctx.textAlign = "center"; ctx.textBaseline = "top";
+      ctx.fillText(label, cx, Y(26.5) + rc + 18); ctx.globalAlpha = 1;
+    }
     // text
-    if (textStage < 1 && t > DUEL + 700) { textStage = 1; scramble(word, "SQUAD ARENA", 800); }
-    if (textStage < 2 && t > DUEL + 1500) { textStage = 2; typeText(slog, "Fifteen coins enter. One squad wins.", 34); }
-    if (textStage < 3 && t > DUEL + 2700) { textStage = 3; scramble(meta, S.mode === "replay" ? "Replaying a real hour of pump.fun · press any key" : "Live pump.fun coins · press any key", 600); }
+    if (textStage < 1 && t > MORPH + 150) { textStage = 1; scramble(word, "SQUAD ARENA", 800); }
+    if (textStage < 2 && t > MORPH + 950) { textStage = 2; typeText(slog, "Fifteen coins enter. One squad wins.", 34); }
+    if (textStage < 3 && t > MORPH + 2100) { textStage = 3; scramble(meta, S.mode === "replay" ? "Replaying a real hour of pump.fun · press any key" : "Live pump.fun coins · press any key", 600); }
     if (t > END) { finish(); return; }
     introRaf = requestAnimationFrame(draw);
   };
