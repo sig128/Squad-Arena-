@@ -46,7 +46,8 @@ async function loadKolsFor(m) {
   if (!S.srv || !SRV.url || loadKolsFor.busy) return; loadKolsFor.busy = true;
   try {
     const r = await fetch(SRV.url + "/kols?m=" + encodeURIComponent(m)); if (!r.ok) return;
-    const j = await r.json(); KOLS.set(m, { holders: j.holders || [], trades: j.trades || [], at: nowW() });
+    const j = await r.json(), who = j.who || {};
+    KOLS.set(m, { holders: j.holders || [], trades: (j.trades || []).map(t => who[t.w] ? { ...who[t.w], ...t } : t), at: nowW() });
     if (coinUI.m === m) { renderKolBox(m); CH.mkKey = ""; dirty.coin = true; if (CH.prim) CH.prim.req(); }
   } catch (_) {}
   finally { loadKolsFor.busy = false; if (coinUI.m === m && !KOLS.has(m)) renderKolBox(m); }
@@ -57,7 +58,7 @@ function kolEvent(d) {
   if (!d || !d.m || !d.tr) return;
   const k = KOLS.get(d.m) || { holders: [], trades: [], at: 0 }, tr = d.tr;
   if (k.trades.some(x => x.sig === tr.sig && x.w === tr.w)) return;
-  k.trades.push(tr); if (k.trades.length > 300) k.trades.splice(0, k.trades.length - 300);
+  k.trades.push(tr); if (k.trades.length > 1000) k.trades.splice(0, k.trades.length - 1000);
   k.holders = k.holders.filter(h => h.w !== tr.w);
   if (tr.hold > 0) k.holders.unshift({ w: tr.w, name: tr.name, x: tr.x, avatar: tr.avatar, amt: tr.hold, since: tr.t });
   KOLS.set(d.m, k);

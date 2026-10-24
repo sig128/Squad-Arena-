@@ -397,12 +397,12 @@ function paintKols(x, ms) {
   const k = KOLS.get(coinUI.m), tok = tokAny(coinUI.m); if (!k || !k.trades.length || !tok) return;
   // one bubble per KOL, side and candle: several fills in the same candle add up
   const iv = (CH.iv || 1) * 60000, groups = new Map();
-  for (const t of k.trades.slice(-400)) {
+  for (const t of k.trades.slice(-1000)) {
     const key = t.w + t.side + Math.floor(t.t / iv), g = groups.get(key), a = t.amt || 0;
     if (!g) groups.set(key, { ...t, sol: t.sol || 0, n: 1, amt: a, pa: t.px ? a : 0, pv: t.px ? t.px * a : 0 });
     else { g.sol += t.sol || 0; g.n++; g.amt += a; if (t.px) { g.pa += a; g.pv += t.px * a; } g.t = Math.max(g.t, t.t); }
   }
-  for (const t of [...groups.values()].slice(-150)) {
+  for (const t of [...groups.values()].slice(-400)) {
     t.px = t.pa > 0 ? t.pv / t.pa : null;
     const p = t.px || pAt(tok, t.t); if (!p) continue;
     const q = pt({ t: t.t, p }); if (!q || q.x < -10 || q.x > ms.width + 10 || q.y < -10 || q.y > ms.height + 10) continue;

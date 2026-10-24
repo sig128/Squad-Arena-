@@ -43,6 +43,8 @@ export const CFG = {
   kolPerSocket: num("KOL_PER_SOCKET", 100),
   kolHistDaily: num("KOL_HISTORY_DAILY", 5000),         // Solana Tracker requests a day for coin history (Advanced plan: 200,000 a month; set 300 on the free plan)
   kolHistEvery: num("KOL_HISTORY_EVERY", 180) * 1000,    // seconds before an open coin page asks for the same coin's history again
+  kolHistPages: num("KOL_HISTORY_PAGES", 4),             // first look at a coin: up to 4 x 250 KOL trades
+  kolDust: num("KOL_DUST_SOL", 0.01),                    // trades under this many SOL count for holdings but aren't drawn
   kolHistBoardEvery: num("KOL_HISTORY_BOARD_EVERY", 900) * 1000,   // board, on-deck and trending coins are refreshed this often
   boardExclude: env("BOARD_EXCLUDE", "PUMP,ANSEM,KIMCHI").split(",").map(x => x.trim().toUpperCase()).filter(Boolean),
   rake: num("RAKE", 0.03),

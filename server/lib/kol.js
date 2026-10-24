@@ -13,7 +13,7 @@ export const KOL = {
   ids: new Map(),           // wallet -> identity for KOLs seen in Solana Tracker history but not in the subscribed list
   pools: new Map(),         // PumpSwap pool -> base mint ("" when the pool isn't paired with SOL)
   socks: [], subs: new Map(), seen: new Set(), queue: [], busy: 0,
-  hist: { at: new Map(), pending: new Map(), day: "", used: 0, pauseUntil: 0, err: "", added: 0 },
+  hist: { at: new Map(), deep: new Set(), pending: new Map(), day: "", used: 0, pauseUntil: 0, err: "", added: 0 },
   stats: { source: "", loadedAt: 0, err: "", trades: 0, notes: 0, fast: 0, slow: 0, fetched: 0, failed: 0, sockets: 0, subscribed: 0 },
   onTrade: null,            // (mint, trade) for the live stream
   onHistory: null,          // (mint) when history changed a coin's KOLs
@@ -25,6 +25,7 @@ const DEX = ["6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P", "pAMMBay6oceH9fJKBRH
   "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8", "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C", "LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj",
   "dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN", "cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG", "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo", "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK"];
 const now = () => Date.now();
+const KEEP = 1500;                                  // trades kept per coin
 
 /* ---------- the list ---------- */
 export async function loadKols() {
@@ -184,8 +185,9 @@ export function recordTrade(x, sig) {
   const prev = st.hold.get(x.w), exact = x.hold != null;
   const hold = exact ? x.hold : x.side === "buy" ? (prev ? prev.amt : 0) + x.amt : prev ? Math.max(0, prev.amt - x.amt) : 0;
   const tr = { t: x.t, w: x.w, side: x.side, amt: x.amt, sol: x.sol, px: x.px, sig, hold };
-  st.trades.push(tr); st.trades.sort((a, b) => a.t - b.t); if (st.trades.length > 400) st.trades.splice(0, st.trades.length - 400);
   if (hold > 1e-6) st.hold.set(x.w, { amt: hold, t: x.t, exact }); else st.hold.delete(x.w);
+  if (!(x.sol >= CFG.kolDust)) { if (KOL.onHistory) KOL.onHistory(x.mint); return; }                         // dust: the balance counts, the chart skips it
+  st.trades.push(tr); st.trades.sort((a, b) => a.t - b.t); if (st.trades.length > KEEP) st.trades.splice(0, st.trades.length - KEEP);
   KOL.stats.trades++;
   if (KOL.onTrade) KOL.onTrade(x.mint, tr);
 }
@@ -209,15 +211,27 @@ export function kolHistory(m) {
   if (h.pending.has(m)) return h.pending.get(m);
   if (h.day !== day) { h.day = day; h.used = 0; }
   if (t - (h.at.get(m) || 0) < CFG.kolHistEvery || t < h.pauseUntil || h.used >= CFG.kolHistDaily) return null;
-  h.at.set(m, t); h.used++;
-  const p = getJSON(`https://data.solanatracker.io/trades/kols/${m}?limit=250&hideArb=true`, { headers: { "x-api-key": CFG.solanaTrackerKey }, timeout: 8000 })
-    .then(j => { h.err = ""; mergeHistory(m, (j && j.trades) || []); return true; })
-    .catch(e => {
+  // the first look at a coin goes back up to KOL_HISTORY_PAGES pages (250 trades each); refreshes take the newest page
+  const deep = !h.deep.has(m); h.at.set(m, t);
+  const p = (async () => {
+    const all = []; let cursor = "", pages = 0;
+    try {
+      do {
+        h.used++; pages++;
+        const j = await getJSON(`https://data.solanatracker.io/trades/kols/${m}?limit=250&hideArb=true` + (cursor ? "&cursor=" + encodeURIComponent(cursor) : ""),
+          { headers: { "x-api-key": CFG.solanaTrackerKey }, timeout: 8000 });
+        const list = (j && j.trades) || []; all.push(...list);
+        const oldest = list.length ? list[list.length - 1].time : 0;
+        cursor = j && j.hasNextPage && j.nextCursor && oldest > t - 72 * 3600e3 ? j.nextCursor : "";
+      } while (cursor && deep && pages < CFG.kolHistPages && h.used < CFG.kolHistDaily);
+      h.err = ""; if (deep) h.deep.add(m); mergeHistory(m, all); return true;
+    } catch (e) {
+      if (all.length) mergeHistory(m, all);
       h.err = String(e.message || e).slice(0, 160); h.at.set(m, now() - CFG.kolHistEvery + 120e3);                // try this coin again in 2 minutes
       if ([401, 402, 403, 429].includes(e.status)) h.pauseUntil = now() + 30 * 60e3;                              // out of requests or a bad key: back off
       return false;
-    })
-    .finally(() => h.pending.delete(m));
+    } finally { h.pending.delete(m); }
+  })();
   h.pending.set(m, p); return p;
 }
 export const kolHistBudget = () => ({ used: KOL.hist.used, daily: CFG.kolHistDaily, coins: KOL.hist.at.size, added: KOL.hist.added, err: KOL.hist.err, pausedFor: Math.max(0, Math.round((KOL.hist.pauseUntil - now()) / 1000)) });
@@ -233,10 +247,10 @@ function mergeHistory(m, list) {
     if (id && !KOL.list.has(x.wallet)) KOL.ids.set(x.wallet, { name: id.name || null, x: id.twitter ? String(id.twitter).replace(/^https?:\/\/(www\.)?(x|twitter)\.com\//, "").replace(/^@/, "") : null, avatar: id.avatar || null });
     const side = x.type === "sell" ? "sell" : "buy", amt = +x.amount || 0;
     const n = net.get(x.wallet) || { buy: 0, sell: 0, last: 0 }; n[side] += amt; n.last = Math.max(n.last, x.time); net.set(x.wallet, n);
-    if (have.has(x.tx + x.wallet)) continue; have.add(x.tx + x.wallet); added++;
+    if (have.has(x.tx + x.wallet) || !(+x.volumeSol >= CFG.kolDust)) continue; have.add(x.tx + x.wallet); added++;
     st.trades.push({ t: x.time, w: x.wallet, side, amt, sol: +(+x.volumeSol || 0).toFixed(4), px: +x.priceUsd || null, sig: x.tx });
   }
-  st.trades.sort((a, b) => a.t - b.t); if (st.trades.length > 400) st.trades.splice(0, st.trades.length - 400);
+  st.trades.sort((a, b) => a.t - b.t); if (st.trades.length > KEEP) st.trades.splice(0, st.trades.length - KEEP);
   // holders: bought more than they sold in that history, unless the live stream has a newer exact balance
   for (const [w, n] of net) {
     const cur = st.hold.get(w); if (cur && cur.exact && cur.t >= n.last) continue;
@@ -254,15 +268,16 @@ export function kolOut(m) {
   const st = KOL.byMint.get(m) || { trades: [], hold: new Map() };
   return {
     holders: [...st.hold].sort((a, b) => b[1].t - a[1].t).map(([w, h]) => ({ ...who(w), amt: h.amt, since: h.t })),
-    trades: st.trades.slice(-200).map(x => ({ t: x.t, side: x.side, sol: x.sol, px: x.px, amt: x.amt, sig: x.sig, ...who(x.w) }))
+    trades: st.trades.slice(-800).map(x => ({ t: x.t, w: x.w, side: x.side, sol: x.sol, px: x.px && +x.px.toPrecision(6), amt: x.amt && +x.amt.toPrecision(6), sig: x.sig })),
+    who: Object.fromEntries([...new Set(st.trades.slice(-800).map(x => x.w))].map(w => { const k = who(w); return [w, { name: k.name, x: k.x, avatar: k.avatar }]; }))
   };
 }
 export const kolWho = who;
 // a coin's KOL state for storage, and back
-export const kolSave = m => { const st = KOL.byMint.get(m); return st ? { tr: st.trades.slice(-200), h: [...st.hold] } : null; };
+export const kolSave = m => { const st = KOL.byMint.get(m); return st ? { tr: st.trades.slice(-800), h: [...st.hold] } : null; };
 export function kolLoad(m, j) {
   if (!j || KOL.byMint.has(m)) return;
-  KOL.byMint.set(m, { trades: (j.tr || []).filter(x => x && x.t), hold: new Map((j.h || []).filter(x => Array.isArray(x))) });
+  KOL.byMint.set(m, { trades: (j.tr || []).filter(x => x && x.t && x.sol >= CFG.kolDust), hold: new Map((j.h || []).filter(x => Array.isArray(x))) });
 }
 export function kolPrune(keep) {
   const cut = now() - 75 * 3600e3;
