@@ -100,11 +100,12 @@ async function watchTick() {
     WATCH.last = nowW();
     try { const r = await fetch("https://api.dexscreener.com/tokens/v1/solana/" + m); if (r.ok) applyPairs(await r.json(), nowW()); dirty.coin = true; } catch (_) {}
   }
-  if (!tok.C.length && S.srv && nowW() - WATCH.hist > 15000) {
+  // the server answers at once with its own candles; asking again every few minutes keeps the coin live on the server while the page is open
+  if (S.srv && nowW() - WATCH.hist > (tok.C.length ? 240000 : 15000)) {
     WATCH.hist = nowW();
-    try { const r = await fetch(SRV.url + "/candles?m=" + encodeURIComponent(m)); if (r.ok) { const j = await r.json(); tok.C = (j.C || []).map(cIn); tok.C5 = (j.C5 || []).map(cIn); tok.firstT = firstTime(tok); dirty.coin = true; } } catch (_) {}
+    try { const r = await fetch(SRV.url + "/candles?m=" + encodeURIComponent(m)); if (r.ok) { const j = await r.json(); if ((j.C || []).length >= tok.C.length) { tok.C = (j.C || []).map(cIn); tok.C5 = (j.C5 || []).map(cIn); tok.firstT = firstTime(tok); dirty.coin = true; } } } catch (_) {}
   }
-  else if (!tok.C.length && tok.pool && nowW() - WATCH.hist > 15000) {
+  else if (!S.srv && !tok.C.length && tok.pool && nowW() - WATCH.hist > 15000) {
     WATCH.hist = nowW();
     for (const five of [false, true]) {
       try {

@@ -3,7 +3,7 @@
 import { CFG, TF, TFK, MKS, CURRENCIES, checkConfig } from "./lib/config.js";
 import { log, now } from "./lib/util.js";
 import { DB } from "./lib/db.js";
-import { TL, FEED, RPC, jobPrices, jobValidate, jobDiscover, jobDiscoverDS, jobHistory, queueHistory, prune, rpcStart, rpcWatch, pumpOff } from "./lib/market.js";
+import { TL, FEED, RPC, jobPrices, jobValidate, jobDiscover, jobDiscoverDS, jobBackfill, samplePools, chartC, prune, rpcStart, rpcWatch, pumpOff } from "./lib/market.js";
 import { G, roundAt, roundOfKey, refreshBoard, ensureFields, lcs, lcsJSON, lcsFromJSON, resultOf, decide, roundsWithOpenBets, indexBet, roundState } from "./lib/game.js";
 import { SOC, betIn, joinSquad, pushDoc, allDocs, peopleOut } from "./lib/social.js";
 import { emit, online } from "./lib/hub.js";
@@ -20,8 +20,8 @@ function tokOut(tok, full = true) {
     gate: tok.gate, rugAt: tok.rugAt, rugWhy: tok.rugWhy, rpc: !!tok.rpcAt };
   if (full) {
     const t = now();
-    o.C = tok.C.slice(-150).map(candleOut);
-    o.C5 = tok.C5.filter(c => c.t >= t - 26 * 3600e3).map(candleOut);
+    o.C = chartC(tok, false, t).slice(-150).map(candleOut);
+    o.C5 = chartC(tok, true, t).filter(c => c.t >= t - 26 * 3600e3).map(candleOut);
     o.ticks = tok.ticks.filter(k => k.t >= t - 20 * 60e3).map(k => [k.t, r6(k.p)]);
   }
   return o;
@@ -33,6 +33,8 @@ function keepSet(t) {
   for (const b of G.bets.values()) if (b.st === "open") keep.add(b.m);
   // coins with a squad, most recently joined first
   [...G.followed].sort((a, b) => b[1] - a[1]).slice(0, 300).forEach(([m]) => keep.add(m));
+  // coins someone has open on a coin page right now
+  for (const [m, at] of FEED.viewed) { if (t - at < 600e3) keep.add(m); else FEED.viewed.delete(m); }
   return keep;
 }
 function snapshot() {
@@ -52,14 +54,28 @@ function snapshot() {
 }
 function health() {
   return { ok: true, time: now(), up: Math.round((now() - STARTED) / 1000), feed: CFG.feed, coins: TL.size, board: G.board.top.length, rpc: RPC.live, rpcCoins: RPC.watched.size,
-    db: DB.kind, money: moneyInfo(), treasurySol: MONEY.treasuryLamports == null ? null : MONEY.treasuryLamports / 1e9, calls: FEED.calls, errors: FEED.errs, lastError: FEED.lastErr || null, discovery: pumpOff() ? "geckoterminal" : "pump.fun", lastPrice: FEED.lastPrice };
+    db: DB.kind, money: moneyInfo(), treasurySol: MONEY.treasuryLamports == null ? null : MONEY.treasuryLamports / 1e9, calls: FEED.calls, errors: FEED.errs, lastError: FEED.lastErr || null, lastPrice: FEED.lastPrice,
+    discovery: { pools: FEED.sample.pools, fresh: FEED.sample.fresh, ago: FEED.sample.at ? Math.round((now() - FEED.sample.at) / 1000) : null, err: FEED.sample.err, pending: FEED.pending.length, pumpfun: !pumpOff() },
+    charts: { withHistory: [...TL.values()].filter(x => x.C.length > 1).length, backfilled: FEED.backfilled, backfill: CFG.gtBackfill } };
 }
 
 /* ---------- live stream batching ---------- */
 const tickBuf = new Map(); let metaDirty = new Set(), sentTok = new Set();
 FEED.onTick = (tok, t, p) => { tickBuf.set(tok.m, [tok.m, t, r6(p)]); };
 FEED.onMeta = list => { for (const tok of list) metaDirty.add(tok.m); };
-FEED.onCandles = (tok, five) => { if (sentTok.has(tok.m)) emit("candles", { m: tok.m, five: !!five, C: (five ? tok.C5.filter(c => c.t >= now() - 26 * 3600e3) : tok.C.slice(-150)).map(candleOut) }); };
+FEED.onCandles = (tok, five) => { if (sentTok.has(tok.m)) emit("candles", { m: tok.m, five: !!five, C: (five ? chartC(tok, true).filter(c => c.t >= now() - 26 * 3600e3) : chartC(tok, false).slice(-150)).map(candleOut) }); };
+// every finished 1-minute candle goes out once, so open pages keep their charts current without reloading
+const sentC = new Map();
+setInterval(() => {
+  const t = now(), list = [];
+  for (const m of keepSet(t)) {
+    const tok = TL.get(m); if (!tok || !sentTok.has(m)) continue;
+    const C = tok.C, last = sentC.get(m) || 0;
+    for (let i = Math.max(0, C.length - 3); i < C.length; i++) { const c = C[i]; if (c.t > last && c.t + 60000 <= t) { list.push([m, candleOut(c)]); sentC.set(m, c.t); } }
+  }
+  if (sentC.size > 5000) sentC.clear();
+  if (list.length) emit("candle", list);
+}, 5000);
 setInterval(() => {
   if (!tickBuf.size) return;
   const keep = keepSet(now()), list = [...tickBuf.values()].filter(x => keep.has(x[0])); tickBuf.clear();
@@ -119,8 +135,8 @@ async function settleTick(t) {
 }
 
 /* ---------- loops ---------- */
-// prices and pump.fun on one loop, GeckoTerminal (discovery fallback, candles) on another
-const discEvery = () => G.board.top.length < 15 ? 4000 : 20000;        // fill the board fast after a restart
+// DEX Screener prices every 4 seconds, new candidates checked in between; the pool stream finds the candidates
+const short = () => G.board.top.length < 15;
 let feedBusy = false, gtBusy = false;
 async function feedStep() {
   if (feedBusy) return; feedBusy = true;
@@ -128,20 +144,24 @@ async function feedStep() {
   try {
     if (t - FEED.lastPrice > 4000) await jobPrices([...keep].slice(0, 360));
     else if (FEED.pending.length) await jobValidate();
-    else if (t - (FEED.lastDS || 0) > (G.board.top.length < 15 ? 5000 : 60000)) await jobDiscoverDS();
-    else if (!pumpOff() && t - FEED.lastDisc > discEvery()) await jobDiscover();
+    else if (t - (FEED.lastDS || 0) > (short() ? 15000 : 60000)) await jobDiscoverDS();
+    else if (!pumpOff() && t - FEED.lastDisc > 30000) await jobDiscover();
   } catch (e) { if (t - FEED.lastPrice > 4000) FEED.lastPrice = t - 2000; log("warn", "feed: " + e.message); }
   finally { feedBusy = false; }
 }
+// listen to the pool stream: every minute while the board is short, every 4 minutes once it's full
+function sampleStep() {
+  if (FEED.sample.running || now() - FEED.sample.at < (short() ? 60e3 : 240e3)) return;
+  samplePools(short() ? 25000 : 40000).then(n => { if (n) log("info", `pool stream: ${FEED.sample.pools} active pools, ${n} new coins to check`); else if (FEED.sample.err) log("warn", "pool stream: " + FEED.sample.err); });
+}
+// background chart history for coins on the board (then on deck, then everything else kept), one GeckoTerminal call at a time
 async function gtStep() {
-  if (gtBusy) return; gtBusy = true;
-  const t = now();
+  if (gtBusy || !CFG.gtBackfill || now() < FEED.gtPauseUntil) return; gtBusy = true;
   try {
-    const short = G.board.top.length < 15;
-    if (pumpOff() && t - FEED.lastDisc > discEvery()) await jobDiscover();
-    else if (short && pumpOff()) return;                                  // candles wait until the board is full
-    else { queueHistory([...keepSet(t)].map(m => TL.get(m)).filter(Boolean)); if (FEED.histQ.length && t - FEED.lastHist > 2500) await jobHistory(); }
-  } catch (e) { log("warn", "feed: " + e.message); }
+    const order = [...G.board.top, ...G.board.bench].map(x => x.m).concat([...keepSet(now())]);
+    const tok = order.map(m => TL.get(m)).find(x => x && x.pool && (!x.histAt || !x.hist5At));
+    if (tok) await jobBackfill(tok);
+  } catch (e) { if (e.status === 429) FEED.gtPauseUntil = now() + 120e3; }
   finally { gtBusy = false; }
 }
 function engineStep() {
@@ -184,9 +204,16 @@ async function main() {
   if (CFG.feed === "replay") startReplay(process.env.REPLAY_FILE || new URL("./replay.json", import.meta.url).pathname);
   else {
     setInterval(() => feedStep(), 1000);
-    setInterval(() => gtStep(), 1000);
+    setInterval(() => gtStep(), 4000);
+    setInterval(sampleStep, 2000); sampleStep();
     rpcStart(() => {});
-    setInterval(() => { if (!RPC.live) return; const next = [...keepSet(now())].map(m => TL.get(m)).find(tok => tok && !RPC.watched.has(tok.m) && tok.dex === "pumpswap" && tok.quote === "SOL"); if (next) rpcWatch(next).catch(e => log("warn", "rpc watch: " + e.message)); }, 1500);
+    // start the price stream for kept coins, up to four a second (board coins first)
+    setInterval(() => {
+      if (!RPC.live) return;
+      const order = [...G.board.top, ...G.board.bench].map(x => x.m).concat([...keepSet(now())]);
+      const next = [...new Set(order)].map(m => TL.get(m)).filter(tok => tok && !RPC.watched.has(tok.m) && tok.dex === "pumpswap" && tok.quote === "SOL").slice(0, 4);
+      for (const tok of next) rpcWatch(tok).catch(e => log("warn", "rpc watch: " + e.message));
+    }, 1000);
     setInterval(() => prune(keepSet(now())), 60000);
   }
   setInterval(engineStep, 1000);

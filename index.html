@@ -3583,6 +3583,7 @@ function srvStream() {
   on("tick", list => { for (const [m, t, p] of list) { const tok = TL.get(m); if (!tok) continue; const K = tok.ticks; if (!K.length || t > K[K.length - 1].t) K.push({ t, p }); if (K.length > 5000) K.splice(0, 1000); tok.px = p; tok.lastSeen = nowW(); } dirty.coin = dirty.race = true; });
   on("token", o => { srvToken(o); dirty.all = true; });
   on("meta", list => { list.forEach(srvToken); });
+  on("candle", list => { for (const [m, c] of list) { const tok = TL.get(m); if (!tok) continue; const x = cIn(c), C = tok.C, last = C[C.length - 1]; if (!last || x.t > last.t) C.push(x); else if (x.t === last.t) C[C.length - 1] = x; if (C.length > 3000) C.splice(0, 600); if (!(tok.firstT <= x.t)) tok.firstT = firstTime(tok); } dirty.coin = dirty.race = true; });
   on("candles", d => { const tok = TL.get(d.m); if (!tok) return; if (d.five) tok.C5 = d.C.map(cIn); else tok.C = d.C.map(cIn); tok.firstT = firstTime(tok); dirty.coin = dirty.race = true; });
   on("board", b => { SRV.board = b; });
   on("round", srvRound);
@@ -3896,11 +3897,12 @@ async function watchTick() {
     WATCH.last = nowW();
     try { const r = await fetch("https://api.dexscreener.com/tokens/v1/solana/" + m); if (r.ok) applyPairs(await r.json(), nowW()); dirty.coin = true; } catch (_) {}
   }
-  if (!tok.C.length && S.srv && nowW() - WATCH.hist > 15000) {
+  // the server answers at once with its own candles; asking again every few minutes keeps the coin live on the server while the page is open
+  if (S.srv && nowW() - WATCH.hist > (tok.C.length ? 240000 : 15000)) {
     WATCH.hist = nowW();
-    try { const r = await fetch(SRV.url + "/candles?m=" + encodeURIComponent(m)); if (r.ok) { const j = await r.json(); tok.C = (j.C || []).map(cIn); tok.C5 = (j.C5 || []).map(cIn); tok.firstT = firstTime(tok); dirty.coin = true; } } catch (_) {}
+    try { const r = await fetch(SRV.url + "/candles?m=" + encodeURIComponent(m)); if (r.ok) { const j = await r.json(); if ((j.C || []).length >= tok.C.length) { tok.C = (j.C || []).map(cIn); tok.C5 = (j.C5 || []).map(cIn); tok.firstT = firstTime(tok); dirty.coin = true; } } } catch (_) {}
   }
-  else if (!tok.C.length && tok.pool && nowW() - WATCH.hist > 15000) {
+  else if (!S.srv && !tok.C.length && tok.pool && nowW() - WATCH.hist > 15000) {
     WATCH.hist = nowW();
     for (const five of [false, true]) {
       try {

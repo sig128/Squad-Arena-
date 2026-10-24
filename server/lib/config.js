@@ -18,6 +18,8 @@ export const CFG = {
   // Market data
   quicknode: env("QUICKNODE_RPC_URL"),                  // mainnet RPC: streams pool balances for prices
   feed: env("FEED", "live"),                            // "live" or "replay" (recorded hour, for local tests)
+  discoveryWs: env("DISCOVERY_WS", "wss://solana-rpc.publicnode.com"),   // free Solana WebSocket for the pool stream (new coins); "off" to skip
+  gtBackfill: env("GT_BACKFILL", "on") !== "off",       // older chart history from GeckoTerminal, in the background
 
   // Money
   network: env("NETWORK", "devnet") === "mainnet" ? "mainnet" : "devnet",
@@ -39,6 +41,7 @@ export const CFG = {
   maxStake: { tSOL: 100, SOL: num("MAX_STAKE_SOL", 10) },
   startBalance: 25
 };
+if (CFG.discoveryWs === "off") CFG.discoveryWs = "";
 CFG.moneyRpc = CFG.solanaRpc || (CFG.network === "mainnet" ? CFG.quicknode : "https://api.devnet.solana.com");
 
 // TIME_SCALE and SCORE_LATE_ROUNDS exist for local tests only (short rounds, score a round the server joined late)

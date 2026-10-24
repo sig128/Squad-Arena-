@@ -83,6 +83,7 @@ function srvStream() {
   on("tick", list => { for (const [m, t, p] of list) { const tok = TL.get(m); if (!tok) continue; const K = tok.ticks; if (!K.length || t > K[K.length - 1].t) K.push({ t, p }); if (K.length > 5000) K.splice(0, 1000); tok.px = p; tok.lastSeen = nowW(); } dirty.coin = dirty.race = true; });
   on("token", o => { srvToken(o); dirty.all = true; });
   on("meta", list => { list.forEach(srvToken); });
+  on("candle", list => { for (const [m, c] of list) { const tok = TL.get(m); if (!tok) continue; const x = cIn(c), C = tok.C, last = C[C.length - 1]; if (!last || x.t > last.t) C.push(x); else if (x.t === last.t) C[C.length - 1] = x; if (C.length > 3000) C.splice(0, 600); if (!(tok.firstT <= x.t)) tok.firstT = firstTime(tok); } dirty.coin = dirty.race = true; });
   on("candles", d => { const tok = TL.get(d.m); if (!tok) return; if (d.five) tok.C5 = d.C.map(cIn); else tok.C = d.C.map(cIn); tok.firstT = firstTime(tok); dirty.coin = dirty.race = true; });
   on("board", b => { SRV.board = b; });
   on("round", srvRound);

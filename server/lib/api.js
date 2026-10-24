@@ -7,7 +7,7 @@ import { authed } from "./auth.js";
 import { attach, online } from "./hub.js";
 import { log, rateOk } from "./util.js";
 import * as A from "./actions.js";
-import { TL, applyPairs, fetchCandles } from "./market.js";
+import { TL, FEED, applyPairs, chartC } from "./market.js";
 import { getJSON, isAddress } from "./util.js";
 
 const POST = {
@@ -64,9 +64,10 @@ export function makeServer({ snapshot, health }) {
         let tok = TL.get(m);
         if (!tok) { try { applyPairs(await getJSON("https://api.dexscreener.com/tokens/v1/solana/" + m), Date.now()); } catch (_) {} tok = TL.get(m); }
         if (!tok || !tok.pool) throw Object.assign(new Error("Couldn't find that coin trading on Solana."), { status: 404 });
-        try { await fetchCandles(tok, false); await fetchCandles(tok, true); } catch (_) {}
+        // answers straight away with what the server has; opening the page keeps the coin live (prices, candles) for 10 minutes
+        FEED.viewed.set(m, Date.now());
         const c = x => [x.t, x.o, x.h, x.l, x.c, Math.round(x.v || 0)];
-        return send(req, res, 200, { m, C: tok.C.slice(-200).map(c), C5: tok.C5.map(c) }, origin);
+        return send(req, res, 200, { m, C: chartC(tok, false).slice(-300).map(c), C5: chartC(tok, true).map(c) }, origin);
       }
       if (req.method === "GET" && GET_AUTH[path]) { const u = await userOf(req); return send(req, res, 200, await GET_AUTH[path](u), origin); }
       if (req.method === "POST" && POST[path]) { const body = await readBody(req); const u = await userOf(req); return send(req, res, 200, await POST[path](u, body), origin); }

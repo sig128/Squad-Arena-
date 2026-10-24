@@ -1,10 +1,16 @@
 // Market data: which coins exist, their prices over time, candles, the gate and the rug filter.
-// Sources: pump.fun (new coins), DEX Screener (prices, liquidity, volume), GeckoTerminal (candles), QuickNode (pool balances on every swap).
+// Sources: the PumpSwap pools themselves (new coins: every pool that trades shows up on a public Solana WebSocket),
+// DEX Screener (market cap, liquidity, volume, trades), QuickNode (pool balances on every swap: prices and our own candles),
+// pump.fun (descriptions and socials when it answers) and GeckoTerminal (older chart history, in the background only).
 import { CFG, GATE, MAX_AGE } from "./config.js";
 import { getJSON, sleep, log, b58dec, b58enc, now } from "./util.js";
 
 export const TL = new Map();               // mint -> token
-export const FEED = { cand: new Map(), pending: [], page: 0, pages: 13, gtPage: 1, pumpBlocked: false, histQ: [], lastPrice: 0, lastDisc: 0, lastHist: 0, gtNext: 0,
+export const FEED = { cand: new Map(), pending: [], page: 0, pages: 13, pumpBlocked: false, lastPrice: 0, lastDisc: 0, gtNext: 0, gtPauseUntil: 0,
+  reject: new Map(),          // mint -> time until which discovery skips it (too old, or not on DEX Screener yet)
+  pools: new Map(),           // mint -> { pool, bv, qv } from the pool stream, so the price stream can start without a lookup
+  viewed: new Map(),          // mint -> last time someone opened its chart (kept live for 10 minutes)
+  sample: { at: 0, running: false, pools: 0, fresh: 0, ms: 0, err: "" }, backfilled: 0,
   started: now(), calls: 0, errs: 0, sol: 0, onTick: null, onMeta: null, onCandles: null };
 
 export function makeToken(r) {
@@ -13,7 +19,7 @@ export function makeToken(r) {
     liq: r.l ?? null, vol: r.v || [0, 0, 0, 0], tx: r.tx || [0, 0, 0, 0], bs: r.bs || [0, 0], ch: r.ch || [0, 0, 0, 0],
     pool: r.p || null, dex: r.dex || null, quote: r.q || "SOL", pa: r.pa || null,
     x: r.x || null, tg: r.tg || null, dc: r.dc || null, w: r.w || null, ds: r.ds || "", logo: r.logo || null,
-    C: [], C5: [], ticks: [], rugAt: 0, rugWhy: "", gate: true, lastSeen: 0, histAt: 0, hist5At: 0, rpcAt: 0, rpc: null
+    C: [], C5: [], CH: [], C5H: [], ticks: [], rugAt: 0, rugWhy: "", gate: true, lastSeen: 0, histAt: 0, hist5At: 0, rpcAt: 0, rpc: null
   };
 }
 
@@ -42,13 +48,28 @@ export function twap(tok, a, b) {
 }
 export function firstTime(tok) { let f = Infinity; if (tok.C.length) f = tok.C[0].t; if (tok.C5.length) f = Math.min(f, tok.C5[0].t); if (tok.ticks.length) f = Math.min(f, tok.ticks[0].t); return f; }
 
-// at most one tick per second per coin; ticks older than 2 h fall back to candles
-export function pushTick(tok, t, p) {
+// at most one tick per second per coin; ticks older than 2 h fall back to our own candles, built from the same prices
+export function pushTick(tok, t, p, v = 0) {
   const K = tok.ticks, last = K[K.length - 1];
-  if (last && t - last.t < 1000) { last.p = p; last.t = Math.max(last.t, t); }
-  else K.push({ t, p });
+  if (last && Math.floor(t / 1000) === Math.floor(last.t / 1000)) { last.p = p; last.t = Math.max(last.t, t); }     // one tick per clock second
+  else if (!last || t > last.t) K.push({ t, p });
   if (K.length > 7600) K.splice(0, K.length - 7200);
+  if (!tok.full) { bump(tok.C, 60000, t, p, v, 1500); bump(tok.C5, 300000, t, p, v, 900); }
   if (FEED.onTick) FEED.onTick(tok, t, p);
+}
+// own candles: 1-minute for 25 hours, 5-minute for 75 hours. Each opens at the last close, so the chart has no gaps in price
+function bump(A, span, t, p, v, keep) {
+  const b = Math.floor(t / span) * span, last = A[A.length - 1];
+  if (last && last.t === b) { if (p > last.h) last.h = p; if (p < last.l) last.l = p; last.c = p; last.v += v; return; }
+  if (last && b < last.t) return;
+  const o = last ? last.c : p;
+  A.push({ t: b, o, h: Math.max(o, p), l: Math.min(o, p), c: p, v });
+  if (A.length > keep) A.splice(0, A.length - keep);
+}
+// what charts show: our candles, with older background history (if any) in front of them; only finished candles
+export function chartC(tok, five, t = now()) {
+  const span = five ? 300000 : 60000, own = five ? tok.C5 : tok.C, old = five ? tok.C5H : tok.CH, first = own.length ? own[0].t : Infinity;
+  return old.filter(c => c.t < first).concat(own.filter(c => c.t + span <= t));
 }
 
 /* ---------- transport: GeckoTerminal allows ~30 calls a minute, so its calls are spaced and backed off ---------- */
@@ -65,11 +86,12 @@ const fetchJSON = url => serial(isGT(url) ? "gt" : "other", async () => {
 /* ---------- applying DEX Screener pairs ---------- */
 const fmtUsd = v => v >= 1e6 ? "$" + (v / 1e6).toFixed(2) + "M" : v >= 1e3 ? "$" + (v / 1e3).toFixed(1) + "K" : "$" + Math.round(v);
 export function applyPairs(arr, t) {
-  const best = new Map();
+  const best = new Map(), born = new Map();
   for (const p of arr || []) {
     if (!p || p.chainId !== "solana" || !p.baseToken || !p.baseToken.address) continue;
     const m = p.baseToken.address, liq = (p.liquidity && p.liquidity.usd) || 0, cur = best.get(m);
     if (!cur || liq > ((cur.liquidity && cur.liquidity.usd) || 0)) best.set(m, p);
+    if (p.pairCreatedAt && !(born.get(m) <= p.pairCreatedAt)) born.set(m, p.pairCreatedAt);     // the first pair is the launch (the bonding curve)
   }
   const changed = [];
   for (const [m, p] of best) {
@@ -84,7 +106,7 @@ export function applyPairs(arr, t) {
     tok.bs = [tx.h1 ? tx.h1.buys || 0 : 0, tx.h1 ? tx.h1.sells || 0 : 0]; tok.ch = [ch.m5 || 0, ch.h1 || 0, ch.h6 || 0, ch.h24 || 0];
     tok.pool = p.pairAddress || tok.pool; tok.dex = p.dexId || tok.dex; tok.quote = (p.quoteToken && p.quoteToken.symbol) || "SOL"; tok.pa = p.pairCreatedAt || tok.pa;
     tok.qn = +p.priceNative || null; if (tok.quote === "SOL" && tok.qn) FEED.sol = px / tok.qn;
-    if (!tok.born) tok.born = cand.t || p.pairCreatedAt || 0;
+    if (!tok.born || (!cand.t && born.get(m) < tok.born)) tok.born = cand.t || born.get(m) || p.pairCreatedAt || 0;
     const info = p.info || {};
     (info.socials || []).forEach(s => { if (s.type === "twitter" && !tok.x) tok.x = s.url; if (s.type === "telegram" && !tok.tg) tok.tg = s.url; if (s.type === "discord" && !tok.dc) tok.dc = s.url; });
     if (!tok.w && info.websites && info.websites[0]) tok.w = info.websites[0].url;
@@ -101,10 +123,11 @@ export function applyPairs(arr, t) {
   }
   if (FEED.onMeta) FEED.onMeta([...best.keys()].map(m => TL.get(m)).filter(Boolean), changed);
 }
+// background history from GeckoTerminal: shown on charts before our own candles start, never used for scoring
 export function applyCandles(tok, list, five) {
   const C = (list || []).map(c => ({ t: c[0] * 1000, o: +c[1], h: +c[2], l: +c[3], c: +c[4], v: +c[5] })).filter(c => c.c > 0).sort((a, b) => a.t - b.t);
-  if (five) { tok.C5 = C; tok.hist5At = now(); } else { tok.C = C; tok.histAt = now(); }
-  if (FEED.onCandles) FEED.onCandles(tok, five);
+  if (five) { tok.C5H = C; tok.hist5At = now(); } else { tok.CH = C; tok.histAt = now(); }
+  if (FEED.onCandles && C.length) FEED.onCandles(tok, five);
 }
 
 /* ---------- jobs ---------- */
@@ -113,9 +136,20 @@ export async function jobPrices(mints) {
   for (let i = 0; i < mints.length; i += 30) applyPairs(await fetchJSON("https://api.dexscreener.com/tokens/v1/solana/" + mints.slice(i, i + 30).join(",")), now());
   FEED.lastPrice = now();
 }
+// new candidates: up to 90 at a time (three DEX Screener calls side by side); old coins and unknown ones are skipped for a while
 export async function jobValidate() {
-  const batch = FEED.pending.splice(0, 30); if (!batch.length) return;
-  applyPairs(await fetchJSON("https://api.dexscreener.com/tokens/v1/solana/" + batch.join(",")), now());
+  const batches = []; for (let i = 0; i < 3 && FEED.pending.length; i++) batches.push(FEED.pending.splice(0, 30));
+  if (!batches.length) return;
+  await Promise.all(batches.map(async batch => {
+    const arr = await getJSON("https://api.dexscreener.com/tokens/v1/solana/" + batch.join(","));
+    FEED.calls++;
+    // keep coins launched in the last 72 hours: their first pair (the bonding curve) dates the launch
+    const t = now(), first = new Map();
+    for (const p of arr || []) { const m = p && p.baseToken && p.baseToken.address; if (m && p.pairCreatedAt && !(first.get(m) <= p.pairCreatedAt)) first.set(m, p.pairCreatedAt); }
+    const young = m => { const c = FEED.cand.get(m); return c && c.t ? t - c.t <= MAX_AGE : first.has(m) && t - first.get(m) <= MAX_AGE + 3600e3; };
+    applyPairs((arr || []).filter(p => p && p.baseToken && young(p.baseToken.address)), t);
+    for (const m of batch) if (!TL.has(m)) FEED.reject.set(m, t + ((arr || []).some(p => p && p.baseToken && p.baseToken.address === m) ? 6 * 3600e3 : 600e3));
+  }).map(p => p.catch(e => { FEED.errs++; FEED.lastErr = { at: now(), msg: String(e.message || e).slice(0, 160) }; })));
 }
 // DEX Screener's latest profiles and boosts: a second source of fresh pump.fun coins that works from any server
 const DS_LISTS = ["https://api.dexscreener.com/token-profiles/latest/v1", "https://api.dexscreener.com/token-boosts/latest/v1", "https://api.dexscreener.com/token-boosts/top/v1"];
@@ -128,7 +162,7 @@ export async function jobDiscoverDS() {
     FEED.cand.set(m, { t: 0, logo: x.icon || null }); FEED.pending.push(m);
   }
 }
-// pump.fun first; if it refuses this server three times, GeckoTerminal's PumpSwap pools for 30 minutes, then pump.fun again
+// pump.fun's own list adds descriptions and socials when it answers; if it refuses this server three times, it rests 30 minutes
 export const pumpOff = () => FEED.pumpBlocked && now() - FEED.pumpBlockedAt < 1800e3;
 export async function jobDiscover() {
   const t = now(); FEED.lastDisc = t;
@@ -144,41 +178,64 @@ export async function jobDiscover() {
       return;
     } catch (e) {
       FEED.pumpFails = (FEED.pumpFails || 0) + 1;
-      if (FEED.pumpFails >= 3) { FEED.pumpBlocked = true; FEED.pumpBlockedAt = t; FEED.pumpFails = 0; log("warn", "pump.fun API unavailable, discovering through GeckoTerminal: " + e.message); }
+      if (FEED.pumpFails >= 3) { FEED.pumpBlocked = true; FEED.pumpBlockedAt = t; FEED.pumpFails = 0; log("warn", "pump.fun API unavailable for 30 minutes: " + e.message); }
       return;
     }
   }
-  const pg = FEED.gtPage; FEED.gtPage = pg % 5 + 1;
-  const j = await fetchJSON(`https://api.geckoterminal.com/api/v2/networks/solana/dexes/pumpswap/pools?page=${pg}&sort=h24_tx_count_desc`);
-  for (const p of (j && j.data) || []) {
-    const mint = String(p.relationships && p.relationships.base_token && p.relationships.base_token.data && p.relationships.base_token.data.id || "").replace(/^solana_/, ""), ct = Date.parse(p.attributes && p.attributes.pool_created_at);
-    if (!mint.endsWith("pump") || !(t - ct <= MAX_AGE)) continue;
-    if (!FEED.cand.has(mint)) { FEED.cand.set(mint, { t: ct }); if (!TL.has(mint)) FEED.pending.push(mint); }
-  }
 }
-export async function jobHistory() {
-  const it = FEED.histQ.shift(); if (!it) return; const tok = TL.get(it.m); if (!tok || !tok.pool) return;
-  FEED.lastHist = now();
-  const q = it.five ? "minute?aggregate=5&limit=300" : "minute?aggregate=1&limit=200";
-  let j; try { j = await fetchJSON(`https://api.geckoterminal.com/api/v2/networks/solana/pools/${tok.pool}/ohlcv/${q}&currency=usd&token=base`); }
-  catch (e) { FEED.lastHist = now() + 8000; throw e; }
-  applyCandles(tok, j && j.data && j.data.attributes && j.data.attributes.ohlcv_list, it.five);
+
+/* ---------- discovery from the chain: every PumpSwap pool that trades during a short listen ---------- */
+const PUMPSWAP = "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA", POOL_TAG = "hQrXeCntzbV", WSOL = "So11111111111111111111111111111111111111112";
+export function samplePools(ms) {
+  if (FEED.sample.running || !CFG.discoveryWs || typeof WebSocket === "undefined") return Promise.resolve(0);
+  FEED.sample.running = true; const seen = new Map(), t0 = now(); let live = 0;
+  return new Promise(resolve => {
+    let ws, done = false;
+    const finish = err => {
+      if (done) return; done = true; clearTimeout(timer); try { ws && ws.close(); } catch (_) {}
+      const t = now(); let fresh = 0;
+      for (const [m, info] of [...seen.entries()].sort((a, b) => b[1].n - a[1].n)) {
+        FEED.pools.set(m, info);
+        const tok = TL.get(m);
+        if (tok) { if (t - (tok.lastSeen || 0) > 600e3 && !FEED.pending.includes(m)) FEED.pending.push(m); continue; }      // re-check coins that may have grown
+        if ((FEED.reject.get(m) || 0) > t || FEED.pending.includes(m)) continue;
+        FEED.pending.push(m); fresh++;
+      }
+      if (FEED.pools.size > 20000) FEED.pools = new Map([...FEED.pools].slice(-10000));
+      if (FEED.reject.size > 50000) for (const [m, until] of FEED.reject) if (until < t) FEED.reject.delete(m);
+      Object.assign(FEED.sample, { at: t, running: false, pools: seen.size, fresh: fresh + live, ms: t - t0, err: err || "" });
+      resolve(fresh + live);
+    };
+    const timer = setTimeout(() => finish(), ms);
+    try { ws = new WebSocket(CFG.discoveryWs); } catch (e) { return finish("could not open: " + e.message); }
+    ws.onopen = () => ws.send(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "programSubscribe", params: [PUMPSWAP, { encoding: "base64", commitment: "confirmed", filters: [{ memcmp: { offset: 0, bytes: POOL_TAG } }, { memcmp: { offset: 75, bytes: WSOL } }] }] }));
+    ws.onerror = () => finish("connection error");
+    ws.onclose = () => finish(seen.size ? "" : "closed early");
+    ws.onmessage = ev => {
+      let j; try { j = JSON.parse(typeof ev.data === "string" ? ev.data : Buffer.from(ev.data).toString()); } catch (_) { return; }
+      if (j.id === 1 && j.error) return finish("refused: " + (j.error.message || "error"));
+      if (j.method !== "programNotification") return;
+      const v = j.params && j.params.result && j.params.result.value; if (!v || !v.account || !v.account.data) return;
+      const d = Buffer.from(v.account.data[0], "base64"); if (d.length < 203) return;
+      const m = b58enc(d.subarray(43, 75)); if (!m.endsWith("pump")) return;
+      const s = seen.get(m); if (s) { s.n++; return; }
+      const info = { pool: v.pubkey, bv: b58enc(d.subarray(139, 171)), qv: b58enc(d.subarray(171, 203)), n: 1 };
+      seen.set(m, info); FEED.pools.set(m, info);
+      // check a coin we haven't seen the moment its pool trades, instead of waiting for the listen to end
+      if (!TL.has(m) && !((FEED.reject.get(m) || 0) > now()) && !FEED.pending.includes(m)) { FEED.pending.push(m); live++; }
+    };
+  });
 }
-// candles for one coin on request (a coin page for a coin off the board), cached for 5 minutes
-export async function fetchCandles(tok, five) {
-  const at = five ? tok.hist5At : tok.histAt;
-  if (at && now() - at < 300e3 && (five ? tok.C5 : tok.C).length) return;
+// background history: one GeckoTerminal fill per coin, for the stretch before the server started watching it.
+// Nothing waits on it; a refusal pauses it for two minutes.
+export async function jobBackfill(tok) {
+  const five = !!tok.histAt; if (five) tok.hist5At = 1; else tok.histAt = 1;
   const q = five ? "minute?aggregate=5&limit=300" : "minute?aggregate=1&limit=200";
-  const j = await fetchJSON(`https://api.geckoterminal.com/api/v2/networks/solana/pools/${tok.pool}/ohlcv/${q}&currency=usd&token=base`);
+  let j;
+  try { j = await fetchJSON(`https://api.geckoterminal.com/api/v2/networks/solana/pools/${tok.pool}/ohlcv/${q}&currency=usd&token=base`); }
+  catch (e) { if (e.status === 429) { if (five) tok.hist5At = 0; else tok.histAt = 0; } throw e; }      // rate limited: try again later; anything else: give up on this coin
   applyCandles(tok, j && j.data && j.data.attributes && j.data.attributes.ohlcv_list, five);
-}
-// coins on the board get 1-minute candles refreshed every 10 min and 5-minute candles every 30 min (the 24 h rounds need them)
-export function queueHistory(list) {
-  const t = now();
-  for (const tok of list) {
-    if (t - tok.histAt > 600e3 && !FEED.histQ.some(x => x.m === tok.m && !x.five)) FEED.histQ.push({ m: tok.m });
-    if (t - tok.hist5At > 1800e3 && !FEED.histQ.some(x => x.m === tok.m && x.five)) FEED.histQ.push({ m: tok.m, five: true });
-  }
+  FEED.backfilled++;
 }
 export function prune(keep) {
   const t = now();
@@ -209,11 +266,15 @@ export function rpcStart(onUp) {
     const sub = RPC.subs.get(j.params && j.params.subscription); if (!sub) return;
     const info = j.params.result && j.params.result.value && j.params.result.value.data && j.params.result.value.data.parsed && j.params.result.value.data.parsed.info;
     const amt = info && info.tokenAmount && +info.tokenAmount.uiAmountString; if (!(amt >= 0)) return;
-    const tok = TL.get(sub.m); if (!tok) return; tok.rpc = tok.rpc || {}; tok.rpc[sub.side] = amt;
-    if (tok.rpc.b > 0 && tok.rpc.q > 0 && FEED.sol > 0) {
-      const p = tok.rpc.q / tok.rpc.b * FEED.sol, t = now();
-      if (tok.px && Math.abs(p / tok.px - 1) > 0.25) return;      // sanity check against the last DEX Screener price
-      tok.rpcAt = t; pushTick(tok, t, p);
+    const tok = TL.get(sub.m); if (!tok) return; const R = tok.rpc = tok.rpc || {};
+    const slot = (j.params.result.context && j.params.result.context.slot) || 0;
+    if (sub.side === "q" && R.q > 0) R.vol = (R.vol || 0) + Math.abs(amt - R.q);              // SOL in or out of the pool = trade size
+    R[sub.side] = amt; R[sub.side + "s"] = slot;
+    // a swap moves both vaults in the same slot: price only once both sides have caught up, so it never flickers mid-swap
+    if (R.b > 0 && R.q > 0 && FEED.sol > 0 && R.bs === R.qs) {
+      const p = R.q / R.b * FEED.sol, t = now();
+      if (tok.px && Math.abs(p / tok.px - 1) > 0.25 && !(tok.rpcAt && t - tok.rpcAt < 60000)) return;   // sanity check against DEX Screener until the stream is established
+      tok.rpcAt = t; pushTick(tok, t, p, (R.vol || 0) * FEED.sol); R.vol = 0;
     }
   };
 }
@@ -222,6 +283,12 @@ export async function rpcWatch(tok) {
   if (!RPC.ws || !RPC.live || RPC.watched.has(tok.m) || !tok.pool || tok.quote !== "SOL" || tok.dex !== "pumpswap") return;
   RPC.watched.add(tok.m);
   try {
+    const known = FEED.pools.get(tok.m);
+    if (known && known.pool === tok.pool) {
+      await rpcSub(known.bv, sid => RPC.subs.set(sid, { m: tok.m, side: "b" }));
+      await rpcSub(known.qv, sid => RPC.subs.set(sid, { m: tok.m, side: "q" }));
+      return;
+    }
     const info = await rpcHttp("getAccountInfo", [tok.pool, { encoding: "base64" }]);
     const data = Buffer.from(info.value.data[0], "base64"), mint = b58dec(tok.m);
     let off = -1; for (let i = 0; i + 32 <= data.length && off < 0; i++) { let ok = true; for (let k = 0; k < 32; k++) if (data[i + k] !== mint[k]) { ok = false; break; } if (ok) off = i; }
