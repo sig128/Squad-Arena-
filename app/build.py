@@ -49,7 +49,7 @@ head_part = re.sub(r'<link rel="icon"[^>]*>\s*', "", head_part)
 head_part = re.sub(r'<meta name="claude:[^>]*>\s*', "", head_part)
 TITLE = "Squad Arena · Fifteen coins enter. One squad wins."
 DESC = "Fifteen fresh pump.fun coins race in live rounds. Back the top gainer or the last coin standing, join the coin's squad and push it up the board."
-URL = "https://squadarena.fun/"
+URL = "https://www.squadarena.fun/"
 ALT = "Squad Arena: fifteen pump.fun coins lined up in three chevron stripes, one winner on the tip."
 meta = f"""<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
