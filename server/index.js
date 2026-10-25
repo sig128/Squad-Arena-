@@ -21,7 +21,7 @@ const candleOut = c => [c.t, r6(c.o), r6(c.h), r6(c.l), r6(c.c), Math.round(c.v 
 function tokOut(tok, full = true) {
   const o = { m: tok.m, s: tok.s, n: tok.n, born: tok.born, supply: tok.supply, px: r6(tok.px), mc: tok.mc, liq: tok.liq, vol: tok.vol, tx: tok.tx, bs: tok.bs, ch: tok.ch,
     pool: tok.pool, dex: tok.dex, quote: tok.quote, pa: tok.pa, x: tok.x, tg: tok.tg, dc: tok.dc, w: tok.w, ds: (tok.ds || "").slice(0, 360), logo: tok.logo,
-    gate: tok.gate, rugAt: tok.rugAt, rugWhy: tok.rugWhy, rpc: !!tok.rpcAt, kol: kolCount(tok.m), holders: tok.holders || null };
+    gate: tok.gate, rugAt: tok.rugAt, rugWhy: tok.rugWhy, flag: tok.flagWhy || "", rpc: !!tok.rpcAt, kol: kolCount(tok.m), holders: tok.holders || null };
   if (full) {
     const t = now();
     o.C = chartC(tok, false, t).slice(-150).map(candleOut);
@@ -77,7 +77,7 @@ const TREND = { list: [], sig: "", at: 0 };
 function trendStep() {
   const t = now(), rows = [];
   for (const tok of TL.values()) {
-    if (BLOCKED(tok) || !(tok.px > 0) || tok.full) continue;
+    if (BLOCKED(tok) || tok.flag || !(tok.px > 0) || tok.full) continue;
     if (tok.born && t - tok.born > MAX_AGE) continue;
     if (tok.rugAt && tok.rugAt <= t) continue;
     if ((tok.liq || 0) < 5000 || !tok.lastSeen || t - tok.lastSeen > 30 * 60e3) continue;

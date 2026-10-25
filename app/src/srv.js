@@ -27,7 +27,7 @@ const cIn = a => ({ t: a[0], o: a[1], h: a[2], l: a[3], c: a[4], v: a[5] });
 function srvToken(o) {
   let tok = TL.get(o.m);
   if (!tok) { tok = makeToken({ m: o.m, s: o.s, n: o.n, t: o.born }); TL.set(o.m, tok); }
-  for (const k of ["s", "n", "born", "supply", "px", "mc", "liq", "vol", "tx", "bs", "ch", "pool", "dex", "quote", "pa", "x", "tg", "dc", "w", "ds", "gate", "rugAt", "rugWhy", "kol", "holders"]) if (o[k] !== undefined && o[k] !== null) tok[k] = o[k];
+  for (const k of ["s", "n", "born", "supply", "px", "mc", "liq", "vol", "tx", "bs", "ch", "pool", "dex", "quote", "pa", "x", "tg", "dc", "w", "ds", "gate", "rugAt", "rugWhy", "kol", "holders", "flag"]) if (o[k] !== undefined && o[k] !== null) tok[k] = o[k];
   if (o.rugAt === 0) { tok.rugAt = 0; tok.rugWhy = ""; }
   if (o.logo && !LOGO[o.m]) tok.logo = o.logo;
   if (o.C) tok.C = o.C.map(cIn);

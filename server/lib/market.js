@@ -115,6 +115,7 @@ export function applyPairs(arr, t) {
     const pass = tok.liq >= GATE.liq && (tok.mc || 0) / Math.max(1, tok.liq) <= GATE.mcLiq && tok.vol[3] * adj / (tok.mc || 1) >= GATE.turn && tok.tx[3] * adj >= GATE.trades && tok.tx[3] >= GATE.tx24;
     if (tok.lastSeen && tok.gate && !tok.rugAt && (tok.ch[0] <= -80 || tok.liq < GATE.liq * 0.6)) { tok.rugAt = t; tok.rugWhy = tok.ch[0] <= -80 ? "price fell " + Math.round(-tok.ch[0]) + "% in 5 min" : "liquidity fell to " + fmtUsd(tok.liq); log("info", "rug filter: " + tok.s + " " + tok.rugWhy); }
     tok.gate = pass || (tok.gate && !!tok.lastSeen && tok.liq >= GATE.liq);
+    scamCheck(tok, t);
     // DEX Screener prices are the backbone, except for coins the RPC stream watches: those pools report every swap,
     // and DEX Screener's slightly older price in between would make the line zigzag
     if (!(RPC.live && RPC.watched.has(m) && tok.rpcAt)) pushTick(tok, t, px);
@@ -123,6 +124,37 @@ export function applyPairs(arr, t) {
   }
   if (FEED.onMeta) FEED.onMeta([...best.keys()].map(m => TL.get(m)).filter(Boolean), changed);
 }
+// Coins that aren't real markets stay off the board, out of trending and out of new rounds:
+//  - one-candle launches: a single 1-minute candle in the first 30 minutes after the pool opened did 4x or more,
+//    and that candle is still most (70%+) of the coin's whole move. That is a bundle buying the pool at launch;
+//    everything after it is a flat line. A coin that later makes a real move of its own becomes eligible again.
+//  - bot volume: trades averaging under $12 over the last hour (500+ trades), or under $6 over 5 minutes (150+).
+//    Volume bots fire thousands of tiny buys and sells to fake activity; real pump.fun trading averages $15-$200.
+export const SCAM = { spike: 4, share: 0.7, window: 30 * 60e3, tx1h: 500, usd1h: 12, tx5m: 150, usd5m: 6 };
+export function scamCheck(tok, t = now()) {
+  let why = "";
+  const tx = tok.tx || [], vol = tok.vol || [];
+  if (tx[1] >= SCAM.tx1h && vol[1] / tx[1] < SCAM.usd1h) why = `bot volume: trades average $${(vol[1] / tx[1]).toFixed(2)} over the last hour`;
+  else if (tx[0] >= SCAM.tx5m && vol[0] / tx[0] < SCAM.usd5m) why = `bot volume: trades average $${(vol[0] / tx[0]).toFixed(2)} over 5 minutes`;
+  if (!why && tok.pa) {
+    const C = chartC(tok, false, t);
+    if (C.length >= 2 && C[0].t <= tok.pa + 120e3) {                                  // we have the launch itself
+      let big = null, lo = Infinity, hi = 0;
+      for (const c of C) {
+        if (!(c.o > 0 && c.c > 0)) continue;
+        lo = Math.min(lo, c.l || c.o); hi = Math.max(hi, c.h || c.c);
+        if (c.t <= tok.pa + SCAM.window && (!big || c.c / c.o > big.c / big.o)) big = c;
+      }
+      const r = big ? big.c / big.o : 0;
+      if (r >= SCAM.spike && hi > lo && Math.log(r) / Math.log(hi / lo) >= SCAM.share) why = `one-candle launch: ${r.toFixed(1)}x in a single minute, then nothing`;
+    }
+  }
+  // a flag holds for at least 30 minutes, so a coin hovering at the line doesn't flicker on and off the board
+  if (why) { if (!tok.flag) log("info", "scam filter: " + tok.s + " " + why); tok.flag = true; tok.flagWhy = why; tok.flagAt = t; }
+  else if (tok.flag && t - (tok.flagAt || 0) > 30 * 60e3) { tok.flag = false; tok.flagWhy = ""; }
+  return tok.flag;
+}
+
 // background history from GeckoTerminal: shown on charts before our own candles start, never used for scoring
 export function applyCandles(tok, list, five) {
   const C = (list || []).map(c => ({ t: c[0] * 1000, o: +c[1], h: +c[2], l: +c[3], c: +c[4], v: +c[5] })).filter(c => c.c > 0).sort((a, b) => a.t - b.t);

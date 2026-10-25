@@ -29,7 +29,7 @@ export const BLOCKED = tok => tok.m === PUMP_MINT || CFG.boardExclude.includes(S
 export function computeBoard(t) {
   const list = [];
   for (const tok of TL.values()) {
-    if (!tok.gate || BLOCKED(tok)) continue;
+    if (!tok.gate || BLOCKED(tok) || tok.flag) continue;
     if (tok.rugAt && t >= tok.rugAt) continue;
     if (tok.born && t - tok.born > MAX_AGE) continue;
     const p = pAt(tok, t); if (p == null) continue;
