@@ -21,7 +21,7 @@ export async function storeInit() {
 }
 export async function storeSave(tok) {
   if (!STORE.on || !tok.C.length) return;
-  const data = zlib.gzipSync(JSON.stringify({ v: 1, C: tok.C.slice(-1500).map(arr), C5: tok.C5.slice(-900).map(arr), K: kolSave(tok.m) })).toString("base64");
+  const data = zlib.gzipSync(JSON.stringify({ v: 1, C: tok.C.slice(-1500).map(arr), C5: tok.C5.slice(-900).map(arr), K: kolSave(tok.m), L: tok.launch || null })).toString("base64");
   const r = await fetch(rest() + "?on_conflict=mint", { method: "POST", headers: hdr({ "content-type": "application/json", prefer: "resolution=merge-duplicates,return=minimal" }),
     body: JSON.stringify({ mint: tok.m, data, updated_at: new Date().toISOString() }), signal: AbortSignal.timeout(15000) });
   if (!r.ok) { const t = await r.text(); STORE.err = `save: HTTP ${r.status} ${t.slice(0, 140)}`; throw new Error(STORE.err); }
@@ -37,6 +37,7 @@ export async function storeLoad(tok) {
   const merge = (own, saved) => { const first = own.length ? own[0].t : Infinity; return (saved || []).map(obj).filter(c => c.t < first && c.c > 0).concat(own); };
   tok.C = merge(tok.C, j.C).slice(-1500); tok.C5 = merge(tok.C5, j.C5).slice(-900);
   if (j.K) kolLoad(tok.m, j.K);
+  if (j.L && !tok.launch) tok.launch = j.L;                // the launch verdict outlives the launch candle
   STORE.loaded++;
   return true;
 }

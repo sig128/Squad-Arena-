@@ -127,28 +127,32 @@ export function applyPairs(arr, t) {
 // Coins that aren't real markets stay off the board, out of trending and out of new rounds:
 //  - one-candle launches: a single 1-minute candle in the first 30 minutes after the pool opened did 4x or more,
 //    and that candle is still most (70%+) of the coin's whole move. That is a bundle buying the pool at launch;
-//    everything after it is a flat line. A coin that later makes a real move of its own becomes eligible again.
-//  - bot volume: trades averaging under $12 over the last hour (500+ trades), or under $6 over 5 minutes (150+).
-//    Volume bots fire thousands of tiny buys and sells to fake activity; real pump.fun trading averages $15-$200.
-export const SCAM = { spike: 4, share: 0.7, window: 30 * 60e3, tx1h: 500, usd1h: 12, tx5m: 150, usd5m: 6 };
-export function scamCheck(tok, t = now()) {
-  let why = "";
-  const tx = tok.tx || [], vol = tok.vol || [];
-  if (tx[1] >= SCAM.tx1h && vol[1] / tx[1] < SCAM.usd1h) why = `bot volume: trades average $${(vol[1] / tx[1]).toFixed(2)} over the last hour`;
-  else if (tx[0] >= SCAM.tx5m && vol[0] / tx[0] < SCAM.usd5m) why = `bot volume: trades average $${(vol[0] / tx[0]).toFixed(2)} over 5 minutes`;
-  if (!why && tok.pa) {
-    const C = chartC(tok, false, t);
-    if (C.length >= 2 && C[0].t <= tok.pa + 120e3) {                                  // we have the launch itself
-      let big = null, lo = Infinity, hi = 0;
-      for (const c of C) {
-        if (!(c.o > 0 && c.c > 0)) continue;
-        lo = Math.min(lo, c.l || c.o); hi = Math.max(hi, c.h || c.c);
-        if (c.t <= tok.pa + SCAM.window && (!big || c.c / c.o > big.c / big.o)) big = c;
-      }
-      const r = big ? big.c / big.o : 0;
-      if (r >= SCAM.spike && hi > lo && Math.log(r) / Math.log(hi / lo) >= SCAM.share) why = `one-candle launch: ${r.toFixed(1)}x in a single minute, then nothing`;
-    }
+//    everything after it is a flat line. The verdict is kept (and stored with the coin's candles), so it holds
+//    after the launch candle has scrolled out of memory; while the launch is still in view, a coin that makes
+//    a real move of its own afterwards becomes eligible again.
+//  - bot volume: trades averaging under $6 over 5 minutes (150+ trades) or under $12 over the last hour (200+),
+//    6 hours (1,000+) or day (2,000+). Volume bots fire thousands of tiny buys and sells to fake activity; real
+//    pump.fun trading averages $15-$200 a trade.
+export const SCAM = { spike: 4, share: 0.7, window: 30 * 60e3, usd: 12,
+  bot: [[0, 150, 6, "5 minutes"], [1, 200, 12, "the last hour"], [2, 1000, 12, "6 hours"], [3, 2000, 12, "24 hours"]] };
+function launchCheck(tok, t) {
+  if (!tok.pa) return null;
+  const C = chartC(tok, false, t);
+  if (C.length < 2 || C[0].t > tok.pa + 120e3) return null;                          // we don't have the launch itself
+  let big = null, lo = Infinity, hi = 0;
+  for (const c of C) {
+    if (!(c.o > 0 && c.c > 0)) continue;
+    lo = Math.min(lo, c.l || c.o); hi = Math.max(hi, c.h || c.c);
+    if (c.t <= tok.pa + SCAM.window && (!big || c.c / c.o > big.c / big.o)) big = c;
   }
+  const r = big ? big.c / big.o : 0;
+  return { r: +r.toFixed(2), bad: r >= SCAM.spike && hi > lo && Math.log(r) / Math.log(hi / lo) >= SCAM.share };
+}
+export function scamCheck(tok, t = now()) {
+  const L = launchCheck(tok, t); if (L) tok.launch = L;
+  let why = tok.launch && tok.launch.bad ? `one-candle launch: ${tok.launch.r.toFixed(1)}x in a single minute, then nothing` : "";
+  const tx = tok.tx || [], vol = tok.vol || [];
+  for (const [i, n, usd, span] of SCAM.bot) if (!why && tx[i] >= n && vol[i] / tx[i] < usd) why = `bot volume: trades average $${(vol[i] / tx[i]).toFixed(2)} over ${span}`;
   // a flag holds for at least 30 minutes, so a coin hovering at the line doesn't flicker on and off the board
   if (why) { if (!tok.flag) log("info", "scam filter: " + tok.s + " " + why); tok.flag = true; tok.flagWhy = why; tok.flagAt = t; }
   else if (tok.flag && t - (tok.flagAt || 0) > 30 * 60e3) { tok.flag = false; tok.flagWhy = ""; }
