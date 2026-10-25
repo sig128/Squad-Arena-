@@ -872,16 +872,22 @@ const slotOf = new Map(), lastSlot = new Map();
 const colorOf = m => slotOf.has(m) ? pal[slotOf.get(m)] : C.faint;
 const ringOf = m => slotOf.has(m) ? pal[slotOf.get(m)] : "var(--faint)";
 const IMG = {};
-function imgOf(tok) { if (!tok.logo) return null; let im = IMG[tok.m]; if (!im) { im = new Image(); im.decoding = "async"; im.src = tok.logo; IMG[tok.m] = im; } return im.complete && im.naturalWidth ? im : null; }
+// IPFS logos: ipfs.io and most public gateways fail or time out in browsers; Filebase answers in a few hundred ms,
+// pump.fun's own Pinata gateway is the second try
+const ipfsCid = u => { const m = String(u || "").match(/^(?:ipfs:\/\/(?:ipfs\/)?|https?:\/\/[^/]+\/ipfs\/)([A-Za-z0-9]{40,}[^?#]*)/); return m ? m[1] : null; };
+const logoUrl = u => { const c = ipfsCid(u); return c ? "https://ipfs.filebase.io/ipfs/" + c : u; };
+function imgOf(tok) { if (!tok.logo) return null; let im = IMG[tok.m]; if (!im) { im = new Image(); im.decoding = "async"; im.src = logoUrl(tok.logo); IMG[tok.m] = im; } return im.complete && im.naturalWidth ? im : null; }
 function avHTML(tok, size, rw) {
-  const src = tok && tok.logo, m = tok ? tok.m : "";
+  const src = tok && tok.logo && logoUrl(tok.logo), m = tok ? tok.m : "";
   return `<span class="av${src ? "" : " mono"}" data-av="${esc(m)}" data-s="${esc((tok && tok.s || "?")[0])}" style="--s:${size}px;--rw:${rw}px;--ring:${ringOf(m)}">${src ? `<img src="${esc(src)}" alt="" width="${size}" height="${size}" loading="lazy" referrerpolicy="no-referrer">` : esc((tok && tok.s || "?")[0])}</span>`;
 }
 // a logo that won't load (hosts that refuse other sites, slow IPFS) goes through the site's own image proxy, then falls back to the initial
 document.addEventListener("error", e => {
   const im = e.target; if (!(im instanceof HTMLImageElement)) return;
   const av = im.parentElement; if (!av || !av.classList.contains("av")) return;
-  if (!im.dataset.px && /^https:/.test(im.src) && /^https?:$/.test(location.protocol) && !window.claude) { im.dataset.px = "1"; im.src = "/api/img?u=" + encodeURIComponent(im.src); return; }
+  const cid = ipfsCid(im.src);
+  if (cid && !im.dataset.pin) { im.dataset.pin = "1"; im.src = "https://pump.mypinata.cloud/ipfs/" + cid + "?img-width=128&img-dpr=2"; return; }
+  if (!im.dataset.px && /^https:/.test(im.src) && /^https?:$/.test(location.protocol) && !window.claude) { im.dataset.px = "1"; im.src = "/api/img?u=" + encodeURIComponent(cid ? "https://ipfs.filebase.io/ipfs/" + cid : im.src); return; }
   av.classList.add("mono"); av.textContent = av.dataset.s || "?";
 }, true);
 const tkHTML = (tok, size = 14) => tok ? `<a class="tk" href="#coin-${esc(tok.m)}">${avHTML(tok, size, 1.5)}<span>${esc(tok.s)}</span></a>` : "";
@@ -3662,7 +3668,7 @@ async function srvSnapshot() {
   let snap;
   try { const r = await fetch(SRV.url + "/snapshot", { cache: "no-store" }); if (!r.ok) throw new Error("HTTP " + r.status); snap = await r.json(); }
   catch (e) { SRV.errs++; throw new Error("The round server isn't reachable right now (" + e.message + ")."); }
-  SRV.cfg = snap.cfg;
+  SRV.cfg = snap.cfg; if (S.view === "coin" && coinUI.m) renderKolBox(coinUI.m);
   for (const o of snap.tokens || []) srvToken(o);
   SRV.board = snap.board || { top: [], bench: [] }; trendingEvent(snap.trending);
   SRV.rounds.clear(); for (const st of Object.values(snap.rounds || {})) srvRound(st);
@@ -4140,11 +4146,11 @@ function renderKolBox(m) {
   const el = $("cKols"); if (!el || coinUI.m !== m) return;
   const k = KOLS.get(m), on = SRV.cfg && SRV.cfg.kols > 0, tok = tokAny(m), p = tok ? pAt(tok, nowW()) : null;
   $("cKolN").textContent = k && k.holders.length ? k.holders.length : "";
+  if (!SRV.cfg || !k) { el.innerHTML = `<p class="fine">Loading…</p>`; return; }            // the snapshot (with the KOL count) can land after the coin's KOLs
   if (!on) { el.innerHTML = `<p class="fine">KOL tracking switches on once the server has a KOL list.</p>`; return; }
-  if (!k) { el.innerHTML = `<p class="fine">Loading…</p>`; return; }
   const hold = k.holders.slice(0, 12).map(h => `<div class="kol">${kolAv(h, 20)}<span class="kn">${h.x ? `<a href="https://x.com/${esc(h.x)}" target="_blank" rel="noopener">${esc(kolName(h))}</a>` : esc(kolName(h))}</span><span class="num dim">${p ? fmtUsd(h.amt * p) : fmtNum(h.amt)}</span></div>`).join("");
   const last = k.trades.slice(-6).reverse().map(t => `<div class="kol">${kolAv(t, 16)}<span class="kn">${esc(kolName(t))} <span class="${t.side === "buy" ? "up" : "down"}">${t.side === "buy" ? "bought" : "sold"}</span></span><span class="num dim">${fmtKolSol(t.sol)} · ${ago(nowW() - t.t)}</span></div>`).join("");
-  el.innerHTML = (hold || `<p class="fine">No tracked KOL holds it yet.</p>`) + (last ? `<div class="kh">Latest KOL trades</div>${last}` : "");
+  el.innerHTML = (hold || `<p class="fine">${k.trades.length ? "No tracked KOL holds it right now." : `None of the ${fmtNum(SRV.cfg.kols)} KOLs we track has traded it yet.`}</p>`) + (last ? `<div class="kh">Latest KOL trades</div>${last}` : "");
 }
 const kolKey = m => { const k = KOLS.get(m); return k ? k.trades.length + ":" + (k.trades.length ? k.trades[k.trades.length - 1].t : 0) : "0"; };
 

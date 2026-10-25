@@ -170,16 +170,22 @@ const slotOf = new Map(), lastSlot = new Map();
 const colorOf = m => slotOf.has(m) ? pal[slotOf.get(m)] : C.faint;
 const ringOf = m => slotOf.has(m) ? pal[slotOf.get(m)] : "var(--faint)";
 const IMG = {};
-function imgOf(tok) { if (!tok.logo) return null; let im = IMG[tok.m]; if (!im) { im = new Image(); im.decoding = "async"; im.src = tok.logo; IMG[tok.m] = im; } return im.complete && im.naturalWidth ? im : null; }
+// IPFS logos: ipfs.io and most public gateways fail or time out in browsers; Filebase answers in a few hundred ms,
+// pump.fun's own Pinata gateway is the second try
+const ipfsCid = u => { const m = String(u || "").match(/^(?:ipfs:\/\/(?:ipfs\/)?|https?:\/\/[^/]+\/ipfs\/)([A-Za-z0-9]{40,}[^?#]*)/); return m ? m[1] : null; };
+const logoUrl = u => { const c = ipfsCid(u); return c ? "https://ipfs.filebase.io/ipfs/" + c : u; };
+function imgOf(tok) { if (!tok.logo) return null; let im = IMG[tok.m]; if (!im) { im = new Image(); im.decoding = "async"; im.src = logoUrl(tok.logo); IMG[tok.m] = im; } return im.complete && im.naturalWidth ? im : null; }
 function avHTML(tok, size, rw) {
-  const src = tok && tok.logo, m = tok ? tok.m : "";
+  const src = tok && tok.logo && logoUrl(tok.logo), m = tok ? tok.m : "";
   return `<span class="av${src ? "" : " mono"}" data-av="${esc(m)}" data-s="${esc((tok && tok.s || "?")[0])}" style="--s:${size}px;--rw:${rw}px;--ring:${ringOf(m)}">${src ? `<img src="${esc(src)}" alt="" width="${size}" height="${size}" loading="lazy" referrerpolicy="no-referrer">` : esc((tok && tok.s || "?")[0])}</span>`;
 }
 // a logo that won't load (hosts that refuse other sites, slow IPFS) goes through the site's own image proxy, then falls back to the initial
 document.addEventListener("error", e => {
   const im = e.target; if (!(im instanceof HTMLImageElement)) return;
   const av = im.parentElement; if (!av || !av.classList.contains("av")) return;
-  if (!im.dataset.px && /^https:/.test(im.src) && /^https?:$/.test(location.protocol) && !window.claude) { im.dataset.px = "1"; im.src = "/api/img?u=" + encodeURIComponent(im.src); return; }
+  const cid = ipfsCid(im.src);
+  if (cid && !im.dataset.pin) { im.dataset.pin = "1"; im.src = "https://pump.mypinata.cloud/ipfs/" + cid + "?img-width=128&img-dpr=2"; return; }
+  if (!im.dataset.px && /^https:/.test(im.src) && /^https?:$/.test(location.protocol) && !window.claude) { im.dataset.px = "1"; im.src = "/api/img?u=" + encodeURIComponent(cid ? "https://ipfs.filebase.io/ipfs/" + cid : im.src); return; }
   av.classList.add("mono"); av.textContent = av.dataset.s || "?";
 }, true);
 const tkHTML = (tok, size = 14) => tok ? `<a class="tk" href="#coin-${esc(tok.m)}">${avHTML(tok, size, 1.5)}<span>${esc(tok.s)}</span></a>` : "";

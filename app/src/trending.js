@@ -73,10 +73,10 @@ function renderKolBox(m) {
   const el = $("cKols"); if (!el || coinUI.m !== m) return;
   const k = KOLS.get(m), on = SRV.cfg && SRV.cfg.kols > 0, tok = tokAny(m), p = tok ? pAt(tok, nowW()) : null;
   $("cKolN").textContent = k && k.holders.length ? k.holders.length : "";
+  if (!SRV.cfg || !k) { el.innerHTML = `<p class="fine">Loading…</p>`; return; }            // the snapshot (with the KOL count) can land after the coin's KOLs
   if (!on) { el.innerHTML = `<p class="fine">KOL tracking switches on once the server has a KOL list.</p>`; return; }
-  if (!k) { el.innerHTML = `<p class="fine">Loading…</p>`; return; }
   const hold = k.holders.slice(0, 12).map(h => `<div class="kol">${kolAv(h, 20)}<span class="kn">${h.x ? `<a href="https://x.com/${esc(h.x)}" target="_blank" rel="noopener">${esc(kolName(h))}</a>` : esc(kolName(h))}</span><span class="num dim">${p ? fmtUsd(h.amt * p) : fmtNum(h.amt)}</span></div>`).join("");
   const last = k.trades.slice(-6).reverse().map(t => `<div class="kol">${kolAv(t, 16)}<span class="kn">${esc(kolName(t))} <span class="${t.side === "buy" ? "up" : "down"}">${t.side === "buy" ? "bought" : "sold"}</span></span><span class="num dim">${fmtKolSol(t.sol)} · ${ago(nowW() - t.t)}</span></div>`).join("");
-  el.innerHTML = (hold || `<p class="fine">No tracked KOL holds it yet.</p>`) + (last ? `<div class="kh">Latest KOL trades</div>${last}` : "");
+  el.innerHTML = (hold || `<p class="fine">${k.trades.length ? "No tracked KOL holds it right now." : `None of the ${fmtNum(SRV.cfg.kols)} KOLs we track has traded it yet.`}</p>`) + (last ? `<div class="kh">Latest KOL trades</div>${last}` : "");
 }
 const kolKey = m => { const k = KOLS.get(m); return k ? k.trades.length + ":" + (k.trades.length ? k.trades[k.trades.length - 1].t : 0) : "0"; };

@@ -18,7 +18,7 @@ export function makeToken(r) {
     m: r.m, s: r.s, n: r.n || r.s, born: r.t || 0, px: r.px || null, mc: r.mc || null, supply: r.mc && r.px ? r.mc / r.px : 1e9,
     liq: r.l ?? null, vol: r.v || [0, 0, 0, 0], tx: r.tx || [0, 0, 0, 0], bs: r.bs || [0, 0], ch: r.ch || [0, 0, 0, 0],
     pool: r.p || null, dex: r.dex || null, quote: r.q || "SOL", pa: r.pa || null,
-    x: r.x || null, tg: r.tg || null, dc: r.dc || null, w: r.w || null, ds: r.ds || "", logo: r.logo || null,
+    x: r.x || null, tg: r.tg || null, dc: r.dc || null, w: r.w || null, ds: r.ds || "", logo: fixLogo(r.logo),
     C: [], C5: [], CH: [], C5H: [], ticks: [], rugAt: 0, rugWhy: "", gate: true, lastSeen: 0, histAt: 0, hist5At: 0, rpcAt: 0, rpc: null
   };
 }
@@ -110,7 +110,7 @@ export function applyPairs(arr, t) {
     const info = p.info || {};
     (info.socials || []).forEach(s => { if (s.type === "twitter" && !tok.x) tok.x = s.url; if (s.type === "telegram" && !tok.tg) tok.tg = s.url; if (s.type === "discord" && !tok.dc) tok.dc = s.url; });
     if (!tok.w && info.websites && info.websites[0]) tok.w = info.websites[0].url;
-    if (info.imageUrl && !tok.logo) tok.logo = info.imageUrl;
+    if (info.imageUrl && (!tok.logo || isIpfs(tok.logo))) tok.logo = info.imageUrl;
     const ageH = Math.max(0.05, (t - (tok.born || t)) / 3600e3), adj = ageH < 24 ? 24 / ageH : 1;
     const pass = tok.liq >= GATE.liq && (tok.mc || 0) / Math.max(1, tok.liq) <= GATE.mcLiq && tok.vol[3] * adj / (tok.mc || 1) >= GATE.turn && tok.tx[3] * adj >= GATE.trades && tok.tx[3] >= GATE.tx24;
     if (tok.lastSeen && tok.gate && !tok.rugAt && (tok.ch[0] <= -80 || tok.liq < GATE.liq * 0.6)) { tok.rugAt = t; tok.rugWhy = tok.ch[0] <= -80 ? "price fell " + Math.round(-tok.ch[0]) + "% in 5 min" : "liquidity fell to " + fmtUsd(tok.liq); log("info", "rug filter: " + tok.s + " " + tok.rugWhy); }
@@ -209,7 +209,7 @@ export async function jobDiscover() {
       for (const c of arr || []) {
         if (!c || !c.mint || c.nsfw || c.is_banned || !(t - c.created_timestamp <= MAX_AGE)) continue;
         if (!FEED.cand.has(c.mint)) { FEED.cand.set(c.mint, { t: c.created_timestamp, ds: c.description || "", x: c.twitter || null, tg: c.telegram || null, w: c.website || null, logo: c.image_uri || null }); if (!TL.has(c.mint)) FEED.pending.push(c.mint); }
-        else { const tok = TL.get(c.mint); if (tok && !tok.logo && c.image_uri) tok.logo = c.image_uri; }
+        else { const tok = TL.get(c.mint); if (tok && !tok.logo && c.image_uri) tok.logo = fixLogo(c.image_uri); }
       }
       return;
     } catch (e) {
@@ -301,7 +301,7 @@ export async function jobMeta(mints) {
   const changed = [];
   for (const x of Array.isArray(arr) ? arr : []) {
     const tok = x && TL.get(x.id); if (!tok) continue;
-    if (x.icon && !tok.logo) tok.logo = x.icon;
+    if (x.icon && !tok.logo) tok.logo = fixLogo(x.icon);
     if (x.twitter && !tok.x) tok.x = x.twitter;
     if (x.website && !tok.w) tok.w = x.website;
     if (x.telegram && !tok.tg) tok.tg = x.telegram;
@@ -312,7 +312,11 @@ export async function jobMeta(mints) {
   return true;
 }
 // pump.fun coins keep their metadata in the mint itself (Token-2022): read its link, then the JSON it points to
-const ipfsAlt = u => { const m = String(u).match(/\/ipfs\/([A-Za-z0-9]+.*)$/); return m ? ["https://ipfs.io/ipfs/" + m[1], "https://gateway.pinata.cloud/ipfs/" + m[1]] : [u]; };
+// Filebase answers IPFS in a few hundred ms; ipfs.io often fails; Pinata's public gateway is slow but has most pump.fun files
+const ipfsAlt = u => { const m = String(u).match(/(?:^ipfs:\/\/(?:ipfs\/)?|\/ipfs\/)([A-Za-z0-9]{40,}.*)$/); return m ? ["https://ipfs.filebase.io/ipfs/" + m[1], "https://gateway.pinata.cloud/ipfs/" + m[1], "https://ipfs.io/ipfs/" + m[1]] : [u]; };
+// a logo on IPFS is served from the fast gateway; DEX Screener's own CDN copy wins over any IPFS link
+export const fixLogo = u => { if (!u) return null; const a = ipfsAlt(u); return a[0]; };
+const isIpfs = u => /\/ipfs\/|^ipfs:/.test(String(u || ""));
 export async function jobDesc(tok) {
   tok.descAt = now(); if (!CFG.quicknode) return;
   const acc = await rpcHttp("getAccountInfo", [tok.m, { encoding: "jsonParsed" }]);
@@ -327,7 +331,7 @@ export async function jobDesc(tok) {
   if (/^https:\/\//.test(str(j.twitter)) && !tok.x) tok.x = str(j.twitter);
   if (/^https:\/\//.test(str(j.telegram)) && !tok.tg) tok.tg = str(j.telegram);
   if (/^https:\/\//.test(str(j.website)) && !tok.w) tok.w = str(j.website);
-  if (/^https:\/\//.test(str(j.image)) && !tok.logo) tok.logo = str(j.image);
+  if (/^(https|ipfs):\/\//.test(str(j.image)) && !tok.logo) tok.logo = fixLogo(str(j.image));
   if (FEED.onMeta) FEED.onMeta([tok], []);
 }
 // a coin page opened for a coin with no history: one quick GeckoTerminal try (2.5 s at most), so the chart isn't empty

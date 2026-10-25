@@ -6,6 +6,8 @@ module.exports = async (req, res) => {
   try { u = new URL(String((req.query && req.query.u) || "")); } catch (_) { res.status(400).end(); return; }
   if (u.protocol !== "https:" || /^(localhost|\d+\.\d+\.\d+\.\d+|\[.*\])$/i.test(u.hostname) || u.hostname.endsWith(".internal")) { res.status(400).end(); return; }
   try {
+    const cid = (u.pathname.match(/^\/ipfs\/([A-Za-z0-9]{40,}.*)$/) || [])[1];
+    if (cid) u = new URL("https://ipfs.filebase.io/ipfs/" + cid);                                  // the fast gateway, whatever the coin's metadata named
     const r = await fetch(u.href, { headers: { accept: "image/*" }, redirect: "follow", signal: AbortSignal.timeout(8000) });
     const type = r.headers.get("content-type") || "";
     if (!r.ok || !/^image\//i.test(type) || /svg/i.test(type)) { res.setHeader("cache-control", "public, s-maxage=600"); res.status(404).end(); return; }

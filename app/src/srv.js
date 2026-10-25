@@ -63,7 +63,7 @@ async function srvSnapshot() {
   let snap;
   try { const r = await fetch(SRV.url + "/snapshot", { cache: "no-store" }); if (!r.ok) throw new Error("HTTP " + r.status); snap = await r.json(); }
   catch (e) { SRV.errs++; throw new Error("The round server isn't reachable right now (" + e.message + ")."); }
-  SRV.cfg = snap.cfg;
+  SRV.cfg = snap.cfg; if (S.view === "coin" && coinUI.m) renderKolBox(coinUI.m);
   for (const o of snap.tokens || []) srvToken(o);
   SRV.board = snap.board || { top: [], bench: [] }; trendingEvent(snap.trending);
   SRV.rounds.clear(); for (const st of Object.values(snap.rounds || {})) srvRound(st);
