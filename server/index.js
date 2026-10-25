@@ -63,6 +63,8 @@ function health() {
     db: DB.kind, money: moneyInfo(), treasurySol: MONEY.treasuryLamports == null ? null : MONEY.treasuryLamports / 1e9, calls: FEED.calls, errors: FEED.errs, lastError: FEED.lastErr || null, lastPrice: FEED.lastPrice,
     discovery: { pools: FEED.sample.pools, fresh: FEED.sample.fresh, ago: FEED.sample.at ? Math.round((now() - FEED.sample.at) / 1000) : null, err: FEED.sample.err, pending: FEED.pending.length, pumpfun: !pumpOff() },
     kols: { list: KOL.list.size, ...KOL.stats, coins: KOL.byMint.size, queue: KOL.queue.length, history: kolHistBudget() }, trending: TREND.list.length,
+    // coins the scam filter keeps off the board, biggest first
+    scam: [...TL.values()].filter(x => x.flag).sort((a, b) => (b.mc || 0) - (a.mc || 0)).slice(0, 30).map(x => ({ s: x.s, m: x.m, mc: Math.round(x.mc || 0), why: x.flagWhy })),
     charts: { withHistory: [...TL.values()].filter(x => x.C.length > 1).length, backfilled: FEED.backfilled, backfill: CFG.gtBackfill, gtPausedFor: Math.max(0, Math.round((FEED.gtPauseUntil - now()) / 1000)),
       stored: { on: STORE.on, saved: STORE.saved, loaded: STORE.loaded, err: STORE.err } } };
 }
