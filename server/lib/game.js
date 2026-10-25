@@ -32,6 +32,8 @@ export function computeBoard(t) {
     if (!tok.gate || BLOCKED(tok) || tok.flag) continue;
     if (tok.rugAt && t >= tok.rugAt) continue;
     if (tok.born && t - tok.born > MAX_AGE) continue;
+    // brand-new pools are one or two candles of launch buying: a coin needs BOARD_MIN_AGE of real trading first
+    if (CFG.feed !== "replay" && t - (tok.pa || tok.born || t) < CFG.boardMinAge) continue;
     const p = pAt(tok, t); if (p == null) continue;
     list.push({ tok, mc: p * tok.supply });
   }

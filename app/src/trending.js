@@ -10,6 +10,9 @@ function kolAv(k, size) {
   return `<span class="av kav" data-s="${init}" style="--s:${size}px;--rw:1.5px;--ring:var(--rule2)">${k.avatar ? `<img src="${esc(k.avatar)}" alt="" width="${size}" height="${size}" loading="lazy" referrerpolicy="no-referrer">` : init}</span>`;
 }
 
+// a pool younger than the server's minimum age can't join the board yet: how long until it can (ms), or 0
+const tooNew = tok => { const min = S.srv && SRV.cfg ? SRV.cfg.boardMinAge || 0 : 0, at = tok.pa || tok.born; return min && at ? Math.max(0, at + min - nowW()) : 0; };
+
 /* ---------- trending view ---------- */
 function trendingEvent(list) { TRD.list = Array.isArray(list) ? list : []; TRD.at = 0; }
 function renderTrending() {

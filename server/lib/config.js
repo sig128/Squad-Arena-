@@ -40,6 +40,7 @@ export const CFG = {
   kolPages: num("KOL_PAGES", 3),                         // 100 KOLs per page, most active over the last 7 days first
   kolWs: env("KOL_WS", "wss://api.mainnet-beta.solana.com"),
   kolRpc: env("KOL_RPC", "https://api.mainnet-beta.solana.com"),
+  boardMinAge: num("BOARD_MIN_AGE", 30) * 60e3,          // minutes a pool must have traded before its coin can join the board or on-deck
   kolPerSocket: num("KOL_PER_SOCKET", 100),
   kolHistDaily: num("KOL_HISTORY_DAILY", 5000),         // Solana Tracker requests a day for coin history (Advanced plan: 200,000 a month; set 300 on the free plan)
   kolHistEvery: num("KOL_HISTORY_EVERY", 180) * 1000,    // seconds before an open coin page asks for the same coin's history again

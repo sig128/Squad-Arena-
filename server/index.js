@@ -52,7 +52,7 @@ function snapshot() {
   }
   return {
     v: 1, now: t, started: STARTED,
-    cfg: { kols: KOL.list.size, rake: CFG.rake, seed: CFG.seed, betWindow: CFG.betWindow, minStake: CFG.minStake, maxStake: CFG.maxStake, currencies: CURRENCIES(), startBalance: CFG.startBalance, money: moneyInfo(), rpc: RPC.live },
+    cfg: { kols: KOL.list.size, boardMinAge: CFG.boardMinAge, rake: CFG.rake, seed: CFG.seed, betWindow: CFG.betWindow, minStake: CFG.minStake, maxStake: CFG.maxStake, currencies: CURRENCIES(), startBalance: CFG.startBalance, money: moneyInfo(), rpc: RPC.live },
     board: { top: G.board.top.map(x => x.m), bench: G.board.bench.map(x => x.m) }, trending: TREND.list,
     tokens: [...keep].map(m => TL.get(m)).filter(Boolean).map(tok => tokOut(tok)),
     rounds, results, docs: allDocs(), people: peopleOut()

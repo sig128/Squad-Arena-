@@ -139,7 +139,7 @@ function updateCoin(force) {
   $("cTier").textContent = "TIER " + TIERS[tier].n + " · " + TIERS[tier].name.toUpperCase();
   $("cAge").textContent = tok.born ? "launched " + age(tokTime(tok) - tok.born) + " ago" : "";
   const ti = S.board.top.findIndex(t => t.m === m), bi = S.board.bench.findIndex(t => t.m === m);
-  $("cRank").textContent = ti >= 0 ? "#" + (ti + 1) + " in the top 15" : bi >= 0 ? "on deck #" + (16 + bi) : tok.rugAt && tok.rugAt <= S.rt ? "removed by the rug filter" : tok.flag ? "kept off the board · " + tok.flag : "not on the board · squads still work";
+  $("cRank").textContent = ti >= 0 ? "#" + (ti + 1) + " in the top 15" : bi >= 0 ? "on deck #" + (16 + bi) : tok.rugAt && tok.rugAt <= S.rt ? "removed by the rug filter" : tok.flag ? "kept off the board · " + tok.flag : tooNew(tok) ? "too new for the board · eligible in " + age(tooNew(tok)) : "not on the board · squads still work";
   $("cKv").innerHTML = [["Price", fmtPrice(p)], ["Market cap", fmtUsd(mc)], ["Liquidity", fmtUsd(tok.liq)], ["Vol 5m · 1h", fmtUsd(tok.vol[0]) + " · " + fmtUsd(tok.vol[1])], ["Vol 6h · 24h", fmtUsd(tok.vol[2]) + " · " + fmtUsd(tok.vol[3])],
     ["Trades 5m · 1h", fmtNum(tok.tx[0]) + " · " + fmtNum(tok.tx[1])], ["Buys · sells 1h", fmtNum(tok.bs[0]) + " · " + fmtNum(tok.bs[1])], ["Change 1h · 24h", fmtPct((tok.ch[1] || 0) / 100, 1) + " · " + fmtPct((tok.ch[3] || 0) / 100, 1)],
     ["Pace growth", fmtPct(attn(tok, S.tf === "24h" ? "24h" : S.tf, S.mode === "replay" ? SNAP : nowW()), 0)], ["Venue", (tok.dex || "—") + " " + short(tok.pool || "")]].map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("");
