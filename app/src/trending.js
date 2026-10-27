@@ -23,7 +23,7 @@ function renderTrending() {
   if (!rows.length) { el.innerHTML = `<div class="empty">${S.srv ? "Ranking the coins the arena tracks. This fills in within a minute of the server starting." : "Trending runs on the live arena at squadarena.fun."}</div>`; return; }
   const onB = new Map(S.board.top.map((t, i) => [t.m, i + 1])), onD = new Set(S.board.bench.map(t => t.m)), tNow = nowW();
   const head = `<div class="tr th"><span>#</span><span>Coin</span><span class="c-age num">Age</span><span class="num">Mcap</span><span class="num">1h</span><span class="num">Vol 1h</span><span class="c-v24 num">Vol 24h</span><span class="num">KOLs</span><span class="c-hold num">Holders</span><span></span></div>`;
-  el.innerHTML = head + rows.map((tok, i) => {
+  setHTML(el, head + rows.map((tok, i) => {
     const p = pAt(tok, tNow), ch = tok.ch ? tok.ch[1] / 100 : null, b = onB.get(tok.m), d = onD.has(tok.m);
     const tag = b ? `<span class="badge">#${b} on the board</span>` : d ? `<span class="badge">On deck</span>` : "";
     return `<div class="tr" data-m="${esc(tok.m)}" tabindex="0" role="link" aria-label="${esc(tok.s)}. Open the coin page.">
@@ -37,11 +37,9 @@ function renderTrending() {
       <span class="num">${tok.kol ? `<b>${tok.kol}</b>` : `<span class="dim">—</span>`}</span>
       <span class="c-hold num dim">${tok.holders ? fmtNum(tok.holders) : "—"}</span>
       <span class="back">${b || d ? `<span class="btn btn-quiet btn-xs" data-act="bet">Back</span>` : ""}</span></div>`;
-  }).join("");
-  qsa(".tr[data-m]", el).forEach(r => {
-    r.onclick = e => { const m = r.dataset.m; if (e.target.closest("[data-act=bet]")) { openBet(m, bestMarket(m)); return; } location.hash = "#coin-" + m; };
-    r.onkeydown = e => { if (e.key === "Enter") location.hash = "#coin-" + r.dataset.m; };
-  });
+  }).join(""));
+  onPick(el, ".tr[data-m]", (r, inner) => { const m = r.dataset.m; if (inner.closest("[data-act=bet]")) { openBet(m, bestMarket(m)); return; } location.hash = "#coin-" + m; });
+  if (!el.__keys) { el.__keys = 1; el.addEventListener("keydown", e => { const r = e.target.closest(".tr[data-m]"); if (r && e.key === "Enter") location.hash = "#coin-" + r.dataset.m; }); }
 }
 
 /* ---------- KOLs on a coin ---------- */

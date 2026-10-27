@@ -188,6 +188,21 @@ document.addEventListener("error", e => {
   if (!im.dataset.px && /^https:/.test(im.src) && /^https?:$/.test(location.protocol) && !window.claude) { im.dataset.px = "1"; im.src = "/api/img?u=" + encodeURIComponent(cid ? "https://ipfs.filebase.io/ipfs/" + cid : im.src); return; }
   av.classList.add("mono"); av.textContent = av.dataset.s || "?";
 }, true);
+// Lists that re-render several times a second can swap the element under the pointer between press and release;
+// the browser then sends the click to the container and the press is lost. The press is remembered on the container,
+// so the click still reaches the row or button that was pressed.
+function onPick(box, sel, fn) {
+  if (!box || box.__pick) return; box.__pick = 1;
+  let down = null;
+  box.addEventListener("pointerdown", e => { const t = e.target.closest(sel); down = t && box.contains(t) ? { t, inner: e.target, at: Date.now() } : null; });
+  box.addEventListener("click", e => {
+    let t = e.target.closest(sel), inner = e.target;
+    if (!t && down && Date.now() - down.at < 2000) { t = down.t; inner = down.inner; }
+    down = null; if (t && !t.disabled) fn(t, inner, e);
+  });
+}
+// writes markup only when it changed, so an unchanged list keeps its elements (and the pointer's target)
+function setHTML(el, h) { if (!el || el.__h === h) return false; el.innerHTML = h; el.__h = h; return true; }
 const tkHTML = (tok, size = 14) => tok ? `<a class="tk" href="#coin-${esc(tok.m)}">${avHTML(tok, size, 1.5)}<span>${esc(tok.s)}</span></a>` : "";
 async function copyText(text, btn, selEl) {
   const label = btn ? btn.dataset.label || (btn.dataset.label = btn.textContent) : "";

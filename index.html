@@ -890,6 +890,21 @@ document.addEventListener("error", e => {
   if (!im.dataset.px && /^https:/.test(im.src) && /^https?:$/.test(location.protocol) && !window.claude) { im.dataset.px = "1"; im.src = "/api/img?u=" + encodeURIComponent(cid ? "https://ipfs.filebase.io/ipfs/" + cid : im.src); return; }
   av.classList.add("mono"); av.textContent = av.dataset.s || "?";
 }, true);
+// Lists that re-render several times a second can swap the element under the pointer between press and release;
+// the browser then sends the click to the container and the press is lost. The press is remembered on the container,
+// so the click still reaches the row or button that was pressed.
+function onPick(box, sel, fn) {
+  if (!box || box.__pick) return; box.__pick = 1;
+  let down = null;
+  box.addEventListener("pointerdown", e => { const t = e.target.closest(sel); down = t && box.contains(t) ? { t, inner: e.target, at: Date.now() } : null; });
+  box.addEventListener("click", e => {
+    let t = e.target.closest(sel), inner = e.target;
+    if (!t && down && Date.now() - down.at < 2000) { t = down.t; inner = down.inner; }
+    down = null; if (t && !t.disabled) fn(t, inner, e);
+  });
+}
+// writes markup only when it changed, so an unchanged list keeps its elements (and the pointer's target)
+function setHTML(el, h) { if (!el || el.__h === h) return false; el.innerHTML = h; el.__h = h; return true; }
 const tkHTML = (tok, size = 14) => tok ? `<a class="tk" href="#coin-${esc(tok.m)}">${avHTML(tok, size, 1.5)}<span>${esc(tok.s)}</span></a>` : "";
 async function copyText(text, btn, selEl) {
   const label = btn ? btn.dataset.label || (btn.dataset.label = btn.textContent) : "";
@@ -1946,11 +1961,11 @@ function renderMarkets(w) {
   // top gainer
   const pt = pool(r, "top"), st = standings(r, w);
   $("tPool").textContent = fmtSol(pt.P); $("tPeople").textContent = pt.people; $("tWin").textContent = bs.open ? "close in " + dur(r.s + r.W * BET_WIN - w) : "closed";
-  $("tList").innerHTML = st.map((x, i) => {
+  setHTML($("tList"), st.map((x, i) => {
     const sh = (pt.sh.get(x.tok.m) || 0) / [...pt.sh.values()].reduce((a, b) => a + b, 0);
     const cls = (x.rug ? "out " : "") + (inBench(x.tok.m) || !inTop(x.tok.m) ? "dimb " : "") + (mine.has("top" + x.tok.m) ? "mine" : "");
     return stRow(i + 1, x.tok, x.rug ? null : x.R, sh || 0, impliedOdds(r, "top", x.tok.m), cls, "top");
-  }).join("");
+  }).join(""));
   // lcs
   const pl = pool(r, "lcs"), ls = lcs(r, w), z = lcsZone(r, ls, w), lb = betState(r, "lcs", w);
   $("lPool").textContent = fmtSol(pl.P); $("lAlive").textContent = ls.alive.size + " / " + ls.field.length;
@@ -1963,9 +1978,9 @@ function renderMarkets(w) {
   $("hPool").textContent = fmtSol(pe.P + pb.P); $("hWin").textContent = hb.open ? "close in " + dur(r.s + r.W * BET_WIN - w) : "closed";
   const effS = h.slice().sort((a, b) => b.eff - a.eff).slice(0, 5), bustS = h.filter(x => x.bust > 0).sort((a, b) => b.bust - a.bust).slice(0, 5);
   const line = (x, v, mk) => `<div class="st" data-m="${esc(x.tok.m)}" data-mk="${mk}" style="grid-template-columns:minmax(0,1fr) 54px 46px"><span class="nmw">${tkHTML(x.tok, 13)}</span><span class="num ${x.R >= 0 ? "up" : "down"}">${fmtPct(x.R, 1)}</span><span class="odds">${v.toFixed(3)}</span></div>`;
-  $("effList").innerHTML = effS.map(x => line(x, x.eff, "eff")).join("") || `<div class="empty">No scores yet.</div>`;
-  $("bustList").innerHTML = bustS.map(x => line(x, x.bust, "bust")).join("") || `<div class="closed">No coin has rising pace and a falling price right now. If none qualifies at the close, this pool refunds.</div>`;
-  qsa(".st[data-m]", $("mkGrid")).forEach(el => el.onclick = e => { if (e.target.closest("a")) return; openBet(el.dataset.m, el.dataset.mk); });
+  setHTML($("effList"), effS.map(x => line(x, x.eff, "eff")).join("") || `<div class="empty">No scores yet.</div>`);
+  setHTML($("bustList"), bustS.map(x => line(x, x.bust, "bust")).join("") || `<div class="closed">No coin has rising pace and a falling price right now. If none qualifies at the close, this pool refunds.</div>`);
+  onPick($("mkGrid"), ".st[data-m]", (el, inner) => { if (inner.closest("a")) return; openBet(el.dataset.m, el.dataset.mk); });
 }
 
 /* ---------- bracket canvas ---------- */
@@ -2260,12 +2275,12 @@ function updateCoin(force) {
     ["Pace growth", fmtPct(attn(tok, S.tf === "24h" ? "24h" : S.tf, S.mode === "replay" ? SNAP : nowW()), 0)], ["Venue", (tok.dex || "—") + " " + short(tok.pool || "")]].map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("");
   const bettable = tfOk(S.tf) && MKS.some(mk => fieldOf(r, mk).some(t => t.m === m) || (mk === "lcs" && lcs(r, w).alive.has(m)));
   $("cBet").hidden = !bettable;
-  $("cBack").innerHTML = !bettable && tfOk(S.tf) ? `<div class="closed">Not in this round. Bets open when ${esc(tok.s)} makes the top 25; the squad, its tasks and chat work any time.</div>` : tfOk(S.tf) ? MKS.map(mk => {
+  setHTML($("cBack"), !bettable && tfOk(S.tf) ? `<div class="closed">Not in this round. Bets open when ${esc(tok.s)} makes the top 25; the squad, its tasks and chat work any time.</div>` : tfOk(S.tf) ? MKS.map(mk => {
     const bs = betState(r, mk, w, m), od = impliedOdds(r, mk, m), inF = fieldOf(r, mk).some(t => t.m === m) || (mk === "lcs" && lcs(r, w).alive.has(m));
     return `<div class="next" style="padding:6px 0;border-bottom:1px solid var(--rule)"><span>${esc(MK[mk].label)}<br><span class="dim">${!inF ? "not in this round" : bs.open ? (od ? fmtX(od) + " · weight ×" + bs.w.toFixed(2) : "open") : "closed"}</span></span>
       <button class="btn btn-quiet btn-xs" type="button" data-cb="${mk}"${!inF || !bs.open ? " disabled" : ""}>Bet</button></div>`;
-  }).join("") : `<div class="closed">24-hour rounds need live data.</div>`;
-  qsa("[data-cb]", $("cBack")).forEach(b => b.onclick = () => openBet(m, b.dataset.cb));
+  }).join("") : `<div class="closed">24-hour rounds need live data.</div>`);
+  onPick($("cBack"), "[data-cb]", b => openBet(coinUI.m, b.dataset.cb));
   const mine = S.my.b.filter(b => b.m === m).slice(0, 8);
   $("cPos").innerHTML = mine.length ? mine.map(b => `<div class="p"><b>${fmtSol(b.s)} · ${esc(MK[b.mk].short)}</b><span class="num">${betLive(b, w)}</span><span>${b.tf.toUpperCase()} round · weight ${b.w.toFixed(2)} · quote ${fmtX(b.q)}</span></div>`).join("")
     : `<div class="empty" style="padding:8px 0">No bets on ${esc(tok.s)} yet.${bettable ? " Backing it in any market also makes you a squad member." : ""}</div>`;
@@ -4096,7 +4111,7 @@ function renderTrending() {
   if (!rows.length) { el.innerHTML = `<div class="empty">${S.srv ? "Ranking the coins the arena tracks. This fills in within a minute of the server starting." : "Trending runs on the live arena at squadarena.fun."}</div>`; return; }
   const onB = new Map(S.board.top.map((t, i) => [t.m, i + 1])), onD = new Set(S.board.bench.map(t => t.m)), tNow = nowW();
   const head = `<div class="tr th"><span>#</span><span>Coin</span><span class="c-age num">Age</span><span class="num">Mcap</span><span class="num">1h</span><span class="num">Vol 1h</span><span class="c-v24 num">Vol 24h</span><span class="num">KOLs</span><span class="c-hold num">Holders</span><span></span></div>`;
-  el.innerHTML = head + rows.map((tok, i) => {
+  setHTML(el, head + rows.map((tok, i) => {
     const p = pAt(tok, tNow), ch = tok.ch ? tok.ch[1] / 100 : null, b = onB.get(tok.m), d = onD.has(tok.m);
     const tag = b ? `<span class="badge">#${b} on the board</span>` : d ? `<span class="badge">On deck</span>` : "";
     return `<div class="tr" data-m="${esc(tok.m)}" tabindex="0" role="link" aria-label="${esc(tok.s)}. Open the coin page.">
@@ -4110,11 +4125,9 @@ function renderTrending() {
       <span class="num">${tok.kol ? `<b>${tok.kol}</b>` : `<span class="dim">—</span>`}</span>
       <span class="c-hold num dim">${tok.holders ? fmtNum(tok.holders) : "—"}</span>
       <span class="back">${b || d ? `<span class="btn btn-quiet btn-xs" data-act="bet">Back</span>` : ""}</span></div>`;
-  }).join("");
-  qsa(".tr[data-m]", el).forEach(r => {
-    r.onclick = e => { const m = r.dataset.m; if (e.target.closest("[data-act=bet]")) { openBet(m, bestMarket(m)); return; } location.hash = "#coin-" + m; };
-    r.onkeydown = e => { if (e.key === "Enter") location.hash = "#coin-" + r.dataset.m; };
-  });
+  }).join(""));
+  onPick(el, ".tr[data-m]", (r, inner) => { const m = r.dataset.m; if (inner.closest("[data-act=bet]")) { openBet(m, bestMarket(m)); return; } location.hash = "#coin-" + m; });
+  if (!el.__keys) { el.__keys = 1; el.addEventListener("keydown", e => { const r = e.target.closest(".tr[data-m]"); if (r && e.key === "Enter") location.hash = "#coin-" + r.dataset.m; }); }
 }
 
 /* ---------- KOLs on a coin ---------- */

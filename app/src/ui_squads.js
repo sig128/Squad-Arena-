@@ -145,12 +145,12 @@ function updateCoin(force) {
     ["Pace growth", fmtPct(attn(tok, S.tf === "24h" ? "24h" : S.tf, S.mode === "replay" ? SNAP : nowW()), 0)], ["Venue", (tok.dex || "—") + " " + short(tok.pool || "")]].map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("");
   const bettable = tfOk(S.tf) && MKS.some(mk => fieldOf(r, mk).some(t => t.m === m) || (mk === "lcs" && lcs(r, w).alive.has(m)));
   $("cBet").hidden = !bettable;
-  $("cBack").innerHTML = !bettable && tfOk(S.tf) ? `<div class="closed">Not in this round. Bets open when ${esc(tok.s)} makes the top 25; the squad, its tasks and chat work any time.</div>` : tfOk(S.tf) ? MKS.map(mk => {
+  setHTML($("cBack"), !bettable && tfOk(S.tf) ? `<div class="closed">Not in this round. Bets open when ${esc(tok.s)} makes the top 25; the squad, its tasks and chat work any time.</div>` : tfOk(S.tf) ? MKS.map(mk => {
     const bs = betState(r, mk, w, m), od = impliedOdds(r, mk, m), inF = fieldOf(r, mk).some(t => t.m === m) || (mk === "lcs" && lcs(r, w).alive.has(m));
     return `<div class="next" style="padding:6px 0;border-bottom:1px solid var(--rule)"><span>${esc(MK[mk].label)}<br><span class="dim">${!inF ? "not in this round" : bs.open ? (od ? fmtX(od) + " · weight ×" + bs.w.toFixed(2) : "open") : "closed"}</span></span>
       <button class="btn btn-quiet btn-xs" type="button" data-cb="${mk}"${!inF || !bs.open ? " disabled" : ""}>Bet</button></div>`;
-  }).join("") : `<div class="closed">24-hour rounds need live data.</div>`;
-  qsa("[data-cb]", $("cBack")).forEach(b => b.onclick = () => openBet(m, b.dataset.cb));
+  }).join("") : `<div class="closed">24-hour rounds need live data.</div>`);
+  onPick($("cBack"), "[data-cb]", b => openBet(coinUI.m, b.dataset.cb));
   const mine = S.my.b.filter(b => b.m === m).slice(0, 8);
   $("cPos").innerHTML = mine.length ? mine.map(b => `<div class="p"><b>${fmtSol(b.s)} · ${esc(MK[b.mk].short)}</b><span class="num">${betLive(b, w)}</span><span>${b.tf.toUpperCase()} round · weight ${b.w.toFixed(2)} · quote ${fmtX(b.q)}</span></div>`).join("")
     : `<div class="empty" style="padding:8px 0">No bets on ${esc(tok.s)} yet.${bettable ? " Backing it in any market also makes you a squad member." : ""}</div>`;

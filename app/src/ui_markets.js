@@ -37,11 +37,11 @@ function renderMarkets(w) {
   // top gainer
   const pt = pool(r, "top"), st = standings(r, w);
   $("tPool").textContent = fmtSol(pt.P); $("tPeople").textContent = pt.people; $("tWin").textContent = bs.open ? "close in " + dur(r.s + r.W * BET_WIN - w) : "closed";
-  $("tList").innerHTML = st.map((x, i) => {
+  setHTML($("tList"), st.map((x, i) => {
     const sh = (pt.sh.get(x.tok.m) || 0) / [...pt.sh.values()].reduce((a, b) => a + b, 0);
     const cls = (x.rug ? "out " : "") + (inBench(x.tok.m) || !inTop(x.tok.m) ? "dimb " : "") + (mine.has("top" + x.tok.m) ? "mine" : "");
     return stRow(i + 1, x.tok, x.rug ? null : x.R, sh || 0, impliedOdds(r, "top", x.tok.m), cls, "top");
-  }).join("");
+  }).join(""));
   // lcs
   const pl = pool(r, "lcs"), ls = lcs(r, w), z = lcsZone(r, ls, w), lb = betState(r, "lcs", w);
   $("lPool").textContent = fmtSol(pl.P); $("lAlive").textContent = ls.alive.size + " / " + ls.field.length;
@@ -54,9 +54,9 @@ function renderMarkets(w) {
   $("hPool").textContent = fmtSol(pe.P + pb.P); $("hWin").textContent = hb.open ? "close in " + dur(r.s + r.W * BET_WIN - w) : "closed";
   const effS = h.slice().sort((a, b) => b.eff - a.eff).slice(0, 5), bustS = h.filter(x => x.bust > 0).sort((a, b) => b.bust - a.bust).slice(0, 5);
   const line = (x, v, mk) => `<div class="st" data-m="${esc(x.tok.m)}" data-mk="${mk}" style="grid-template-columns:minmax(0,1fr) 54px 46px"><span class="nmw">${tkHTML(x.tok, 13)}</span><span class="num ${x.R >= 0 ? "up" : "down"}">${fmtPct(x.R, 1)}</span><span class="odds">${v.toFixed(3)}</span></div>`;
-  $("effList").innerHTML = effS.map(x => line(x, x.eff, "eff")).join("") || `<div class="empty">No scores yet.</div>`;
-  $("bustList").innerHTML = bustS.map(x => line(x, x.bust, "bust")).join("") || `<div class="closed">No coin has rising pace and a falling price right now. If none qualifies at the close, this pool refunds.</div>`;
-  qsa(".st[data-m]", $("mkGrid")).forEach(el => el.onclick = e => { if (e.target.closest("a")) return; openBet(el.dataset.m, el.dataset.mk); });
+  setHTML($("effList"), effS.map(x => line(x, x.eff, "eff")).join("") || `<div class="empty">No scores yet.</div>`);
+  setHTML($("bustList"), bustS.map(x => line(x, x.bust, "bust")).join("") || `<div class="closed">No coin has rising pace and a falling price right now. If none qualifies at the close, this pool refunds.</div>`);
+  onPick($("mkGrid"), ".st[data-m]", (el, inner) => { if (inner.closest("a")) return; openBet(el.dataset.m, el.dataset.mk); });
 }
 
 /* ---------- bracket canvas ---------- */
