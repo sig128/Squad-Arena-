@@ -130,6 +130,10 @@ input,textarea{font:inherit;color:inherit}
 .dot.live::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:1px solid var(--up);animation:ping 1.6s var(--ease) infinite}
 .dot.rep{background:var(--fg)}
 @keyframes ping{from{transform:scale(.4);opacity:1}to{transform:scale(1.6);opacity:0}}
+.xlink{display:inline-grid;place-items:center;width:32px;height:32px;border:1px solid var(--rule2);color:var(--fg);flex:none;transition:border-color .15s ease,background .15s ease}
+.xlink:hover{border-color:var(--fg);background:var(--hover)}
+.xlink svg{width:14px;height:14px;display:block}
+.xlink[hidden]{display:none}
 .clock{font-size:11px;font-variant-numeric:tabular-nums;color:var(--dim);white-space:nowrap}
 .prog{position:absolute;left:0;bottom:-1px;height:1px;width:100%;pointer-events:none}
 .prog i{display:block;height:1px;background:var(--fg);width:0;opacity:0}
@@ -637,6 +641,7 @@ body.chart-full{overflow:hidden}
     <div class="top-r">
       <div class="seg tf" role="group" aria-label="Round length"></div>
       <span class="clock" id="clock">--:--:--</span>
+      <a class="xlink" id="xLink" href="https://x.com" target="_blank" rel="noopener" aria-label="Squad Arena on X" title="Squad Arena on X" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
       <button class="btn btn-solid" id="walletBtn" type="button">Wallet</button>
     </div>
     <div class="prog" aria-hidden="true"><i id="navProg"></i></div>
@@ -4772,6 +4777,9 @@ function boot() {
   layoutCols(); new ResizeObserver(() => { layoutCols(); dirty.all = true; }).observe($("tbl"));
   raceModeUI();
   pfUploadFromHash();
+  // the project's X account (config.js: x: "handle")
+  const xh = String((window.SA_CONFIG && window.SA_CONFIG.x) || "").replace(/^@/, "").replace(/[^A-Za-z0-9_]/g, "");
+  if (xh) { $("xLink").href = "https://x.com/" + xh; $("xLink").title = "@" + xh + " on X"; $("xLink").hidden = false; }
   route();
   matchMedia("(prefers-color-scheme:dark)").addEventListener("change", readTheme);
   new MutationObserver(readTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "class", "style"] });

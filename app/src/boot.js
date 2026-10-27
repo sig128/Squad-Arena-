@@ -152,6 +152,9 @@ function boot() {
   layoutCols(); new ResizeObserver(() => { layoutCols(); dirty.all = true; }).observe($("tbl"));
   raceModeUI();
   pfUploadFromHash();
+  // the project's X account (config.js: x: "handle")
+  const xh = String((window.SA_CONFIG && window.SA_CONFIG.x) || "").replace(/^@/, "").replace(/[^A-Za-z0-9_]/g, "");
+  if (xh) { $("xLink").href = "https://x.com/" + xh; $("xLink").title = "@" + xh + " on X"; $("xLink").hidden = false; }
   route();
   matchMedia("(prefers-color-scheme:dark)").addEventListener("change", readTheme);
   new MutationObserver(readTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "class", "style"] });
