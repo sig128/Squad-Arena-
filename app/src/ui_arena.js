@@ -120,14 +120,16 @@ function raceSeries(r, w) {
   }
   return { ser: out, t0: r.rs, t1, te };
 }
+// a round step for time ticks: 1, 2, 5, 10, 15, 30 minutes, 1, 2, 3, 6, 12 hours, days
+const niceTime = d => [60e3, 120e3, 300e3, 600e3, 900e3, 1800e3, 3600e3, 7200e3, 10800e3, 21600e3, 43200e3, 86400e3, 172800e3].find(s => s >= d) || 172800e3;
 function drawRace(w) {
   if (!race.offsetParent) return;
   const { ctx, w: W, h: H } = fit(race); ctx.clearRect(0, 0, W, H);
   if (!tfOk(S.tf)) { ctx.fillStyle = C.dim; ctx.font = `12px ${MONO}`; ctx.textAlign = "center"; ctx.fillText("24-hour rounds run on live data. Open the data panel to go live.", W / 2, H / 2); return; }
-  const sq = RACE.mode === "squads", r = roundAt(S.tf, w), { ser, t0, t1, te } = sq ? sqSeries(r, w) : raceSeries(r, w);
+  const sq = RACE.mode === "squads", r = roundAt(S.tf, w), { ser, t0, t1, te, abs } = sq ? sqSeries(r, w) : raceSeries(r, w);
   const fv = sq ? v => sgnUsd(v) : null;
   const narrow = W < 560, fs = narrow ? 10 : 11, labW = narrow ? 118 : 158;
-  const L = narrow ? 42 : 52, R = labW + 16, Tp = 12, B = 24, pw = Math.max(20, W - L - R), ph = H - Tp - B;
+  const L = abs ? (narrow ? 58 : 70) : narrow ? 42 : 52, R = labW + 16, Tp = 12, B = 24, pw = Math.max(20, W - L - R), ph = H - Tp - B;
   const X = t => L + (t - t0) / (t1 - t0) * pw;
   let mn = 0, mx = 0; ser.forEach(s => s.pts.forEach(p => { if (p.v < mn) mn = p.v; if (p.v > mx) mx = p.v; }));
   const pad = sq ? Math.max(25, (mx - mn) * 0.08) : Math.max(0.0025, (mx - mn) * 0.08); mn -= pad; mx += pad;
@@ -140,14 +142,17 @@ function drawRace(w) {
     ctx.beginPath(); ctx.moveTo(L, yy); ctx.lineTo(L + pw, yy); ctx.stroke(); ctx.setLineDash([]);
     ctx.fillStyle = C.dim; ctx.fillText(sq ? (zero ? "$0" : fv(v)) : (v > 0 ? "+" : v < 0 ? "−" : "") + +(Math.abs(v) * 100).toFixed(2) + "%", L - 8, yy);
   }
-  // checkpoints + bet close markers, with labels that never overlap
-  const labs = [{ x: L, t: "open", a: "left", c: C.dim, p: 0 }, { x: L + pw, t: raceSpan === "full" ? "close" : "now", a: "right", c: C.dim, p: 0 }];
-  for (let k = 1; k <= 5; k++) { const t = r.rs + k * r.W / 6; if (t > t1) break; const x = Math.round(X(t)) + .5; ctx.strokeStyle = C.rule2; ctx.setLineDash([2, 4]); ctx.beginPath(); ctx.moveTo(x, Tp); ctx.lineTo(x, Tp + ph); ctx.stroke(); ctx.setLineDash([]); labs.push({ x, t: "C" + k, a: "center", c: C.faint, p: 2 }); }
-  const bx = r.rs + r.W * BET_WIN; if (bx <= t1) { const x = Math.round(X(bx)) + .5; ctx.strokeStyle = C.faint; ctx.beginPath(); ctx.moveTo(x, Tp); ctx.lineTo(x, Tp + ph); ctx.stroke(); labs.push({ x, t: "bets close", a: "center", c: C.dim, p: 1 }); }
+  // checkpoints + bet close markers (squads: times of day), with labels that never overlap
+  const tlab = t => { const d = new Date(t); return (t1 - t0 > 20 * 3600e3 ? d.getDate() + "/" + (d.getMonth() + 1) + " " : "") + local(t, false); };
+  const labs = abs ? [{ x: L, t: tlab(t0), a: "left", c: C.dim, p: 0 }, { x: L + pw, t: "now", a: "right", c: C.dim, p: 0 }]
+    : [{ x: L, t: "open", a: "left", c: C.dim, p: 0 }, { x: L + pw, t: raceSpan === "full" ? "close" : "now", a: "right", c: C.dim, p: 0 }];
+  if (abs) { const st = niceTime((t1 - t0) / (narrow ? 3 : 6)); for (let t = Math.ceil(t0 / st) * st; t < t1 - st * 0.4; t += st) { if (t - t0 < st * 0.4) continue; const x = Math.round(X(t)) + .5; ctx.strokeStyle = C.rule2; ctx.setLineDash([2, 4]); ctx.beginPath(); ctx.moveTo(x, Tp); ctx.lineTo(x, Tp + ph); ctx.stroke(); ctx.setLineDash([]); labs.push({ x, t: tlab(t), a: "center", c: C.faint, p: 2 }); } }
+  else for (let k = 1; k <= 5; k++) { const t = r.rs + k * r.W / 6; if (t > t1) break; const x = Math.round(X(t)) + .5; ctx.strokeStyle = C.rule2; ctx.setLineDash([2, 4]); ctx.beginPath(); ctx.moveTo(x, Tp); ctx.lineTo(x, Tp + ph); ctx.stroke(); ctx.setLineDash([]); labs.push({ x, t: "C" + k, a: "center", c: C.faint, p: 2 }); }
+  const bx = r.rs + r.W * BET_WIN; if (!abs && bx <= t1) { const x = Math.round(X(bx)) + .5; ctx.strokeStyle = C.faint; ctx.beginPath(); ctx.moveTo(x, Tp); ctx.lineTo(x, Tp + ph); ctx.stroke(); labs.push({ x, t: "bets close", a: "center", c: C.dim, p: 1 }); }
   ctx.textBaseline = "top"; const placed = [];
   labs.sort((a, b) => a.p - b.p).forEach(l => { const wd = ctx.measureText(l.t).width, x0 = l.a === "left" ? l.x : l.a === "right" ? l.x - wd : l.x - wd / 2;
     if (placed.some(p => x0 < p[1] + 8 && x0 + wd > p[0] - 8)) return; placed.push([x0, x0 + wd]); ctx.fillStyle = l.c; ctx.textAlign = "left"; ctx.fillText(l.t, x0, Tp + ph + 8); });
-  if (raceSpan === "full") { const x = Math.round(X(te)) + .5; ctx.strokeStyle = C.fg; ctx.globalAlpha = .4; ctx.beginPath(); ctx.moveTo(x, Tp); ctx.lineTo(x, Tp + ph); ctx.stroke(); ctx.globalAlpha = 1; }
+  if (!abs && raceSpan === "full") { const x = Math.round(X(te)) + .5; ctx.strokeStyle = C.fg; ctx.globalAlpha = .4; ctx.beginPath(); ctx.moveTo(x, Tp); ctx.lineTo(x, Tp + ph); ctx.stroke(); ctx.globalAlpha = 1; }
   const hov = hover && ser.some(s => s.tok.m === hover) ? hover : null;
   const line = (s, a, lw) => { ctx.globalAlpha = a; ctx.strokeStyle = s.col; ctx.lineWidth = lw; ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.beginPath();
     let lx = -1e9; const n = s.pts.length;
@@ -165,7 +170,7 @@ function drawRace(w) {
   items.forEach(it => { if (it.yl == null) return; ctx.globalAlpha = hov && it.s.tok.m !== hov ? .25 : 1; ctx.fillStyle = it.s.col; ctx.beginPath(); ctx.arc(it.x, it.yl, it.s.tok.m === hov ? 3.8 : 2.6, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; });
   if (tcc != null) {
     const x = Math.round(X(tcc)) + .5; ctx.strokeStyle = C.fg; ctx.globalAlpha = .35; ctx.beginPath(); ctx.moveTo(x, Tp); ctx.lineTo(x, Tp + ph); ctx.stroke(); ctx.globalAlpha = 1;
-    const lab = dur(tcc - r.rs) + (S.mode === "replay" ? " · " + utc(tcc) : ""); ctx.font = `500 ${fs}px ${MONO}`; const tw = ctx.measureText(lab).width + 10;
+    const lab = abs ? tlab(tcc) : dur(tcc - r.rs) + (S.mode === "replay" ? " · " + utc(tcc) : ""); ctx.font = `500 ${fs}px ${MONO}`; const tw = ctx.measureText(lab).width + 10;
     const bxx = Math.min(Math.max(x - tw / 2, L), L + pw - tw); ctx.fillStyle = C.fg; ctx.fillRect(bxx, Tp + ph + 4, tw, fs + 8);
     ctx.fillStyle = C.bg; ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillText(lab, bxx + 5, Tp + ph + 7);
   }
@@ -232,7 +237,7 @@ function ensureRow(tok, bench) {
   el.innerHTML = rowHTML(tok, bench);
   el.addEventListener("pointerenter", e => { if (e.pointerType === "mouse") { setHover(tok.m); showLens(tok.m, el); } });
   el.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") { setHover(null); hideLens(); } });
-  el.addEventListener("click", e => { hideLens(); if (e.target.closest("[data-act=bet]")) { openBet(tok.m, bestMarket(tok.m)); return; } location.hash = "#coin-" + tok.m; });
+  el.addEventListener("click", e => { hideLens(); if (e.target.closest("[data-act=bet]")) { const mk = bestMarket(tok.m); if (mk === "top") slipPick("coins", tok.m); else openBet(tok.m, mk); return; } location.hash = "#coin-" + tok.m; });
   el.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); location.hash = "#coin-" + tok.m; } });
   el.refs = {}; qsa("[data-c]", el).forEach(c => el.refs[c.dataset.c] = c); el.refs.spark = el.querySelector(".spark");
   if (S.hideCols) qsa("[data-c]", el).forEach(c => c.classList.toggle("off", S.hideCols.has(c.dataset.c)));

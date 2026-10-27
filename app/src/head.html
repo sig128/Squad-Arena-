@@ -138,6 +138,7 @@ main{min-width:0;padding-right:24px;border-right:1px solid var(--rule);min-heigh
   main{padding-right:0;border-right:0;min-height:0}
   .rail{position:static;height:auto;padding-left:0;border-top:1px solid var(--rule);margin-top:24px;grid-template-rows:auto auto}
   .rail .panel{height:440px}
+  .rail.bet .panel:first-child{height:600px}
   .rail{max-height:1200px;transition:opacity .3s ease,transform .5s var(--ease),max-height .55s var(--ease),margin-top .55s var(--ease)}
   body.rail-off .rail{max-height:0;margin-top:0;border-top-color:transparent}
   body.rail-off main{padding-right:0}
@@ -154,6 +155,38 @@ body.rail-off .shell{grid-template-columns:minmax(0,1fr) 0px}
 body.rail-off main{padding-right:38px;border-right-color:transparent}
 body.rail-off .rail{opacity:0;transform:translateX(56px);padding-left:0;pointer-events:none}
 body.no-anim .shell,body.no-anim main,body.no-anim .rail,body.no-anim .railtab{transition:none!important}
+.rail.bet{grid-template-rows:minmax(0,1.5fr) minmax(0,1fr)}
+.rtabs{display:flex;gap:2px}
+.rtabs button{font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;padding:4px 8px;color:var(--dim);border:1px solid transparent;display:inline-flex;align-items:center;gap:6px}
+.rtabs button:hover{color:var(--fg)}
+.rtabs button[aria-pressed="true"]{color:var(--fg);border-color:var(--rule2)}
+.rtabs b{font-size:9.5px;font-weight:600;letter-spacing:0;min-width:16px;height:16px;display:inline-grid;place-items:center;background:var(--fg);color:var(--bg);padding:0 3px}
+.rtabs b:empty{display:none}
+.slip{display:flex;flex-direction:column;min-height:0;flex:1;padding-top:12px}
+.slip[hidden]{display:none}
+.slip-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.slip-st{font-size:10.5px;color:var(--dim);line-height:1.4;flex:1;min-width:120px;text-align:right}
+.slip-st.shut{text-align:left;flex-basis:100%}
+.slip-h{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);padding:12px 0 6px;border-bottom:1px solid var(--rule)}
+.slip-list{min-height:96px}
+.srow{display:grid;grid-template-columns:18px 22px minmax(0,1fr) auto;align-items:center;gap:8px;width:100%;text-align:left;padding:7px 6px;border-bottom:1px solid var(--rule);border-left:2px solid transparent}
+.srow:hover{background:var(--hover)}
+.srow[aria-pressed="true"]{background:var(--hover);border-left-color:var(--fg)}
+.srow .rk{font-size:10px;color:var(--dim);font-variant-numeric:tabular-nums}
+.srow .nm{display:flex;flex-direction:column;min-width:0}
+.srow .nm b{font-weight:500;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.srow .nm span,.srow .v span{font-size:10px;color:var(--dim);font-variant-numeric:tabular-nums}
+.srow .v{display:flex;flex-direction:column;align-items:flex-end;font-variant-numeric:tabular-nums}
+.srow .v b{font-weight:500;font-size:12px}
+.slip-foot{padding-top:12px;border-top:1px solid var(--rule)}
+.slip-foot .field input{font-size:17px;padding:7px 0}
+.slip-foot .quick{margin:8px 0 10px}
+.slip-foot .calc{margin-bottom:8px}
+.slip-foot .err{margin-bottom:8px}
+.slip-foot .btn-wide{padding:11px}
+.slip-fine{display:flex;justify-content:space-between;gap:10px;font-size:10px;color:var(--dim);margin-top:8px}
+.slip-fine .link{font-size:10px;color:var(--dim);text-decoration:underline;text-underline-offset:2px}
+.slip-fine .link:hover{color:var(--fg)}
 .railbtn{display:inline-grid;place-items:center;width:24px;height:24px;border:1px solid var(--rule2);color:var(--dim)}
 .railbtn:hover{border-color:var(--fg);color:var(--fg)}
 .railbtn svg{width:12px;height:12px;display:block}
@@ -334,12 +367,12 @@ body.rail-off .railtab{transform:translate(0,-50%);transition-delay:.25s}
 
 /* ---------- pump.fun squads ---------- */
 .race-ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.sqr{--cols:26px minmax(0,1.7fr) 100px 100px 170px 72px 60px}
+.sqr{--cols:30px minmax(0,1.7fr) 110px 100px 100px 72px 60px}
 .sqr .sq-top{display:flex;gap:3px;align-items:center}
 .sqr .sq-top img{width:16px;height:16px;border-radius:50%;object-fit:cover;background:var(--rule)}
 .sqtbl .btn[aria-disabled="true"]{opacity:.45}
 .sq-note{padding:10px 6px 0}
-@media (max-width:900px){.sqr{--cols:22px minmax(0,1fr) 92px 92px 60px}.sqr .sq-ru,.sqr .sq-top{display:none}}
+@media (max-width:900px){.sqr{--cols:26px minmax(0,1fr) 100px 60px}.sqr .sq-ru,.sqr .sq-top{display:none}}
 
 /* ---------- coin page ---------- */
 .c-head{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-top:18px}
@@ -596,8 +629,8 @@ body.chart-full{overflow:hidden}
 
     <section class="view" id="v-arena" data-view="arena">
       <div class="sec">
-        <div class="sec-h"><div class="t"><h2 data-scr id="raceTitle">Race</h2><p id="raceSub">% since round open</p></div>
-          <div class="race-ctl"><div class="seg" id="raceMode" role="group" aria-label="What races"><button type="button" data-mode="coins" aria-pressed="true">Coins</button><button type="button" data-mode="squads" aria-pressed="false">Squads</button></div>
+        <div class="sec-h"><div class="t"><h2 data-scr id="raceTitle">Squads</h2><p id="raceSub">pump.fun squads · profit gained since the round opened</p></div>
+          <div class="race-ctl"><div class="seg" id="raceMode" role="group" aria-label="What races"><button type="button" data-mode="squads" aria-pressed="true">Squads</button><button type="button" data-mode="coins" aria-pressed="false">Coins</button></div>
           <div class="seg" id="raceSeg" role="group" aria-label="Chart span"><button type="button" data-r="fit" aria-pressed="true">Fit</button><button type="button" data-r="full" aria-pressed="false">Full round</button></div></div></div>
         <canvas id="race" aria-label="All top 15 coins, percent change since the round opened"></canvas>
       </div>
@@ -653,11 +686,24 @@ body.chart-full{overflow:hidden}
     <footer class="foot" id="foot"></footer>
   </main>
 
-  <aside class="rail" aria-label="Wire and chat">
+  <aside class="rail bet" aria-label="Bet slip, wire and chat">
     <section class="panel">
-      <div class="p-head"><h2>Wire</h2><span class="meta" id="wireMeta"></span><span class="sp"></span>
+      <div class="p-head"><div class="rtabs" id="railTabs" role="group" aria-label="Bet slip or wire"><button type="button" data-rt="bet" aria-pressed="true">Bet</button><button type="button" data-rt="wire" aria-pressed="false">Wire<b id="wireN"></b></button></div><span class="sp"></span>
         <div class="ask"><button class="btn btn-quiet btn-xs" id="askBtn" type="button" hidden>Ask Claude</button><button class="btn btn-quiet btn-xs" id="autoBtn" type="button" hidden aria-pressed="false">Auto</button><button class="railbtn" id="railClose" type="button" aria-label="Hide wire and chat" title="Hide wire and chat"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 2l4 4-4 4"/></svg></button></div></div>
-      <div class="scroll" id="feed" aria-live="polite"></div>
+      <div class="slip" id="slip">
+        <div class="slip-top"><div class="seg" id="slipMode" role="group" aria-label="What to back"><button type="button" data-mode="squads" aria-pressed="true">Squads</button><button type="button" data-mode="coins" aria-pressed="false">Coins</button></div><span class="slip-st" id="slipSt"></span></div>
+        <div class="slip-h" id="slipHead">Squad · this round · pays</div>
+        <div class="scroll slip-list" id="slipList" aria-label="Pick what to back"></div>
+        <div class="slip-foot">
+          <div class="field"><input id="sAmt" type="number" inputmode="decimal" min="0" step="0.05" aria-label="Stake"><span id="sCur">tSOL</span></div>
+          <div class="quick" id="sQuick"></div>
+          <div class="calc"><div><span>Backing</span><b id="sPick">—</b></div><div><span>Weight if placed now</span><b id="sW">—</b></div><div class="pay"><span>Payout if it wins</span><b id="sO">—</b></div></div>
+          <p class="err" id="sErr"></p>
+          <button class="btn btn-solid btn-wide" type="button" id="sGo">Pick a squad</button>
+          <div class="slip-fine"><span id="sBal"></span><button type="button" class="link" id="sMore">Pool details</button></div>
+        </div>
+      </div>
+      <div class="scroll" id="feed" aria-live="polite" hidden></div>
     </section>
     <section class="panel">
       <div class="p-head"><h2>Chat</h2><span class="meta" id="onlineTxt"></span><span class="sp"></span><div class="chat-tabs" id="chatTabs"></div></div>
@@ -668,7 +714,7 @@ body.chart-full{overflow:hidden}
   </aside>
 </div>
 
-<button class="railtab" id="railOpen" type="button" aria-label="Show wire and chat"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 2L4 6l4 4"/></svg><span>Wire · Chat</span><b id="railUnread"></b></button>
+<button class="railtab" id="railOpen" type="button" aria-label="Show wire and chat"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 2L4 6l4 4"/></svg><span>Bet · Wire · Chat</span><b id="railUnread"></b></button>
 <div class="lens" id="lens" aria-hidden="true">
   <div class="l-top"><span id="lAv"></span><b id="lSym"></b><span class="nm" id="lName"></span><span class="px" id="lPx"></span><span class="num" id="lPct"></span></div>
   <canvas id="lensCv"></canvas>

@@ -22,6 +22,8 @@ export const PF = {
   live: new Map(),           // id -> { pnl, r, u, at } the squad's score now
   series: new Map(),         // id -> [[t, pnl]]
   next: new Map(),           // wallet -> when it is due again
+  fields: new Map(),         // round key -> { ids, at }: the squads racing in that round (the 15 leading at its open)
+  dirty: false,              // tracking moved since the last save
   stats: { calls: 0, ok: 0, failed: 0, err: "", lastAt: 0, wallets: 0, tracked: 0, sample: null, pauseUntil: 0, saved: 0 },
   onUpdate: null             // (list of [id, pnl, r, u]) after each refresh
 };
@@ -49,7 +51,7 @@ function cleanCopy(j) {
 }
 function useCopy(c, keepBase) {
   PF.comp = c.comp; PF.at = c.at; PF.squads = new Map(c.squads.map(s => [s.id, s]));
-  if (!keepBase) { PF.base.clear(); PF.cur.clear(); PF.series.clear(); }
+  if (!keepBase) { PF.base.clear(); PF.cur.clear(); PF.series.clear(); PF.fields.clear(); }
   PF.next.clear(); recompute();
 }
 export async function pfIngest(req, res, send) {
@@ -131,6 +133,7 @@ function recompute(t = now()) {
     }
   }
   PF.stats.wallets = PF.cur.size; PF.stats.tracked = [...PF.live.values()].filter(v => v.seen).length;
+  if (upd.length) PF.dirty = true;
   if (upd.length && PF.onUpdate) PF.onUpdate(upd, t);
 }
 // the score at time t (the last known point at or before t)
@@ -139,17 +142,41 @@ export function pfAt(id, t) {
   let lo = 0, hi = ser.length - 1; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (ser[m][0] <= t) lo = m; else hi = m - 1; }
   return ser[lo][1];
 }
+// a round's squad race: the 15 leading squads by score at the round's open. Fixed the first time it's asked for and kept
+// with the tracking, so a server restart keeps the same race (and its bets). Needs tracking from before the open.
+export function pfField(r) {
+  const have = PF.fields.get(r.key); if (have) return have.ids;
+  if (!PF.squads.size || !PF.at || PF.at > r.s || now() < r.s) return null;
+  const ids = [...PF.squads.keys()].map(id => ({ id, v: pfAt(id, r.s) })).filter(x => x.v != null)
+    .sort((a, b) => b.v - a.v || (a.id < b.id ? -1 : 1)).slice(0, 15).map(x => x.id);
+  if (ids.length < 2) return null;
+  PF.fields.set(r.key, { ids, at: now() }); PF.dirty = true;
+  for (const [k, f] of PF.fields) if (now() - f.at > 3 * 86400e3) PF.fields.delete(k);
+  return ids;
+}
+export const pfFieldIds = key => (PF.fields.get(key) || {}).ids || null;
 export const pfRanked = () => [...PF.squads.values()].map(s => ({ s, v: PF.live.get(s.id) || { pnl: s.pnl0, r: s.r0, u: s.u0 } })).sort((a, b) => b.v.pnl - a.v.pnl);
 export const pfTop = n => pfRanked().slice(0, n).map(x => x.s.id);
 
 /* ---------- what pages see ---------- */
+// a squad's history for a page: every point from the last few hours (rounds are scored on those), older history
+// thinned to about 300 points (the last one in each slice of time)
+function thinFor(ser, cut, t) {
+  const fine = t - 2.5 * 3600e3, step = Math.max(1, (fine - cut) / 300), out = []; let lastB = null;
+  for (let i = 0; i < ser.length; i++) {
+    const p = ser[i]; if (p[0] < cut && !(ser[i + 1] && ser[i + 1][0] >= cut)) continue;
+    if (p[0] >= fine || !out.length) { out.push(p); lastB = null; continue; }
+    const b = Math.floor((p[0] - cut) / step); if (b === lastB) out[out.length - 1] = p; else { out.push(p); lastB = b; }
+  }
+  return out;
+}
 export function pfList(since) {
   if (!PF.squads.size) return { on: false };
   const ranked = pfRanked(), cut = Math.max(0, +since || 0), fieldIds = new Set(ranked.slice(0, 25).map(x => x.s.id));
   return { on: true, comp: PF.comp, at: PF.at, tracked: PF.stats.lastAt,
     squads: ranked.map((x, i) => ({ id: x.s.id, rank: i + 1, rank0: x.s.rank0, name: x.s.name, img: x.s.img, n: x.s.n, pnl: +x.v.pnl.toFixed(2), r: +x.v.r.toFixed(2), u: +x.v.u.toFixed(2),
       top: x.s.top.slice(0, 3).map(p => ({ s: p.s, img: p.img })) })),
-    series: cut ? Object.fromEntries([...fieldIds].map(id => [id, (PF.series.get(id) || []).filter((p, i, a) => p[0] >= cut || (a[i + 1] && a[i + 1][0] >= cut))])) : {} };
+    series: cut ? Object.fromEntries([...fieldIds].map(id => [id, thinFor(PF.series.get(id) || [], cut, now())])) : {} };
 }
 export function pfSquad(id, since) {
   const s = PF.squads.get(id); if (!s) return null;
@@ -157,7 +184,7 @@ export function pfSquad(id, since) {
   const members = s.members.map(m => { const b = PF.base.get(m.w), c = PF.cur.get(m.w), d = b && c ? [c[0] - b[0], c[1] - b[1], c[2] - b[2]] : [0, 0, 0];
     return { w: m.w, u: m.u, img: m.img, x: m.x, pnl: +(m.pnl0 + d[0]).toFixed(2), r: +(m.r0 + d[1]).toFixed(2), un: +(m.u0 + d[2]).toFixed(2) }; }).sort((a, b) => b.pnl - a.pnl);
   return { id, rank, rank0: s.rank0, name: s.name, img: s.img, x: s.x, n: s.n, pnl: +v.pnl.toFixed(2), r: +v.r.toFixed(2), u: +v.u.toFixed(2), sol: s.sol, positions: s.positions,
-    top: s.top, members, comp: PF.comp, at: PF.at, tracked: PF.stats.lastAt, series: (PF.series.get(id) || []).filter(p => p[0] >= cut) };
+    top: s.top, members, comp: PF.comp, at: PF.at, tracked: PF.stats.lastAt, series: thinFor(PF.series.get(id) || [], cut, now()) };
 }
 export const pfHealth = () => ({ on: PF.squads.size > 0, squads: PF.squads.size, members: [...PF.squads.values()].reduce((a, s) => a + s.members.length, 0), copiedAt: PF.at, ...PF.stats,
   pausedFor: Math.max(0, Math.round((PF.stats.pauseUntil - now()) / 1000)) });
@@ -171,8 +198,10 @@ export async function pfSave(withCopy) {
   if (DB.kind !== "supabase" || !PF.squads.size) return;
   try {
     if (withCopy) await kvPut("pf:copy", { gz: gz({ comp: PF.comp, at: PF.at, squads: [...PF.squads.values()] }) });
-    await kvPut("pf:track", { gz: gz({ at: PF.at, base: [...PF.base], cur: [...PF.cur], series: [...PF.series].map(([id, s]) => [id, s.filter((p, i) => i === s.length - 1 || i % 2 === 0 || p[0] > now() - 6 * 3600e3)]) }) });
-    PF.stats.saved++;
+    const keepAll = now() - 30 * 3600e3, thin = s => { let last = -Infinity; return s.filter((p, i) => { if (i === 0 || i === s.length - 1 || p[0] >= keepAll || p[0] - last >= 3600e3) { last = p[0]; return true; } return false; }); };
+    PF.dirty = false;
+    await kvPut("pf:track", { gz: gz({ at: PF.at, base: [...PF.base], cur: [...PF.cur], series: [...PF.series].map(([id, s]) => [id, thin(s)]), fields: [...PF.fields] }) });
+    PF.stats.saved++; PF.stats.savedAt = now();
   } catch (e) { PF.stats.err = "save: " + String(e.message).slice(0, 160); }
 }
 export async function pfLoad() {
@@ -181,7 +210,7 @@ export async function pfLoad() {
     const c = await kvGet("pf:copy"); if (!c || !c.gz) return;
     useCopy(ungz(c.gz), false);
     const tr = await kvGet("pf:track");
-    if (tr && tr.gz) { const t = ungz(tr.gz); if (t.at === PF.at) { PF.base = new Map(t.base); PF.cur = new Map(t.cur); PF.series = new Map(t.series); recompute(); } }
+    if (tr && tr.gz) { const t = ungz(tr.gz); if (t.at === PF.at) { PF.base = new Map(t.base); PF.cur = new Map(t.cur); PF.series = new Map(t.series); PF.fields = new Map(t.fields || []); recompute(); } }
     log("info", `pump.fun squads: ${PF.squads.size} squads loaded`);
   } catch (e) { PF.stats.err = "load: " + String(e.message).slice(0, 160); }
 }

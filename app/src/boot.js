@@ -122,6 +122,7 @@ function tick(force) {
   if (S.view === "coin") kolTick();
   if (S.view === "coin") updateCoin();
   if (S.view === "arena" && RACE.mode === "squads") { renderSqTable(w); const r = roundAt(S.tf, w); if (S.srv && PFS.loadedFor !== r.key) pfLoad(r); }
+  renderSlip(w);
   if (S.view === "sq") { if (S.tickN % 3 === 0) renderSquadPage(false); if (w - PFS.detailAt > 60000) { PFS.detailAt = w; loadSquad(S.sq); } }
   if (dirty.chat) { dirty.chat = false; renderChat(); renderChatTabs(); }
   if (dirty.online) { dirty.online = false; const n = S.peers ? S.peers.length : 0; $("onlineTxt").textContent = n ? n + " online" : ""; }

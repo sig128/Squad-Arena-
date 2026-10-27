@@ -289,6 +289,7 @@ function wire(tag, html, key) {
   el.innerHTML = `<time>${mktClock()}</time><span class="tg${key ? " k" : ""}">${esc(tag)}</span><p>${html}</p>`;
   feed.prepend(el); while (feed.children.length > 160) feed.lastChild.remove();
   if (typeof bumpUnread === "function") bumpUnread(1);
+  if (typeof slipWireBump === "function") slipWireBump();
   return el;
 }
 let noticeT = null;

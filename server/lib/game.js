@@ -4,7 +4,7 @@ import crypto from "node:crypto";
 import { CFG, TF, TFK, MKS, MAX_AGE } from "./config.js";
 import { TL, pAt, twap, firstTime } from "./market.js";
 import { log, now } from "./util.js";
-import { PF, pfTop, pfAt } from "./pfsquads.js";
+import { pfAt, pfField, pfFieldIds } from "./pfsquads.js";
 
 export const G = {
   board: { top: [], bench: [] }, boardSig: "",
@@ -16,7 +16,7 @@ export const G = {
   bets: new Map(),            // bet id -> bet
   followed: new Map(),        // mint -> last join ms: coins with a squad, tracked even when they are off the board
   byPool: new Map(),          // round key | market | currency -> [bet]
-  hooks: { field: null, lcs: null, settled: null, bet: null, board: null }
+  hooks: { field: null, lcs: null, settled: null, bet: null, board: null, sq: null }
 };
 
 export function roundAt(tfk, w) { const tf = TF[tfk], s = Math.floor(w / tf.W) * tf.W; return { tfk, tf, W: tf.W, s, e: s + tf.W, rs: s, key: "L." + tfk + "." + s }; }
@@ -51,10 +51,13 @@ export function refreshBoard(t) {
 /* ---------- fields: fixed in the first minute of a round; a round the server joins later is not scored ---------- */
 export function ensureFields(w) {
   for (const tfk of TFK) {
-    const r = roundAt(tfk, w); if (G.fields.has(r.key)) continue;
+    const r = roundAt(tfk, w);
+    // the squad race (the 15 leading pump.fun squads at the open, on profit gained during the round) is scored from the
+    // squads' tracked history, which survives restarts, so it doesn't depend on the coin field below
+    const hadSq = !!pfFieldIds(r.key), sq = pfField(r);
+    if (G.fields.has(r.key)) { if (sq && !hadSq && G.hooks.sq) G.hooks.sq(r); continue; }
     if (!G.board.top.length) continue;
-    // sq: the 15 leading pump.fun squads at the open race on their profit gained during the round
-    const f = { top: G.board.top.map(t => t.m), bench: G.board.bench.map(t => t.m), sq: PF.squads.size ? pfTop(15) : [], live: w - r.s <= 60000 || CFG.scoreLate, at: w };
+    const f = { top: G.board.top.map(t => t.m), bench: G.board.bench.map(t => t.m), live: w - r.s <= 60000 || CFG.scoreLate, at: w };
     G.fields.set(r.key, f);
     if (G.hooks.field) G.hooks.field(r, f);
     log("info", `round ${r.key} open, ${f.top.length} coins${f.live ? "" : " (joined late: not scored)"}`);
@@ -62,8 +65,8 @@ export function ensureFields(w) {
 }
 export const roundLive = r => { const f = G.fields.get(r.key); return !!(f && f.live); };
 export function fieldOf(r, mk) {
+  if (mk === "sq") return (pfFieldIds(r.key) || []).map(id => ({ m: id }));
   const f = G.fields.get(r.key); if (!f) return [];
-  if (mk === "sq") return (f.sq || []).map(id => ({ m: id }));
   return (mk === "top" ? f.top.concat(f.bench) : f.top).map(m => TL.get(m)).filter(Boolean);
 }
 
@@ -123,7 +126,7 @@ export function hype(r, w) {
 }
 export function resultOf(r, mk) {
   const key = r.key + "|" + mk; let res = G.results.get(key); if (res) return res;
-  if (now() < r.e + 1200 || !roundLive(r)) return null;
+  if (now() < r.e + 1200 || (mk !== "sq" && !roundLive(r))) return null;
   const rugged = tok => tok.rugAt && tok.rugAt <= r.rs + r.W;
   if (mk === "sq") {
     // profit gained over the round, from the squads' tracked scores at the open and the close
@@ -175,6 +178,13 @@ export function quote(r, mk, m, s, w, cur) {
 }
 export function betState(r, mk, w, m) {
   const el = (w - r.s) / r.W;
+  if (mk === "sq") {
+    if (el >= CFG.betWindow) return { open: false, why: "Bets close at 40% of the round." };
+    const ids = pfFieldIds(r.key);
+    if (!ids) return { open: false, why: "The squad race starts with the next round." };
+    if (m && !ids.includes(m)) return { open: false, why: "That squad isn't in this round's race." };
+    return { open: true, el, w: 1 / (1 + 2 * el) };
+  }
   if (!roundLive(r)) return { open: false, why: "The server joined this round partway, so it isn't scored. Betting opens with the next round." };
   if (mk === "lcs") {
     if (w >= r.e - winOf(r)) return { open: false, why: "The final duel is being scored." };
@@ -182,12 +192,6 @@ export function betState(r, mk, w, m) {
     return { open: true, el, w: 1 / (1 + 2 * el) };
   }
   if (el >= CFG.betWindow) return { open: false, why: "Bets close at 40% of the round." };
-  if (mk === "sq") {
-    const f = G.fields.get(r.key);
-    if (!f || !(f.sq || []).length) return { open: false, why: "The squad race starts with the next round." };
-    if (m && !f.sq.includes(m)) return { open: false, why: "That squad isn't in this round's race." };
-    return { open: true, el, w: 1 / (1 + 2 * el) };
-  }
   if (m) {
     const tok = TL.get(m); if (!tok) return { open: false, why: "That coin is not in this round's field." };
     if (tok.rugAt && tok.rugAt <= w) return { open: false, why: "That coin was removed by the rug filter." };
@@ -206,7 +210,7 @@ export function decide(r, w) {
     for (const b of list) { const tok = TL.get(b.m); if (tok && tok.rugAt && tok.rugAt <= Math.min(w, r.e)) out.push({ bet: b, status: "refund", payout: 0, why: "rug" }); }
     if (!ended) continue;
     const still = list.filter(b => !out.some(o => o.bet === b));
-    if (!f || !f.live) { still.forEach(b => out.push({ bet: b, status: "refund", payout: 0, why: "round not scored" })); continue; }
+    if (mk === "sq" ? !pfFieldIds(r.key) : (!f || !f.live)) { still.forEach(b => out.push({ bet: b, status: "refund", payout: 0, why: "round not scored" })); continue; }
     const res = resultOf(r, mk);
     if (!res) { if (w >= r.e + 120000) still.forEach(b => out.push({ bet: b, status: "refund", payout: 0, why: "no result" })); continue; }
     if (res.refundAll) { still.forEach(b => out.push({ bet: b, status: "refund", payout: 0, why: res.why })); continue; }
@@ -230,9 +234,9 @@ export function roundsWithOpenBets() {
 
 /* ---------- what the site needs to draw a round the same way ---------- */
 export function roundState(r, w) {
-  const f = G.fields.get(r.key); if (!f) return null;
-  const st = r.tfk ? lcs(r, w) : null;
+  const sq = pfFieldIds(r.key) || [], f = G.fields.get(r.key) || (sq.length ? { top: [], bench: [], live: false } : null); if (!f) return null;
+  const st = r.tfk && G.fields.has(r.key) ? lcs(r, w) : null;
   const pools = {};
   for (const mk of MKS) for (const cur of ["tSOL", "SOL"]) { const pl = pool(r, mk, cur); if (pl.n) pools[mk + "|" + cur] = { P: +pl.P.toFixed(9), sh: Object.fromEntries([...pl.sh].map(([m, v]) => [m, +v.toFixed(9)])), n: pl.n, people: pl.people }; }
-  return { key: r.key, tfk: r.tfk, s: r.s, e: r.e, field: { top: f.top, bench: f.bench, sq: f.sq || [] }, live: f.live, lcs: lcsJSON(st), pools };
+  return { key: r.key, tfk: r.tfk, s: r.s, e: r.e, field: { top: f.top, bench: f.bench, sq }, live: f.live, sqLive: sq.length > 0, lcs: lcsJSON(st), pools };
 }

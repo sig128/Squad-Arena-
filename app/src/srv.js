@@ -293,8 +293,8 @@ async function srvPlaceBet(r, mk, m, s) {
   const out = await api("/bet", { tf: r.tfk, mk, m, s, cur: CUR, rk: r.key });
   SRV.bal = out.bal; SRV.allBets.unshift(out.bet); if (out.joined) S.my.sq[m] = out.bet.ts;
   srvMine(); rebuildBetIdx(); renderWallet(); dirty.bets = dirty.squads = true;
-  const tok = T.get(m);
-  wire("You", `${fmtSol(out.bet.s)} on ${tkHTML(tok)} · ${esc(MK[mk].label)} · ${r.tf.label} · weight ${out.bet.w.toFixed(2)} · quote ${fmtX(out.bet.q)}.`, true);
+  const tok = T.get(m), what = mk === "sq" ? "<b>" + esc((PFS.byId.get(m) || {}).name || "a squad") + "</b>" : tkHTML(tok);
+  wire("You", `${fmtSol(out.bet.s)} on ${what} · ${esc(MK[mk].label)} · ${r.tf.label} · weight ${out.bet.w.toFixed(2)} · quote ${fmtX(out.bet.q)}.`, true);
   if (out.joined) wire("Squad", `You joined the ${tkHTML(tok)} squad. Its tasks are on the coin page.`);
   return out.bet;
 }

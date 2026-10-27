@@ -175,6 +175,7 @@ G.hooks.lcs = (r, st) => {
   clearTimeout(lcsSave.get(r.key));
   lcsSave.set(r.key, setTimeout(() => { lcsSave.delete(r.key); DB.updateRound(r.key, { lcs: lcsJSON(st) }).catch(e => log("error", "save bracket: " + e.message)); emit("round", roundState(r, now())); }, 300));
 };
+G.hooks.sq = r => emit("round", roundState(r, now()));
 G.hooks.board = b => emit("board", { top: b.top.map(x => x.m), bench: b.bench.map(x => x.m) });
 
 /* ---------- settlement ---------- */
@@ -266,9 +267,9 @@ async function saveStep(all) {
   } finally { saveBusy = false; }
 }
 process.on("SIGTERM", async () => {
-  log("info", "stopping: saving candles");
+  log("info", "stopping: saving candles and squad tracking");
   saveBusy = false;
-  await Promise.race([saveStep(true), new Promise(r => setTimeout(r, 8000))]);
+  await Promise.race([Promise.all([saveStep(true), pfSave(false)]), new Promise(r => setTimeout(r, 8000))]);
   process.exit(0);
 });
 // background chart history for coins on the board (then on deck, then everything else kept), one GeckoTerminal call at a time
@@ -320,7 +321,8 @@ async function main() {
   checkConfig(log); initMoney();
   try { await loadState(); } catch (e) { log("error", "could not load saved state: " + e.message + " — did you run supabase/schema.sql?"); }
   // pump.fun squads: the stored copy, then every member wallet's profit, a batch of up to 100 every 15 s
-  pfLoad().then(() => { setInterval(pfStep, +process.env.PF_STEP_MS || 15000); setInterval(() => pfSave(false), 600e3); });
+  // saved every minute while scores move (and on shutdown), so a restart keeps each round's squad race and its scores
+  pfLoad().then(() => { setInterval(pfStep, +process.env.PF_STEP_MS || 15000); setInterval(() => { if (PF.dirty) pfSave(false); }, 60e3); });
   if (CFG.feed === "replay") startReplay(process.env.REPLAY_FILE || new URL("./replay.json", import.meta.url).pathname);
   else {
     setInterval(() => feedStep(), 1000);
