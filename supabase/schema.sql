@@ -45,7 +45,7 @@ create table if not exists bets (
   round_key    text not null,
   tf           text not null,
   round_start  bigint not null,                       -- ms since epoch
-  market       text not null check (market in ('top','lcs','eff','bust')),
+  market       text not null check (market in ('top','lcs','eff','bust','sq')),   -- sq: the pump.fun squad race (mint holds the squad id)
   mint         text not null,
   currency     text not null check (currency in ('tSOL','SOL')),
   stake        numeric(20,9) not null check (stake > 0),
@@ -157,7 +157,7 @@ begin
   insert into bets (user_id, round_key, tf, round_start, market, mint, currency, stake, weight, quote)
     values (p_user, p_round, p_tf, p_round_start, p_market, p_mint, p_currency, p_stake, p_weight, p_quote) returning * into b;
   perform sa_add(p_user, p_currency, -p_stake, 'bet', b.id::text);
-  insert into squad_members (user_id, mint) values (p_user, p_mint) on conflict do nothing;
+  if p_market <> 'sq' then insert into squad_members (user_id, mint) values (p_user, p_mint) on conflict do nothing; end if;   -- a squad-race bet doesn't join a coin squad
   return b;
 end $$;
 
@@ -256,3 +256,17 @@ create table if not exists candles (
 alter table candles enable row level security;
 revoke all on candles from anon, authenticated;
 grant all on candles to service_role;
+
+-- ---------- kv: small server state (the pump.fun squad copy and its tracking) ----------
+create table if not exists kv (
+  k text primary key,
+  v jsonb not null,
+  updated_at timestamptz not null default now()
+);
+alter table kv enable row level security;
+revoke all on kv from anon, authenticated;
+grant all on kv to service_role;
+
+-- ---------- upgrade an existing database for the squad race ----------
+alter table bets drop constraint if exists bets_market_check;
+alter table bets add constraint bets_market_check check (market in ('top','lcs','eff','bust','sq'));
