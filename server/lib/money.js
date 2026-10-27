@@ -70,12 +70,14 @@ export async function scanDeposits() {
   for (const s of sigs || []) {
     if (s.err || MONEY.seen.has(s.signature)) continue;
     MONEY.seen.add(s.signature);
-    if (await DB.knownDeposit(s.signature)) continue;
-    let tx; try { tx = await SOL.txOf(s.signature); } catch (_) { MONEY.seen.delete(s.signature); continue; }
-    for (const t of SOL.transfersIn(tx, MONEY.key.address)) {
-      const owners = await DB.profilesByWallet(t.from);
-      if (owners.length === 1) { const bal = await DB.creditDeposit(owners[0].id, s.signature, CFG.network, t.from, t.lamports); if (bal != null) log("info", `deposit ${t.lamports / 1e9} SOL credited to ${owners[0].id} (found by scan)`); break; }
-    }
+    try {
+      if (await DB.knownDeposit(s.signature)) continue;
+      const tx = await SOL.txOf(s.signature);
+      for (const t of SOL.transfersIn(tx, MONEY.key.address)) {
+        const owners = await DB.profilesByWallet(t.from);
+        if (owners.length === 1) { const bal = await DB.creditDeposit(owners[0].id, s.signature, CFG.network, t.from, t.lamports); if (bal != null) log("info", `deposit ${t.lamports / 1e9} SOL credited to ${owners[0].id} (found by scan)`); break; }
+      }
+    } catch (e) { MONEY.seen.delete(s.signature); log("warn", "deposit scan: " + e.message); break; }      // the database or RPC is down: look again next scan
   }
   if (MONEY.seen.size > 5000) MONEY.seen = new Set([...MONEY.seen].slice(-2000));
   try { MONEY.treasuryLamports = await SOL.balanceOf(MONEY.key.address); } catch (_) {}
