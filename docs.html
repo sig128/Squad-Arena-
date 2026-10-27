@@ -4,18 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Squad Arena docs</title>
-<meta name="description" content="How Squad Arena works: the board, rounds, the four markets, pools and payouts, squads, the SOL wallet and how results are kept fair.">
+<meta name="description" content="How Squad Arena works: the board, rounds, the five markets, pools and payouts, squads, the SOL wallet and how results are kept fair.">
 <link rel="canonical" href="https://www.squadarena.fun/docs">
 <meta name="theme-color" content="#0b0b0d">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Squad Arena">
 <meta property="og:url" content="https://www.squadarena.fun/docs">
 <meta property="og:title" content="Squad Arena docs">
-<meta property="og:description" content="The board, rounds, the four markets, pools and payouts, squads and the SOL wallet, explained in full.">
+<meta property="og:description" content="The board, rounds, the five markets, pools and payouts, squads and the SOL wallet, explained in full.">
 <meta property="og:image" content="https://www.squadarena.fun/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Squad Arena docs">
-<meta name="twitter:description" content="The board, rounds, the four markets, pools and payouts, squads and the SOL wallet, explained in full.">
+<meta name="twitter:description" content="The board, rounds, the five markets, pools and payouts, squads and the SOL wallet, explained in full.">
 <meta name="twitter:image" content="https://www.squadarena.fun/og.png">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -282,12 +282,13 @@ details > div{padding:0 0 16px;color:var(--ink2)}
     <a href="#top-gainer">Top gainer</a>
     <a href="#last-coin-standing">Last coin standing</a>
     <a href="#hype-delta">Hype delta</a>
+    <a href="#squad-race">Squad race</a>
     <a href="#pools">Pools and payouts</a>
     <a href="#refunds">Refunds</a>
     <div class="grp">Squads</div>
     <a href="#squads">Joining a squad</a>
     <a href="#tasks">Tasks and proofs</a>
-    <a href="#chat">Chat</a>
+    <a href="#rail">Bet slip and wire</a>
     <div class="grp">Your account</div>
     <a href="#login">Logging in</a>
     <a href="#practice">Practice credits</a>
@@ -302,14 +303,14 @@ details > div{padding:0 0 16px;color:var(--ink2)}
   <main id="main">
     <div class="prose">
       <h1>How the arena works</h1>
-      <p class="lede">Fresh pump.fun coins race each other in rounds of 15 minutes, 30 minutes, an hour and a day. You back the coin you think wins, and everyone who backed the winner splits the pool. Below is the round that's running right now, and everything that decides it.</p>
+      <p class="lede">Fresh pump.fun coins race each other in 24-hour rounds, and a new round opens every hour. You back the coin you think wins, and everyone who backed the winner splits the pool. Below is the round that opened this hour, and everything that decides it.</p>
     </div>
 
     <div class="live wide" id="live" aria-labelledby="liveTtl">
       <div class="live-head">
-        <div class="ttl"><b id="liveTtl">15-minute round</b><span id="lvWhen"><i class="dot off" id="lvDot"></i>Connecting to the arena</span></div>
+        <div class="ttl"><b id="liveTtl">24-hour round</b><span id="lvWhen"><i class="dot off" id="lvDot"></i>Connecting to the arena</span></div>
         <div class="st"><span>Time left</span><b id="lvLeft">--:--</b></div>
-        <div class="st"><span id="lvBetsL">Top gainer bets</span><b id="lvBets">--</b></div>
+        <div class="st"><span id="lvBetsL">Bets</span><b id="lvBets">--</b></div>
         <div class="st"><span>Next checkpoint</span><b id="lvCp">--</b></div>
         <div class="st"><span>Pools</span><b id="lvPool">--</b></div>
       </div>
@@ -319,7 +320,7 @@ details > div{padding:0 0 16px;color:var(--ink2)}
       </div>
       <div class="live-foot">
         <span><i class="lg-win"></i>Opening and closing windows (<a href="#scoring">scoring</a>)</span>
-        <span><i class="lg-close"></i>Bets close at 40% (<a href="#rounds">rounds</a>)</span>
+        <span><i class="lg-close"></i>Bets close after 1 h (<a href="#rounds">rounds</a>)</span>
         <span><i class="lg-cp"></i>Checkpoints C1 to C5 (<a href="#last-coin-standing">bracket</a>)</span>
         <span><i class="lg-x"></i>Cut from Last coin standing</span>
       </div>
@@ -330,10 +331,11 @@ details > div{padding:0 0 16px;color:var(--ink2)}
       <h2>What Squad Arena is</h2>
       <p>Squad Arena turns the newest pump.fun coins into a running competition. A server watches every coin launched in the last 72 hours, keeps the ones with real trading, and lines up the top 15 by market cap. Those 15 are the board.</p>
       <p>Every round, the board races. You don't buy any coin. You put a stake behind one in a market, such as "which coin gains the most this round", and your stake joins a shared pool. When the round ends, the pool goes to the people who backed the winner, in proportion to what they put in.</p>
-      <p>Backing a coin also makes you part of its squad: the people backing the same coin, who can work together on tasks like memes, lore threads and explainers, and talk in the squad's own chat.</p>
+      <p>Backing a coin also makes you part of its squad: the people backing the same coin, who can work together on tasks like memes, lore threads and explainers.</p>
+      <p>The arena opens on the Squads view, a mirror of pump.fun's own squads, which race too. The <a href="#squad-race">Squad race</a> section covers them. The coins are one click away, under Coins.</p>
       <div class="facts" id="facts">
-        <div><b>4</b><span>round lengths, aligned to the clock</span></div>
-        <div><b>4</b><span>markets in every round</span></div>
+        <div><b>24 h</b><span>every round, a new one each hour</span></div>
+        <div><b>5</b><span>markets in every round</span></div>
         <div><b id="fBoard">15</b><span>coins on the board right now</span></div>
         <div><b data-cfg="rake">3%</b><span>rake, the only fee</span></div>
       </div>
@@ -345,9 +347,9 @@ details > div{padding:0 0 16px;color:var(--ink2)}
       <ol class="steps">
         <li><b>Log in</b>Press Log in at the top right. Google creates a Solana wallet for you on the spot. If you already use Phantom, Solflare or Backpack, connect it instead.</li>
         <li><b>Get your practice credits</b>Every account starts with <span data-cfg="startBalance">25</span> tSOL. They have no value and can't be withdrawn, so you can learn the game without risking anything.</li>
-        <li><b>Pick a round and a coin</b>Choose 15M, 30M, 1H or 24H at the top, then press Back next to a coin. Pick a market, set your stake and check the payout estimate before you place the bet.</li>
-        <li><b>Watch the race</b>The race chart shows every coin's change since the round opened. The round settles 5 seconds after it ends, and winnings land in your balance straight away.</li>
-        <li><b>Find your squad</b>Open the coin's page to see its squad: who's in it, the tasks it's working on, and its chat.</li>
+        <li><b>Pick a squad or a coin</b>Press Back next to a squad or a coin, or pick one in the bet slip on the right. Set your stake and check the payout estimate before you place the bet. The newest round takes bets until the next one opens, on the hour.</li>
+        <li><b>Watch the race</b>In Squads, the race chart shows each squad's profit. In Coins, it shows every coin's change since the round opened. A round runs for 24 hours and settles 5 seconds after it ends, and winnings land in your balance straight away.</li>
+        <li><b>Find your squad</b>Open the coin's page to see its squad: who's in it and the tasks it's working on.</li>
       </ol>
       <p>When you're ready for real stakes, switch the account to SOL and deposit from your wallet. The <a href="#sol-wallet">SOL wallet</a> section covers how money moves.</p>
     </section>
@@ -383,24 +385,21 @@ details > div{padding:0 0 16px;color:var(--ink2)}
     <!-- ================= rounds ================= -->
     <section class="doc prose" id="rounds">
       <h2>Rounds</h2>
-      <p>Four round lengths run side by side, all lined up with the clock: 15-minute rounds start on the quarter hour, 30-minute rounds on the hour and half hour, hourly rounds on the hour, and daily rounds at midnight UTC. A new round starts the moment the last one ends.</p>
+      <p>Every round lasts 24 hours. A new one opens every hour, on the hour (UTC), so up to 24 rounds run at once. A round takes bets only during its first hour, until the next round opens. After that it runs to its end with the bets it has, so every bet runs for 24 hours.</p>
       <p>The <span class="k">field</span>, the set of coins that race, is fixed when a round opens: the board and on-deck list at that moment. Coins that join the board later can still enter Last coin standing at its next checkpoint, but they don't race in the other markets until the next round.</p>
     </section>
     <figure class="wide">
       <div class="fig" id="figTimeline"></div>
-      <figcaption>One round from start to end. Top gainer and Hype delta take bets for the first 40%. Last coin standing takes bets on surviving coins until the closing window. Five checkpoints split the round into sixths.</figcaption>
+      <figcaption>One round from start to end. Every market takes bets for the first hour, until the next round opens. Five checkpoints split the round into sixths, one every 4 hours.</figcaption>
     </figure>
     <div class="prose">
       <div class="tbl"><table>
         <thead><tr><th>Round</th><th class="n">Bets close</th><th class="n">Checkpoint every</th><th class="n">Measuring window</th></tr></thead>
         <tbody>
-          <tr><td>15 minutes</td><td class="n">after 6:00</td><td class="n">2:30</td><td class="n">27 s</td></tr>
-          <tr><td>30 minutes</td><td class="n">after 12:00</td><td class="n">5:00</td><td class="n">54 s</td></tr>
-          <tr><td>1 hour</td><td class="n">after 24:00</td><td class="n">10:00</td><td class="n">1 min 48 s</td></tr>
-          <tr><td>24 hours</td><td class="n">after 9 h 36 min</td><td class="n">4 h</td><td class="n">43 min 12 s</td></tr>
+          <tr><td>24 hours</td><td class="n">after 1 h, when the next round opens</td><td class="n">4 h</td><td class="n">43 min 12 s</td></tr>
         </tbody>
       </table></div>
-      <p>"Bets close" applies to Top gainer and both Hype delta markets. Last coin standing stays open on surviving coins until the closing window starts.</p>
+      <p>"Bets close" applies to every market, Last coin standing and the Squad race included.</p>
     </div>
 
     <!-- ================= scoring ================= -->
@@ -423,7 +422,7 @@ details > div{padding:0 0 16px;color:var(--ink2)}
       <h2>Top gainer</h2>
       <p>The coin with the highest return wins. It's the simplest market and the only one where on-deck coins race too, so up to 25 coins can be in the field.</p>
       <ul>
-        <li>Bets close at 40% of the round.</li>
+        <li>Bets close after the first hour, when the next round opens.</li>
         <li>A coin the rug filter removes during the round can't win. Its bets are refunded.</li>
         <li>The standings you see during the round use the same return, measured up to that moment.</li>
       </ul>
@@ -432,7 +431,7 @@ details > div{padding:0 0 16px;color:var(--ink2)}
     <!-- ================= last coin standing ================= -->
     <section class="doc prose" id="last-coin-standing">
       <h2>Last coin standing</h2>
-      <p>The board's 15 coins enter a bracket. At each checkpoint, the coins with the lowest return so far are cut. The number cut is spread so that exactly two coins are left after the fifth checkpoint. Those two duel to the end, and the one with the better return at the close wins.</p>
+      <p>The board's 15 coins enter a bracket. At each checkpoint, one every 4 hours, the coins with the lowest return so far are cut. The number cut is spread so that exactly two coins are left after the fifth checkpoint. Those two duel to the end, and the one with the better return at the close wins.</p>
       <p>With a full field of 15, the cuts go 3, 3, 3, 2, 2. A smaller field cuts fewer coins per checkpoint but still ends in a duel.</p>
     </section>
     <figure class="wide">
@@ -440,13 +439,13 @@ details > div{padding:0 0 16px;color:var(--ink2)}
       <figcaption>An example bracket. Each line is a coin, ranked by its return at every checkpoint. A cross marks where a coin was cut.</figcaption>
     </figure>
     <div class="prose">
-      <h3>Betting on survivors</h3>
-      <p>Unlike the other markets, Last coin standing takes bets for almost the whole round, on any coin still in the bracket. Bets close when the closing window starts. A later bet knows more, so it counts for less. Every bet in every market carries a <span class="k">weight</span> set by how much of the round had passed when you placed it:</p>
+      <h3>Betting on the bracket</h3>
+      <p>Like every market, Last coin standing takes bets only in the round's first hour, well before the first checkpoint. The coin you back has to survive all five cuts and then win the duel. A later bet knows more, so it counts for less. Every bet in every market carries a <span class="k">weight</span> set by how much of the round had passed when you placed it:</p>
       <div class="formula">weight = 1 ÷ (1 + 2 × share of the round passed)</div>
     </div>
     <figure class="wide">
       <div class="fig" id="figWeight"></div>
-      <figcaption>A bet at the open counts in full. At 40%, when Top gainer and Hype delta close, a bet counts for 0.556 of its stake. In the final duel it counts for about a third.</figcaption>
+      <figcaption>A bet at the open counts in full. Bets close an hour in, 1/24 of the round, when a bet counts for 0.923 of its stake. So every bet counts for between 1 and about 0.92 of its stake.</figcaption>
     </figure>
     <div class="prose">
       <h3>Wildcards</h3>
@@ -462,12 +461,10 @@ details > div{padding:0 0 16px;color:var(--ink2)}
       <div class="tbl"><table>
         <thead><tr><th>Round</th><th>Recent pace</th><th>Compared with</th></tr></thead>
         <tbody>
-          <tr><td>15 and 30 minutes</td><td>Trades in the last 5 minutes</td><td>The last hour</td></tr>
-          <tr><td>1 hour</td><td>The last hour</td><td>The last 6 hours</td></tr>
-          <tr><td>24 hours</td><td>The last 6 hours</td><td>The last 24 hours</td></tr>
+          <tr><td>24 hours</td><td>Trades in the last 6 hours</td><td>The last 24 hours</td></tr>
         </tbody>
       </table></div>
-      <p>An A of +50% means the coin is trading 1.5 times as fast as usual. An A of −40% means it's trading at 60% of its usual rate. Both markets race the board's 15 coins, and both close their bets at 40%.</p>
+      <p>An A of +50% means the coin is trading 1.5 times as fast as usual. An A of −40% means it's trading at 60% of its usual rate. Both markets race the board's 15 coins, and like every market, both take bets only in the round's first hour.</p>
       <h3>Most efficient</h3>
       <p>Pays the coin whose price rose the most for the attention it got. A coin that climbs while trading stays calm beats one that only rises on a rush of trades.</p>
       <div class="formula">efficiency = R ÷ (1 + A) <span class="c">  A counts as no lower than −90%</span></div>
@@ -491,6 +488,14 @@ details > div{padding:0 0 16px;color:var(--ink2)}
       <p>Coin A gained more, but coin B wins Most efficient: it rose 8% while its trading slowed. Coin C wins Biggest bust.</p>
     </div>
 
+    <!-- ================= squad race ================= -->
+    <section class="doc prose" id="squad-race">
+      <h2>Squad race</h2>
+      <p>The arena opens on the <span class="k">Squads</span> view: the squads from pump.fun's Squad Invitational, mirrored and ranked by all-time profit. They're pump.fun's squads, separate from the coin squads described further down. The coins are one click away, under Coins.</p>
+      <p>The Squad race is a market on those squads. The 15 leading squads when a round opens race on the profit they gain during the 24-hour round, and the squad that gains the most wins the pool. The bet window, the weight, the <span data-cfg="rake">3%</span> rake and the house seed are the same as in the coin markets.</p>
+      <p>A squad's profit is pump.fun's figure at the time the arena copied it, plus each member wallet's on-chain profit since then, read through Solana Tracker. So it can differ slightly from pump.fun's official number.</p>
+    </section>
+
     <!-- ================= pools ================= -->
     <section class="doc prose" id="pools">
       <h2>Pools and payouts</h2>
@@ -505,7 +510,7 @@ details > div{padding:0 0 16px;color:var(--ink2)}
       <div class="in">
         <div class="seg" role="group" aria-label="Currency"><button type="button" data-cur="tSOL" aria-pressed="true">tSOL</button><button type="button" data-cur="SOL" aria-pressed="false">SOL</button></div>
         <label for="cStake"><span>Your stake</span><input id="cStake" type="number" min="0" step="0.05" value="1" inputmode="decimal"></label>
-        <label for="cAt"><span>Placed when this much of the round had passed <output id="cAtO">10%</output></span><input id="cAt" type="range" min="0" max="40" step="1" value="10"></label>
+        <label for="cAt"><span>Placed this long after the round opened <output id="cAtO">10 min</output></span><input id="cAt" type="range" min="0" max="60" step="1" value="10"></label>
         <label for="cOthers"><span>Everyone else's stakes in this pool</span><input id="cOthers" type="number" min="0" step="0.5" value="8" inputmode="decimal"></label>
         <label for="cMine"><span>Of that, already on your coin</span><input id="cMine" type="number" min="0" step="0.5" value="2" inputmode="decimal"></label>
         <label for="cN"><span>Coins in the field</span><input id="cN" type="number" min="2" max="25" step="1" value="15" inputmode="numeric"></label>
@@ -517,7 +522,7 @@ details > div{padding:0 0 16px;color:var(--ink2)}
         <div class="o"><span>Rake</span><b id="oR">--</b></div>
         <div class="o big"><span>Payout if your coin wins</span><b id="oPay">--</b></div>
         <p class="fine" id="oX">--</p>
-        <p class="fine">Assumes the other stakes on your coin were placed at the open and nobody bets after you. Real odds move until bets close, so the bet sheet shows a live estimate.</p>
+        <p class="fine">Assumes the other stakes on your coin were placed at the open and nobody bets after you. Real odds move until bets close, so the bet slip shows a live estimate.</p>
       </div>
     </div>
     <div class="prose">
@@ -538,9 +543,10 @@ details > div{padding:0 0 16px;color:var(--ink2)}
       <p>A refund returns your full stake to your balance, with no rake. It happens when:</p>
       <ul>
         <li><span class="k">The rug filter removes your coin.</span> Refunded the moment it's removed.</li>
-        <li><span class="k">The round isn't scored.</span> The server has to see a round from its first minute. If it started up partway through a round, or restarted during one, that round's bets are refunded because some of its prices are missing.</li>
+        <li><span class="k">The round isn't scored.</span> The server has to see a round from its first minute. A round keeps going through a server restart once its opening prices are saved, about 45 minutes after it opens. If the server restarts before that, or starts up partway through a round it never saw open, that round's coin bets are refunded because some of its prices are missing. The Squad race keeps going either way, because the squads' profit history is saved.</li>
         <li><span class="k">There's no result.</span> If a market can't be decided within 2 minutes of the end, for example because no coin had a price, its bets are refunded.</li>
         <li><span class="k">No coin qualifies for Biggest bust.</span> If no coin's price fell while its pace rose, the whole market is refunded.</li>
+        <li><span class="k">The Squad race has no result.</span> If the arena has no profit data for the squads in a round, or no squad's profit moved, the whole market is refunded.</li>
         <li><span class="k">Nobody backed the winner, in a pool without a house seed.</span> Everyone is refunded. In a pool with a seed, the seed holds the only share on the winning coin, so that pool goes to the house.</li>
       </ul>
     </section>
@@ -599,11 +605,11 @@ details > div{padding:0 0 16px;color:var(--ink2)}
       <p>Other squad members can <span class="k">verify</span> a proof they've checked, or <span class="k">flag</span> one that breaks the rules. You can't verify your own. A proof flagged by two members is hidden.</p>
     </section>
 
-    <!-- ================= chat ================= -->
-    <section class="doc prose" id="chat">
-      <h2>Chat</h2>
-      <p>The rail on the right of the arena has two parts. The upper part, the wire, shows round notes: cuts, big moves and results, written as they happen. Below it is the chat. The Arena channel is open to everyone, and each coin has its own squad channel, which appears when you open the coin or join its squad.</p>
-      <p>You need to be logged in to send messages. Messages are up to 280 characters, and sending too quickly pauses you for a moment. The arena also posts a short note when someone joins a squad or completes a proof.</p>
+    <!-- ================= rail ================= -->
+    <section class="doc prose" id="rail">
+      <h2>Bet slip and wire</h2>
+      <p>The rail on the right of the arena has two tabs. <span class="k">Bet</span> is a bet slip, and it's the tab that opens by default. Pick a squad or a coin, set a stake, and the slip shows the weight your bet would get and an estimate of the payout before you place it. In Squads the slip bets on the Squad race, and in Coins on Top gainer. The other markets take bets from their own Bet buttons.</p>
+      <p><span class="k">Wire</span> shows round notes: cuts, big moves and results, written as they happen. While the slip is showing, a count on the Wire tab tells you how many new notes are waiting.</p>
     </section>
 
     <!-- ================= login ================= -->
@@ -682,8 +688,9 @@ details > div{padding:0 0 16px;color:var(--ink2)}
           <tr><td>Market cap, liquidity, volume, trades</td><td>DEX Screener, refreshed every few seconds</td></tr>
           <tr><td>Live prices</td><td>Each coin's PumpSwap pool, read through a Solana RPC on every swap</td></tr>
           <tr><td>Charts</td><td>Built by the arena from the same live pool prices, with older history from GeckoTerminal for the time before the arena started watching a coin</td></tr>
+          <tr><td>pump.fun squads and their profit</td><td>pump.fun's squad leaderboard, copied once, then each member wallet's on-chain profit from Solana Tracker</td></tr>
           <tr><td>Logins and wallets</td><td>Privy</td></tr>
-          <tr><td>Accounts, bets, squads, chat</td><td>The arena's database</td></tr>
+          <tr><td>Accounts, bets, squads</td><td>The arena's database</td></tr>
         </tbody>
       </table></div>
       <p>Coin names, logos and descriptions come from their creators. The arena doesn't check them and doesn't endorse any coin.</p>
@@ -708,8 +715,8 @@ details > div{padding:0 0 16px;color:var(--ink2)}
       <h2>Questions</h2>
       <details><summary>Do I own the coin I back?</summary><div>No. Backing a coin is a stake in the arena's pool. You never buy or hold the coin itself.</div></details>
       <details><summary>Why is the on-deck list empty?</summary><div>On deck shows coins ranked 16 to 25 among the coins that pass the board tests. When 15 or fewer coins pass, they're all on the board and on deck stays empty. It fills up again when more coins qualify, which usually happens during busier trading hours.</div></details>
-      <details><summary>Why was my bet refunded?</summary><div>Your coin was removed by the rug filter, the round wasn't scored, no result could be worked out, Biggest bust had no qualifying coin, or nobody backed the winner in a pool without a house seed. The <a href="#refunds">refunds</a> section explains each one.</div></details>
-      <details><summary>Can I bet after 40% of the round?</summary><div>Only in Last coin standing, on coins still in the bracket, until the closing window. Top gainer and both Hype delta markets close at 40%.</div></details>
+      <details><summary>Why was my bet refunded?</summary><div>Your coin was removed by the rug filter, the round wasn't scored, no result could be worked out, Biggest bust had no qualifying coin, the Squad race had no result, or nobody backed the winner in a pool without a house seed. The <a href="#refunds">refunds</a> section explains each one.</div></details>
+      <details><summary>Can I bet after the first hour of a round?</summary><div>No. Every market, Last coin standing and the Squad race included, stops taking bets an hour after the round opens. By then the next 24-hour round is open, so you can bet there.</div></details>
       <details><summary>Can I cancel a bet?</summary><div>No. A stake is final once it's placed.</div></details>
       <details><summary>Why can't I bet on a coin I found in search?</summary><div>Only coins in a round's field can be bet on. You can still join any coin's squad from search, and if it makes the board, its squad will already be waiting.</div></details>
       <details><summary>How long does a withdrawal take?</summary><div>Usually under a minute. If the network is slow, the withdrawal is checked again automatically, and it's refunded if it never lands.</div></details>
@@ -742,6 +749,7 @@ const C = i => `var(--c${((i % 15) + 15) % 15})`;
 const pad = n => String(n).padStart(2, "0");
 const clock = ms => { ms = Math.max(0, ms); const s = Math.floor(ms / 1000); return (s >= 3600 ? Math.floor(s / 3600) + ":" + pad(Math.floor(s / 60) % 60) : Math.floor(s / 60)) + ":" + pad(s % 60); };
 const hm = t => { const d = new Date(t); return pad(d.getHours()) + ":" + pad(d.getMinutes()); };
+const dayOf = t => { const d = new Date(t), n = new Date(), k = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(n.getFullYear(), n.getMonth(), n.getDate())) / 864e5); return k === 0 ? "today" : k === 1 ? "tomorrow" : k === -1 ? "yesterday" : d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }); };
 const pct = (v, d = 2) => (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(d) + "%";
 const amt = (v, cur) => (cur === "SOL" ? (+v).toFixed(4).replace(/(\.\d*?[1-9])0+$|\.0+$/, "$1") : String(parseFloat((+v).toFixed(2)))) + " " + cur;
 
@@ -764,10 +772,11 @@ function fillCfg() {
 }
 
 /* ---------- the live round ---------- */
-const W15 = 15 * 60e3, WIN = Math.max(5000, W15 * 0.03);
-const H = { off: 0, toks: new Map(), field: [], lcs: null, pools: {}, scored: true, r: null, example: false, ok: false, last: 0 };
+// every round lasts 24 hours; a new one opens every hour (UTC-aligned) and takes bets until the next one opens
+const HOUR = 3600e3, DAY = 86400e3, WIN = Math.max(5000, DAY * 0.03);
+const H = { off: 0, toks: new Map(), field: [], bench: [], sq: [], lcs: null, pools: {}, scored: true, r: null, example: false, ok: false, last: 0 };
 const nowS = () => Date.now() + H.off;
-const roundAt = t => { const s = Math.floor(t / W15) * W15; return { s, e: s + W15, key: "L.15m." + s }; };
+const roundAt = t => { const s = Math.floor(t / HOUR) * HOUR; return { s, e: s + DAY, key: "L.24h." + s }; };
 
 async function getJSON(path) { const r = await fetch(API + path, { cache: "no-store" }); if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }
 async function loadSnap() {
@@ -775,9 +784,15 @@ async function loadSnap() {
   const s = await getJSON("/snapshot");
   H.off = (s.now || Date.now()) - Date.now();
   cfg = Object.assign(cfg, s.cfg || {}); fillCfg();
-  H.toks = new Map((s.tokens || []).map(t => [t.m, { s: t.s, logo: t.logo, ticks: (t.ticks || []).map(k => ({ t: k[0], p: k[1] })) }]));
-  const r = roundAt(nowS()), rs = (s.rounds || {})[r.key];
-  H.r = r; H.field = rs ? rs.field.top : (s.board && s.board.top) || []; H.bench = rs ? rs.field.bench : (s.board && s.board.bench) || []; H.lcs = rs ? rs.lcs : null; H.pools = rs ? rs.pools || {} : {}; H.scored = rs ? !!rs.live : false;
+  // live ticks only cover the last 20 minutes, so the rest of the round's first hour comes from 1-minute candles
+  H.toks = new Map((s.tokens || []).map(t => {
+    const K = (t.ticks || []).map(k => ({ t: k[0], p: k[1] })), t0 = K.length ? K[0].t : Infinity, C = [];
+    for (const c of t.C || []) if (c[0] + 60e3 <= t0) C.push({ t: c[0], p: c[1] }, { t: c[0] + 59e3, p: c[4] });
+    return [t.m, { s: t.s, logo: t.logo, ticks: C.concat(K) }];
+  }));
+  const r = roundAt(nowS()), rs = (s.rounds || {})[r.key], f = rs && rs.field;
+  H.r = r; H.field = f && f.top.length ? f.top : (s.board && s.board.top) || []; H.bench = f && f.top.length ? f.bench : (s.board && s.board.bench) || []; H.sq = f ? f.sq || [] : [];
+  H.lcs = rs ? rs.lcs : null; H.pools = rs ? rs.pools || {} : {}; H.scored = rs ? !!rs.live : false;
   H.board = s.board || { top: [], bench: [] }; H.ok = true; H.example = false; H.last = Date.now();
   $("fBoard").textContent = H.board.top.length;
   funnel();
@@ -788,7 +803,7 @@ function stream() {
   try {
     es = new EventSource(API + "/stream");
     es.addEventListener("tick", e => { let list; try { list = JSON.parse(e.data); } catch (_) { return; } for (const [m, t, p] of list) { const k = H.toks.get(m); if (!k) continue; const K = k.ticks; if (!K.length || t > K[K.length - 1].t) K.push({ t, p }); } H.last = Date.now(); });
-    es.addEventListener("round", e => { let d; try { d = JSON.parse(e.data); } catch (_) { return; } if (d && H.r && d.key === H.r.key) { H.lcs = d.lcs; H.pools = d.pools || {}; if (d.field) H.field = d.field.top; H.scored = !!d.live; } });
+    es.addEventListener("round", e => { let d; try { d = JSON.parse(e.data); } catch (_) { return; } if (d && H.r && d.key === H.r.key) { H.lcs = d.lcs; H.pools = d.pools || {}; if (d.field) { if (d.field.top.length) H.field = d.field.top; H.sq = d.field.sq || H.sq; } H.scored = !!d.live; } });
     es.onerror = () => {};
   } catch (_) { es = null; }
 }
@@ -820,11 +835,13 @@ function niceStep(span) { const raw = span / 4, p = Math.pow(10, Math.floor(Math
 
 function drawHero() {
   const box = $("heroChart"); if (!box || !H.ok) return;
-  const t = nowS(), r = H.r || roundAt(t);
-  if (t >= r.e + 6000 && !H.example) { reload(); }
+  const t = nowS(); let r = H.r || roundAt(t);
+  // the next round has opened: follow it (the example just starts a new made-up round)
+  if (t >= r.s + HOUR + 6000) { if (H.example) { example(); r = H.r; } else reload(); }
   const Wd = Math.max(300, box.clientWidth - 6), Ht = window.innerWidth <= 640 ? 250 : 320;
   const L = 44, Rm = 14, T = 26, B = 26, w = Wd - L - Rm, h = Ht - T - B;
-  const X = tt => L + (tt - r.s) / W15 * w;
+  // the newest round is always in its first hour (its betting hour), so the chart shows that stretch, not the whole day
+  const SPAN = HOUR * 1.25, X = tt => L + (tt - r.s) / SPAN * w, betEnd = r.s + HOUR;
   const cut = new Map(); if (H.lcs && H.lcs.out) for (const o of H.lcs.out) cut.set(o.m, o);
   const lines = [];
   H.field.forEach((m, i) => { const k = H.toks.get(m); if (!k) return; const pts = seriesOf(k, r, Math.min(t, r.e)); if (pts) lines.push({ m, i, k, pts, R: pts[pts.length - 1].R }); });
@@ -835,13 +852,13 @@ function drawHero() {
   // grid
   for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-12; v += step) { const y = Y(v).toFixed(1), z = Math.abs(v) < step / 2; g += `<line x1="${L}" x2="${L + w}" y1="${y}" y2="${y}" style="stroke:var(--rule)" ${z ? 'stroke-dasharray="3 4" ' : ""}/><text x="${L - 8}" y="${+y + 4}" text-anchor="end">${z ? "0%" : (v > 0 ? "+" : "−") + Math.abs(v * 100).toFixed(step < .01 ? 1 : 0) + "%"}</text>`; }
   // windows, bets close, checkpoints
-  g += `<rect x="${X(r.s)}" y="${T}" width="${X(r.s + WIN) - X(r.s)}" height="${h}" style="fill:var(--win)"/><rect x="${X(r.e - WIN)}" y="${T}" width="${X(r.e) - X(r.e - WIN)}" height="${h}" style="fill:var(--win)"/>`;
-  const bx = X(r.s + .4 * W15); g += `<line x1="${bx}" x2="${bx}" y1="${T - 6}" y2="${T + h}" style="stroke:var(--ink)" stroke-width="1.2"/><text x="${bx + 6}" y="${T - 10}" class="ink">Bets close</text>`;
-  for (let k = 1; k <= 5; k++) { const x = X(r.s + k * W15 / 6), past = t >= r.s + k * W15 / 6; g += `<line x1="${x}" x2="${x}" y1="${T}" y2="${T + h}" style="stroke:var(--rule2)" stroke-dasharray="2 4"/><rect x="${x - 3.5}" y="${T + h + 5}" width="7" height="7" style="fill:${past ? "var(--ink)" : "var(--panel)"};stroke:var(--dim)"/><text x="${x}" y="${T + h + 22}" text-anchor="middle">C${k}</text>`; }
-  g += `<text x="${L}" y="${T + h + 22}">${hm(r.s)}</text><text x="${L + w}" y="${T + h + 22}" text-anchor="end">${hm(r.e)}</text>`;
+  g += `<rect x="${X(r.s)}" y="${T}" width="${X(r.s + WIN) - X(r.s)}" height="${h}" style="fill:var(--win)"/>`;
+  const bx = X(betEnd); g += `<line x1="${bx}" x2="${bx}" y1="${T - 6}" y2="${T + h}" style="stroke:var(--ink)" stroke-width="1.2"/><text x="${bx + 6}" y="${T - 10}" class="ink">Bets close</text>`;
+  for (let k = 1; k <= 5; k++) { if (k * DAY / 6 > SPAN) break; const x = X(r.s + k * DAY / 6), past = t >= r.s + k * DAY / 6; g += `<line x1="${x}" x2="${x}" y1="${T}" y2="${T + h}" style="stroke:var(--rule2)" stroke-dasharray="2 4"/><rect x="${x - 3.5}" y="${T + h + 5}" width="7" height="7" style="fill:${past ? "var(--ink)" : "var(--panel)"};stroke:var(--dim)"/><text x="${x}" y="${T + h + 22}" text-anchor="middle">C${k}</text>`; }
+  g += `<text x="${L}" y="${T + h + 22}">${hm(r.s)}</text><text x="${L + w}" y="${T + h + 22}" text-anchor="end">round ends ${hm(r.e)} tomorrow</text>`;
   // lines
   for (const l of lines) {
-    const o = cut.get(l.m), tc = o ? r.s + Math.floor(o.k) * W15 / 6 : Infinity;
+    const o = cut.get(l.m), tc = o ? r.s + Math.floor(o.k) * DAY / 6 : Infinity;
     const a = [], b = []; for (const p of l.pts) (p.t <= tc ? a : b).push(p);
     if (b.length && a.length) b.unshift(a[a.length - 1]);
     const pl = arr => arr.map(p => X(p.t).toFixed(1) + "," + Y(p.R).toFixed(1)).join(" ");
@@ -851,20 +868,21 @@ function drawHero() {
     const lp = l.pts[l.pts.length - 1]; if (!o) g += `<circle cx="${X(lp.t).toFixed(1)}" cy="${Y(lp.R).toFixed(1)}" r="3" style="fill:${C(l.i)}"/>`;
   }
   // now
-  if (t < r.e) { const nx = X(t); g += `<line x1="${nx}" x2="${nx}" y1="${T}" y2="${T + h}" style="stroke:var(--dim)" stroke-width="1"/><text x="${nx}" y="${T - 10}" text-anchor="${nx > L + w - 60 ? "end" : "middle"}">now</text>`; }
+  // while bets are open "now" sits just left of the "Bets close" label, so it hangs to the left of its line
+  if (t < r.e) { const nx = X(t), left = t < betEnd || nx > L + w - 60; g += `<line x1="${nx}" x2="${nx}" y1="${T}" y2="${T + h}" style="stroke:var(--dim)" stroke-width="1"/><text x="${left ? nx - 4 : nx}" y="${T - 10}" text-anchor="${left ? "end" : "middle"}">now</text>`; }
   if (!lines.length) g += `<text x="${L + w / 2}" y="${T + h / 2}" text-anchor="middle">Waiting for the first prices of this round</text>`;
   box.innerHTML = `<svg viewBox="0 0 ${Wd} ${Ht}" preserveAspectRatio="none" aria-hidden="true">${g}</svg>`;
   // standings
   const rows = lines.slice().sort((a, b) => { const ca = cut.has(a.m), cb = cut.has(b.m); return ca !== cb ? (ca ? 1 : -1) : b.R - a.R; });
   $("stand").innerHTML = rows.map((l, n) => { const o = cut.get(l.m); return `<div class="row${o ? " out" : ""}"><span class="r">${o ? "" : n + 1}</span><span class="av" style="--ring:${C(l.i)}">${l.k.logo ? `<img src="${esc(l.k.logo)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : esc((l.k.s || "?")[0])}</span><span class="s" ${o ? `data-out="${o.why === "rug" ? "rug" : "out at C" + Math.floor(o.k)}"` : ""}>${esc(l.k.s)}</span><span class="v ${l.R >= 0 ? "up" : "down"}">${pct(l.R, 1)}</span></div>`; }).join("") || `<div class="row"><span></span><span></span><span class="s dim">No coins yet</span><span></span></div>`;
   // header
-  const el = (t - r.s) / W15, cp = Math.min(5, Math.floor(el * 6) + 1);
-  $("liveTtl").textContent = H.example ? "Example round" : "15-minute round";
-  $("lvWhen").innerHTML = H.example ? `<i class="dot off"></i>Live data didn't load, so this is a made-up round` : `<i class="dot${Date.now() - H.last < 30000 ? "" : " off"}"></i>Live now, ${hm(r.s)} to ${hm(r.e)}${H.scored ? "" : ". This round isn't scored"}`;
+  const el = (t - r.s) / DAY, cp = Math.min(5, Math.floor(el * 6) + 1);
+  $("liveTtl").textContent = H.example ? "Example round" : "24-hour round";
+  $("lvWhen").innerHTML = H.example ? `<i class="dot off"></i>Live data didn't load, so this is a made-up round` : `<i class="dot${Date.now() - H.last < 30000 ? "" : " off"}"></i>Live now, ${hm(r.s)} ${dayOf(r.s)} to ${hm(r.e)} ${dayOf(r.e)}${H.scored ? "" : ". This round isn't scored"}`;
   $("lvLeft").textContent = clock(r.e - t);
-  $("lvBets").textContent = el < .4 ? "close in " + clock(r.s + .4 * W15 - t) : "closed";
-  $("lvCp").textContent = el >= 5 / 6 ? "final duel" : "C" + cp + " in " + clock(r.s + cp * W15 / 6 - t);
-  let P = 0; for (const mk of ["top", "lcs", "eff", "bust"]) { const pl = (H.pools || {})[mk + "|tSOL"]; P += pl ? pl.P : cfg.seed.tSOL * (H.field.length + (mk === "top" ? (H.bench || []).length : 0)); }
+  $("lvBets").textContent = t < betEnd ? "close in " + clock(betEnd - t) : "closed";
+  $("lvCp").textContent = el >= 5 / 6 ? "final duel" : "C" + cp + " in " + clock(r.s + cp * DAY / 6 - t);
+  let P = 0; for (const mk of ["top", "lcs", "eff", "bust", "sq"]) { const pl = (H.pools || {})[mk + "|tSOL"]; P += pl ? pl.P : cfg.seed.tSOL * (mk === "sq" ? (H.sq || []).length : H.field.length + (mk === "top" ? (H.bench || []).length : 0)); }
   $("lvPool").textContent = H.example || !P ? "--" : amt(P, "tSOL");
 }
 let reloading = false;
@@ -885,17 +903,18 @@ function figTimeline() {
   g += `<rect x="${x(0)}" y="${y - 16}" width="${x(.03) - x(0)}" height="32" style="fill:var(--win)"/><rect x="${x(.97)}" y="${y - 16}" width="${x(1) - x(.97)}" height="32" style="fill:var(--win)"/>`;
   g += `<line x1="${x(0)}" x2="${x(1)}" y1="${y}" y2="${y}" style="stroke:var(--ink)" stroke-width="2"/>`;
   g += `<line x1="${x(0)}" x2="${x(0)}" y1="${y - 10}" y2="${y + 10}" style="stroke:var(--ink)" stroke-width="2"/><line x1="${x(1)}" x2="${x(1)}" y1="${y - 10}" y2="${y + 10}" style="stroke:var(--ink)" stroke-width="2"/>`;
-  // top bracket: bets for Top gainer and Hype delta
-  g += `<path d="M${x(0)},${y - 30}V${y - 38}H${x(.4)}V${y - 30}" fill="none" style="stroke:var(--ink)" stroke-width="1.4"/><text x="${x(0)}" y="${y - 48}" class="ink" font-size="13">Top gainer and Hype delta take bets</text>`;
-  g += `<line x1="${x(.4)}" x2="${x(.4)}" y1="${y - 38}" y2="${y + 16}" style="stroke:var(--ink)" stroke-width="1.4"/><text x="${x(.4) + 8}" y="${y - 22}" font-size="12">40%</text>`;
+  // top bracket: every market takes bets for the first hour, 1/24 of the round
+  const bc = 1 / 24;
+  g += `<path d="M${x(0)},${y - 30}V${y - 38}H${x(bc)}V${y - 30}" fill="none" style="stroke:var(--ink)" stroke-width="1.4"/><text x="${x(0)}" y="${y - 48}" class="ink" font-size="13">Every market takes bets for the first hour</text>`;
+  g += `<line x1="${x(bc)}" x2="${x(bc)}" y1="${y - 38}" y2="${y + 16}" style="stroke:var(--ink)" stroke-width="1.4"/><text x="${x(bc) + 8}" y="${y - 22}" font-size="12">1 h</text>`;
   // checkpoints
   for (let k = 1; k <= 5; k++) { const cx = x(k / 6); g += `<rect x="${cx - 5}" y="${y - 5}" width="10" height="10" style="fill:var(--panel);stroke:var(--ink)" stroke-width="1.4"/><text x="${cx}" y="${y + 30}" text-anchor="middle" font-size="12.5" class="ink">C${k}</text>`; }
   g += `<text x="${(x(5 / 6) + x(1)) / 2}" y="${y - 22}" text-anchor="middle" font-size="12">final duel</text>`;
   g += `<text x="${x(0)}" y="${y + 30}" font-size="12.5">start</text><text x="${x(1)}" y="${y + 30}" text-anchor="end" font-size="12.5">end</text>`;
-  // bottom bracket: LCS
-  g += `<path d="M${x(0)},${y + 46}V${y + 54}H${x(.97)}V${y + 46}" fill="none" style="stroke:var(--dim)" stroke-width="1.4"/><text x="${x(0)}" y="${y + 74}" font-size="13" class="ink">Last coin standing takes bets on surviving coins</text>`;
+  // bottom bracket: the rest of the round runs on the bets it took in its first hour
+  g += `<path d="M${x(bc)},${y + 46}V${y + 54}H${x(1)}V${y + 46}" fill="none" style="stroke:var(--dim)" stroke-width="1.4"/><text x="${x(bc)}" y="${y + 74}" font-size="13" class="ink">No new bets: the next round, open since 1 h, takes them</text>`;
   g += `<text x="${x(1)}" y="${y + 74}" text-anchor="end" font-size="12">settles 5 s after the end</text>`;
-  $("figTimeline").innerHTML = svg(900, 190, g, "Timeline of a round: bets for Top gainer and Hype delta close at 40%, checkpoints at each sixth, Last coin standing bets close at 97%.");
+  $("figTimeline").innerHTML = svg(900, 190, g, "Timeline of a 24-hour round: bets in every market close after the first hour, when the next round opens, checkpoints every 4 hours at each sixth, then a final duel to the end.");
 }
 function figTwap() {
   let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -942,16 +961,16 @@ function figBracket() {
   $("figBracket").innerHTML = svg(900, T + 14 + n * row + 10, g, "A Last coin standing bracket: 15 coins, cut by 3, 3, 3, 2 and 2 at the five checkpoints, then a final duel.");
 }
 function figWeight() {
-  const L = 60, Wd = 790, T = 18, Hh = 180, X = e => L + e * Wd, Y = v => T + (1 - v) * Hh, f = e => 1 / (1 + 2 * e);
-  let g = `<rect x="${X(0)}" y="${T}" width="${X(.4) - X(0)}" height="${Hh}" style="fill:var(--win)"/>`;
-  [0, .25, .5, .75, 1].forEach(v => { g += `<line x1="${L}" x2="${L + Wd}" y1="${Y(v)}" y2="${Y(v)}" style="stroke:var(--rule)"/><text x="${L - 10}" y="${Y(v) + 4}" text-anchor="end" font-size="12">${v.toFixed(2)}</text>`; });
-  [0, .2, .4, .6, .8, 1].forEach(e => { g += `<text x="${X(e)}" y="${T + Hh + 20}" text-anchor="middle" font-size="12">${e * 100}%</text>`; });
-  const pts = []; for (let i = 0; i <= 100; i++) { const e = i / 100 * .97; pts.push(X(e).toFixed(1) + "," + Y(f(e)).toFixed(1)); }
+  // bets close an hour into a 24-hour round, so the curve only runs from 1 down to 1 / (1 + 2/24); the scale starts at 0.9
+  const L = 60, Wd = 790, T = 18, Hh = 180, lo = .9, X = m => L + m / 60 * Wd, Y = v => T + (1 - v) / (1 - lo) * Hh, f = m => 1 / (1 + 2 * m / 1440);
+  let g = "";
+  [.9, .925, .95, .975, 1].forEach(v => { g += `<line x1="${L}" x2="${L + Wd}" y1="${Y(v)}" y2="${Y(v)}" style="stroke:var(--rule)"/><text x="${L - 10}" y="${Y(v) + 4}" text-anchor="end" font-size="12">${v.toFixed(3)}</text>`; });
+  [[0, "0"], [15, "15 min"], [30, "30 min"], [45, "45 min"], [60, "1 h"]].forEach(([m, s]) => { g += `<text x="${X(m)}" y="${T + Hh + 20}" text-anchor="middle" font-size="12">${s}</text>`; });
+  const pts = []; for (let i = 0; i <= 60; i++) pts.push(X(i).toFixed(1) + "," + Y(f(i)).toFixed(1));
   g += `<polyline points="${pts.join(" ")}" fill="none" style="stroke:var(--ink)" stroke-width="2.2"/>`;
-  [[0, "1.000 at the open", 9, -10, ""], [.4, "0.556 when bets close", 9, -10, ""], [5 / 6, "0.375 at C5", 0, 24, "middle"], [.97, "0.340 at the closing window", -4, -14, "end"]].forEach(([e, t, dx, dy, an]) => { const x = X(e), y = Y(f(e)); g += `<circle cx="${x}" cy="${y}" r="4" style="fill:var(--panel);stroke:var(--ink)" stroke-width="2"/><text x="${x + dx}" y="${y + dy}" ${an ? `text-anchor="${an}"` : ""} font-size="12.5" class="ink">${t}</text>`; });
-  g += `<text x="${X(.2)}" y="${T + Hh - 10}" text-anchor="middle" font-size="12">all four markets open</text><text x="${X(.7)}" y="${T + Hh - 10}" text-anchor="middle" font-size="12">Last coin standing only</text>`;
-  g += `<text x="${L + Wd / 2}" y="${T + Hh + 40}" text-anchor="middle" font-size="12">share of the round passed when the bet was placed</text>`;
-  $("figWeight").innerHTML = svg(900, T + Hh + 50, g, "Bet weight falls from 1 at the open to about 0.34 at the end of betting.");
+  [[0, "1.000 at the open", 9, -8, ""], [30, "0.960 half an hour in", 9, -10, ""], [60, "0.923 when bets close", -10, 24, "end"]].forEach(([m, t, dx, dy, an]) => { const x = X(m), y = Y(f(m)); g += `<circle cx="${x}" cy="${y}" r="4" style="fill:var(--panel);stroke:var(--ink)" stroke-width="2"/><text x="${x + dx}" y="${y + dy}" ${an ? `text-anchor="${an}"` : ""} font-size="12.5" class="ink">${t}</text>`; });
+  g += `<text x="${L + Wd / 2}" y="${T + Hh + 40}" text-anchor="middle" font-size="12">time since the round opened when the bet was placed</text>`;
+  $("figWeight").innerHTML = svg(900, T + Hh + 50, g, "Bet weight falls from 1 at the open to about 0.92 when bets close, an hour into the 24-hour round.");
 }
 function figHype() {
   const L = 40, Wd = 820, T = 16, Hh = 320, cx = L + Wd / 2, cy = T + Hh / 2;
@@ -980,10 +999,10 @@ function figMoney() {
 /* ---------- payout calculator ---------- */
 let cur = "tSOL";
 function calc() {
-  const s = Math.max(0, +$("cStake").value || 0), e = (+$("cAt").value || 0) / 100, others = Math.max(0, +$("cOthers").value || 0), onMine = Math.min(others, Math.max(0, +$("cMine").value || 0)), n = Math.max(2, Math.min(25, Math.round(+$("cN").value || 15)));
+  const s = Math.max(0, +$("cStake").value || 0), mins = Math.max(0, Math.min(60, +$("cAt").value || 0)), e = mins / 1440, others = Math.max(0, +$("cOthers").value || 0), onMine = Math.min(others, Math.max(0, +$("cMine").value || 0)), n = Math.max(2, Math.min(25, Math.round(+$("cN").value || 15)));
   const w = 1 / (1 + 2 * e), seed = (cfg.seed && cfg.seed[cur]) || 0, rake = cfg.rake;
   const P = others + s + seed * n, mineShares = seed + onMine, my = s * w, share = my / (mineShares + my || 1), pay = P * (1 - rake) * share;
-  $("cAtO").textContent = Math.round(e * 100) + "%";
+  $("cAtO").textContent = mins >= 60 ? "1 h" : mins + " min";
   $("oW").textContent = "×" + w.toFixed(3);
   $("oP").textContent = amt(P, cur);
   $("oS").textContent = s > 0 ? (share * 100).toFixed(1) + "%" : "--";
