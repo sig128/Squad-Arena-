@@ -64,6 +64,7 @@ async function srvSnapshot() {
   try { const r = await fetch(SRV.url + "/snapshot", { cache: "no-store" }); if (!r.ok) throw new Error("HTTP " + r.status); snap = await r.json(); }
   catch (e) { SRV.errs++; throw new Error("The round server isn't reachable right now (" + e.message + ")."); }
   SRV.cfg = snap.cfg; if (S.view === "coin" && coinUI.m) renderKolBox(coinUI.m);
+  if (RACE.mode === "squads" || S.view === "sq") pfLoad(roundAt(S.tf, nowW()), true);
   for (const o of snap.tokens || []) srvToken(o);
   SRV.board = snap.board || { top: [], bench: [] }; trendingEvent(snap.trending);
   SRV.rounds.clear(); for (const st of Object.values(snap.rounds || {})) srvRound(st);
@@ -86,6 +87,7 @@ function srvStream() {
   on("candle", list => { for (const [m, c] of list) { const tok = TL.get(m); if (!tok) continue; const x = cIn(c), C = tok.C, last = C[C.length - 1]; if (!last || x.t > last.t) C.push(x); else if (x.t === last.t) C[C.length - 1] = x; if (C.length > 3000) C.splice(0, 600); if (!(tok.firstT <= x.t)) tok.firstT = firstTime(tok); } dirty.coin = dirty.race = true; });
   on("candles", d => { const tok = TL.get(d.m); if (!tok) return; if (d.five) tok.C5 = d.C.map(cIn); else tok.C = d.C.map(cIn); tok.firstT = firstTime(tok); dirty.coin = dirty.race = true; });
   on("board", b => { SRV.board = b; });
+  on("pf", pfEvent);
   on("trending", trendingEvent);
   on("kol", kolEvent);
   on("round", srvRound);

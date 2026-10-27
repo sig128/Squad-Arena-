@@ -332,6 +332,15 @@ body.rail-off .railtab{transform:translate(0,-50%);transition-delay:.25s}
 .ladder ul{margin:4px 0 0;padding:0;list-style:none;font-size:11px;display:flex;flex-direction:column;gap:3px}
 @media (max-width:900px){.ladder{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
+/* ---------- pump.fun squads ---------- */
+.race-ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.sqr{--cols:26px minmax(0,1.7fr) 100px 100px 170px 72px 60px}
+.sqr .sq-top{display:flex;gap:3px;align-items:center}
+.sqr .sq-top img{width:16px;height:16px;border-radius:50%;object-fit:cover;background:var(--rule)}
+.sqtbl .btn[aria-disabled="true"]{opacity:.45}
+.sq-note{padding:10px 6px 0}
+@media (max-width:900px){.sqr{--cols:22px minmax(0,1fr) 92px 92px 60px}.sqr .sq-ru,.sqr .sq-top{display:none}}
+
 /* ---------- coin page ---------- */
 .c-head{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-top:18px}
 .c-head .ttl{display:flex;flex-direction:column;gap:3px;min-width:0}
@@ -587,12 +596,14 @@ body.chart-full{overflow:hidden}
 
     <section class="view" id="v-arena" data-view="arena">
       <div class="sec">
-        <div class="sec-h"><div class="t"><h2 data-scr>Race</h2><p id="raceSub">% since round open</p></div>
-          <div class="seg" id="raceSeg" role="group" aria-label="Chart span"><button type="button" data-r="fit" aria-pressed="true">Fit</button><button type="button" data-r="full" aria-pressed="false">Full round</button></div></div>
+        <div class="sec-h"><div class="t"><h2 data-scr id="raceTitle">Race</h2><p id="raceSub">% since round open</p></div>
+          <div class="race-ctl"><div class="seg" id="raceMode" role="group" aria-label="What races"><button type="button" data-mode="coins" aria-pressed="true">Coins</button><button type="button" data-mode="squads" aria-pressed="false">Squads</button></div>
+          <div class="seg" id="raceSeg" role="group" aria-label="Chart span"><button type="button" data-r="fit" aria-pressed="true">Fit</button><button type="button" data-r="full" aria-pressed="false">Full round</button></div></div></div>
         <canvas id="race" aria-label="All top 15 coins, percent change since the round opened"></canvas>
       </div>
       <div class="sec">
-        <div class="sec-h"><div class="t"><h2 data-scr>Top 15</h2><p id="boardSub">pump.fun coins launched in the last 72 h, ranked by market cap</p></div></div>
+        <div class="sec-h"><div class="t"><h2 data-scr id="boardH">Top 15</h2><p id="boardSub">pump.fun coins launched in the last 72 h, ranked by market cap</p></div></div>
+        <div class="tbl sqtbl" id="sqTbl" hidden></div>
         <div class="tbl" id="tbl">
           <div class="row thead" id="thead"></div>
           <div id="rows"></div>
@@ -637,6 +648,7 @@ body.chart-full{overflow:hidden}
     </section>
 
     <section class="view" id="v-coin" data-view="coin" hidden></section>
+    <section class="view" id="v-sq" data-view="sq" hidden></section>
 
     <footer class="foot" id="foot"></footer>
   </main>

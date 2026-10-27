@@ -170,6 +170,7 @@ function betLive(b, w) {
   if (b.st !== "open") return b.st === "won" ? `<span class="up">won ${fmtSol(b.pay)}</span>` : b.st === "lost" ? `<span class="down">lost</span>` : `<span class="dim">refunded${b.why === "rug" ? " · rug" : ""}</span>`;
   if (b.md === "L" && S.mode === "replay") return `<span class="dim">waits for live data</span>`;
   if (w >= r.e) return `<span class="dim">settling…</span>`;
+  if (b.mk === "sq") return sqBetLive(b, w);
   if (b.mk === "top") { const st = standings(r, w), i = st.findIndex(x => x.tok.m === b.m); return i >= 0 ? `#${i + 1} · ${fmtPct(st[i].R)}` : "—"; }
   if (b.mk === "lcs") { const st = lcs(r, w); return st.alive.has(b.m) ? `alive · ${st.alive.size} left` : `<span class="down">cut</span>`; }
   const h = hype(r, w).filter(x => x.R != null).sort((a, c) => c[b.mk] - a[b.mk]), i = h.findIndex(x => x.tok.m === b.m);
@@ -183,7 +184,7 @@ function renderMyBets(w) {
   el.innerHTML = `<table class="tbl2"><thead><tr><th>Placed</th><th>Market</th><th>Round</th><th>Coin</th><th class="n">Stake</th><th class="n">Weight</th><th class="n">Quote</th><th>Now</th><th></th></tr></thead><tbody>${list.map(b => {
     const tok = mapOf(b.md).get(b.m), r = roundOfBet(b), si = streakInfo(b);
     const when = b.md === "R" ? utc(recOf(r, b.ts), false) + " rec" : local(b.ts, false);
-    return `<tr><td class="dim">${when}</td><td>${esc(MK[b.mk].short)}</td><td class="dim">${b.tf.toUpperCase()} · ${b.md === "R" ? utc(r.rs, false) : local(r.s, false)}</td><td>${tok ? tkHTML(tok, 13) : esc(short(b.m))}</td>
+    return `<tr><td class="dim">${when}</td><td>${esc(MK[b.mk].short)}</td><td class="dim">${b.tf.toUpperCase()} · ${b.md === "R" ? utc(r.rs, false) : local(r.s, false)}</td><td>${b.mk === "sq" ? (PFS.byId.get(b.m) ? `<a class="tk" href="#sq-${esc(b.m)}">${sqAv(PFS.byId.get(b.m), 13)}<span>${esc(PFS.byId.get(b.m).name)}</span></a>` : "squad") : tok ? tkHTML(tok, 13) : esc(short(b.m))}</td>
       <td class="n">${fmtSol(b.s)}</td><td class="n">${b.w.toFixed(2)}</td><td class="n">${fmtX(b.q)}</td><td>${betLive(b, w)}</td>
       <td>${si && si.ok ? `<button class="btn btn-quiet btn-xs" type="button" data-pass="${esc(b.id)}">Streak pass</button>` : si && si.used ? `<span class="dim cap">pass used</span>` : ""}</td></tr>`;
   }).join("")}</tbody></table>`;

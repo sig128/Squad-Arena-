@@ -9,6 +9,7 @@ import { log, rateOk } from "./util.js";
 import * as A from "./actions.js";
 import { TL, FEED, applyPairs, chartC, quickHistory } from "./market.js";
 import { kolOut, kolHistory } from "./kol.js";
+import { pfIngest, pfList, pfSquad } from "./pfsquads.js";
 import { getJSON, isAddress } from "./util.js";
 
 const POST = {
@@ -52,6 +53,8 @@ export function makeServer({ snapshot, health }) {
       res.writeHead(204, { "access-control-allow-origin": origin || "null", "access-control-allow-methods": "GET, POST, OPTIONS", "access-control-allow-headers": "authorization, content-type", "access-control-max-age": "86400", vary: "origin" });
       return res.end();
     }
+    // the pump.fun squad copy is uploaded from a pump.fun page (token-protected, any origin)
+    if (req.method === "POST" && path === "/admin/pf-copy") { try { return await pfIngest(req, res, (st, o) => send(req, res, st, o, null)); } catch (e) { return send(req, res, e.status || 500, { error: e.message }, null); } }
     if (req.headers.origin && !origin) return send(req, res, 403, { error: "This site isn't allowed to use the arena API." }, null);
     const ip = (req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").split(",")[0].trim();
     try {
@@ -70,6 +73,12 @@ export function makeServer({ snapshot, health }) {
         if (!tok.C.length && !tok.CH.length) await quickHistory(tok);
         const c = x => [x.t, x.o, x.h, x.l, x.c, Math.round(x.v || 0)];
         return send(req, res, 200, { m, C: chartC(tok, false).slice(-300).map(c), C5: chartC(tok, true).map(c) }, origin);
+      }
+      if (req.method === "GET" && path === "/pf") { if (!rateOk("pf:" + ip, 60, 10)) throw Object.assign(new Error("Too many requests."), { status: 429 }); return send(req, res, 200, pfList(url.searchParams.get("since")), origin); }
+      if (req.method === "GET" && path === "/pf/squad") {
+        if (!rateOk("pfs:" + ip, 60, 10)) throw Object.assign(new Error("Too many requests."), { status: 429 });
+        const o = pfSquad(String(url.searchParams.get("id") || ""), url.searchParams.get("since")); if (!o) throw Object.assign(new Error("No such squad."), { status: 404 });
+        return send(req, res, 200, o, origin);
       }
       if (req.method === "GET" && path === "/kols") {
         if (!rateOk("kols:" + ip, 60, 10)) throw Object.assign(new Error("Too many requests."), { status: 429 });

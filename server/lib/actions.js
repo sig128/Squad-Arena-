@@ -60,7 +60,7 @@ export async function placeBet(user, body) {
   try { row = await DB.placeBet({ uid: user.id, rk: r.key, tf, rs: r.s, mk, m, cur, s, w: weight, q: +q.mult.toFixed(3) }); }
   catch (e) { if (/insufficient/i.test(e.message)) { const b = await balances(user.id); throw err(`You have ${fmt(b ? b[cur] : 0, cur)}. Lower the stake.`); } throw e; }
   const b = betIn(row); indexBet(b);
-  const joined = joinSquad(user.id, m, b.ts);
+  const joined = mk === "sq" ? false : joinSquad(user.id, m, b.ts);
   pushDoc("members", user.id);
   emit("round", roundState(r, Date.now()));
   if (joined) await systemPost(user.id, m, "joined the squad");

@@ -43,6 +43,8 @@ export const CFG = {
   kolPages: num("KOL_PAGES", 3),                         // 100 KOLs per page, most active over the last 7 days first
   kolWs: env("KOL_WS", "wss://api.mainnet-beta.solana.com"),
   kolRpc: env("KOL_RPC", "https://api.mainnet-beta.solana.com"),
+  pfFast: num("PF_FAST", 90),                            // seconds between profit checks for the 15 leading pump.fun squads
+  pfSlow: num("PF_SLOW", 1200),                          // and for the other squads
   boardMinAge: num("BOARD_MIN_AGE", 30) * 60e3,          // minutes a pool must have traded before its coin can join the board or on-deck
   kolPerSocket: num("KOL_PER_SOCKET", 100),
   kolHistDaily: num("KOL_HISTORY_DAILY", 5000),         // Solana Tracker requests a day for coin history (Advanced plan: 200,000 a month; set 300 on the free plan)
@@ -73,7 +75,7 @@ export const TF = {
 };
 CFG.scoreLate = env("SCORE_LATE_ROUNDS") === "1";
 export const TFK = ["15m", "30m", "1h", "24h"];
-export const MKS = ["top", "lcs", "eff", "bust"];
+export const MKS = ["top", "lcs", "eff", "bust", "sq"];     // sq: the pump.fun squad race
 export const MAX_AGE = 72 * 3600e3;
 export const GATE = { liq: 25e3, turn: 0.25, trades: 2000, tx24: 300, mcLiq: 60 };
 export const CURRENCIES = () => CFG.realMoney ? ["tSOL", "SOL"] : ["tSOL"];

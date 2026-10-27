@@ -11,6 +11,7 @@ import { emit, online } from "./lib/hub.js";
 import { makeServer } from "./lib/api.js";
 import { initMoney, moneyInfo, scanDeposits, recoverWithdrawals, MONEY } from "./lib/money.js";
 import { startReplay } from "./lib/replay.js";
+import { PF, pfStep, pfSave, pfLoad, pfHealth } from "./lib/pfsquads.js";
 import { KOL, loadKols, kolStep, kolCount, kolWho, kolPrune, kolHistory, kolHistDue, kolHistBudget } from "./lib/kol.js";
 import { BLOCKED } from "./lib/game.js";
 import { MAX_AGE, GATE } from "./lib/config.js";
@@ -85,6 +86,7 @@ function health() {
     db: DB.kind, dbOk: DBH.ok, dbErr: DBH.err || undefined, dbAt: DBH.at, dbKey: keyInfo(), dbMissing: DBH.missing, bets: { open: [...G.bets.values()].filter(b => b.st === "open").length, loaded: G.bets.size }, money: moneyInfo(), treasurySol: MONEY.treasuryLamports == null ? null : MONEY.treasuryLamports / 1e9, calls: FEED.calls, errors: FEED.errs, lastError: FEED.lastErr || null, lastPrice: FEED.lastPrice,
     discovery: { pools: FEED.sample.pools, fresh: FEED.sample.fresh, ago: FEED.sample.at ? Math.round((now() - FEED.sample.at) / 1000) : null, err: FEED.sample.err, pending: FEED.pending.length, pumpfun: !pumpOff() },
     kols: { list: KOL.list.size, ...KOL.stats, coins: KOL.byMint.size, queue: KOL.queue.length, history: kolHistBudget() }, trending: TREND.list.length,
+    pf: pfHealth(),
     // coins the scam filter keeps off the board, biggest first
     scam: [...TL.values()].filter(x => x.flag).sort((a, b) => (b.mc || 0) - (a.mc || 0)).slice(0, 30).map(x => ({ s: x.s, m: x.m, mc: Math.round(x.mc || 0), why: x.flagWhy })),
     charts: { withHistory: [...TL.values()].filter(x => x.C.length > 1).length, backfilled: FEED.backfilled, backfill: CFG.gtBackfill, gtPausedFor: Math.max(0, Math.round((FEED.gtPauseUntil - now()) / 1000)),
@@ -120,6 +122,7 @@ setInterval(trendStep, 10000);
 KOL.onTrade = (m, tr) => { metaDirty.add(m); if (keepNow().has(m)) emit("kol", { m, tr: { t: tr.t, side: tr.side, sol: tr.sol, px: tr.px, amt: tr.amt, sig: tr.sig, hold: tr.hold, ...kolWho(tr.w) } }); };
 FEED.onTick = tok => { const k = tok.ticks[tok.ticks.length - 1]; if (k) tickBuf.set(tok.m, k.h !== k.p || k.l !== k.p ? [tok.m, k.t, r6(k.p), r6(k.h), r6(k.l)] : [tok.m, k.t, r6(k.p)]); };
 KOL.onHistory = m => { metaDirty.add(m); };
+PF.onUpdate = (list, t) => emit("pf", { t, list });
 // PumpSwap pool -> coin, from the pools discovery already knows (KOL swaps name the pool, not the coin)
 let poolIx = { n: -1, at: 0, map: new Map() };
 KOL.poolMint = pool => {
@@ -316,6 +319,8 @@ async function loadState() {
 async function main() {
   checkConfig(log); initMoney();
   try { await loadState(); } catch (e) { log("error", "could not load saved state: " + e.message + " — did you run supabase/schema.sql?"); }
+  // pump.fun squads: the stored copy, then every member wallet's profit, a batch of up to 100 every 15 s
+  pfLoad().then(() => { setInterval(pfStep, +process.env.PF_STEP_MS || 15000); setInterval(() => pfSave(false), 600e3); });
   if (CFG.feed === "replay") startReplay(process.env.REPLAY_FILE || new URL("./replay.json", import.meta.url).pathname);
   else {
     setInterval(() => feedStep(), 1000);

@@ -16,7 +16,8 @@ const MK = {
   top:  { label: "Top gainer", short: "Top" },
   lcs:  { label: "Last coin standing", short: "LCS" },
   eff:  { label: "Hype delta · most efficient", short: "Efficient" },
-  bust: { label: "Hype delta · biggest bust", short: "Bust" }
+  bust: { label: "Hype delta · biggest bust", short: "Bust" },
+  sq:   { label: "Squad race", short: "Squad" }            // pump.fun squads; not in MKS (coin markets), see pfsquads.js
 };
 const nowW = () => Date.now();
 const modeCode = () => S.mode === "replay" ? "R" : "L";

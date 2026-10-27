@@ -3,6 +3,7 @@ let curView = null;
 function parseHash() {
   const h = decodeURIComponent((location.hash || "").slice(1));
   if (h.startsWith("coin-")) return { v: "coin", m: h.slice(5) };
+  if (h.startsWith("sq-")) return { v: "sq", m: h.slice(3) };
   if (h === "arena" || h === "markets" || h === "squads" || h === "trending") return { v: h };
   return { v: "arena" };
 }
@@ -15,13 +16,14 @@ function route() {
     if (route.pending === m) return;
     if (location.hash !== "#arena") location.hash = "#arena"; return;
   }
-  if (curView === v && (v !== "coin" || S.coin === m)) return;
+  if (curView === v && (v !== "coin" || S.coin === m) && (v !== "sq" || S.sq === m)) return;
   const prevEl = curView ? $("v-" + curView) : null, nextEl = $("v-" + v);
   S.view = v; S.coin = v === "coin" ? m : null;
   qsa(".nav a").forEach(a => { if (a.dataset.v === v) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
   const show = () => {
     qsa("section.view").forEach(el => { if (el !== nextEl) el.hidden = true; });     // only one view at a time, also when a link opens a coin page directly
     if (v === "coin") { buildCoin(m); loadKolsFor(m); }
+    if (v === "sq") buildSquadPage(m);
     nextEl.hidden = false; enterAnim(nextEl);
     if (prevEl) window.scrollTo(0, 0);
     dirty.all = true; hideLens();
@@ -113,7 +115,7 @@ function raceSeries(r, w) {
     const pts = [];
     for (let i = 0; i <= N; i++) { const t = a0 + (te - a0) * i / N; const p = pAt(tok, t); if (p != null) pts.push({ t, v: p / o - 1 }); }
     if (!pts.length) continue;
-    out.push({ tok, pts, o, end: pts[pts.length - 1].v, col: colorOf(tok.m) });
+    out.push({ tok, pts, o, end: pts[pts.length - 1].v, col: colorOf(tok.m), at: t => { const p = pAt(tok, t); return t >= pts[0].t && p != null ? p / o - 1 : null; } });
   }
   return { ser: out, t0: r.rs, t1, te };
 }
@@ -121,12 +123,13 @@ function drawRace(w) {
   if (!race.offsetParent) return;
   const { ctx, w: W, h: H } = fit(race); ctx.clearRect(0, 0, W, H);
   if (!tfOk(S.tf)) { ctx.fillStyle = C.dim; ctx.font = `12px ${MONO}`; ctx.textAlign = "center"; ctx.fillText("24-hour rounds run on live data. Open the data panel to go live.", W / 2, H / 2); return; }
-  const r = roundAt(S.tf, w), { ser, t0, t1, te } = raceSeries(r, w);
+  const sq = RACE.mode === "squads", r = roundAt(S.tf, w), { ser, t0, t1, te } = sq ? sqSeries(r, w) : raceSeries(r, w);
+  const fv = sq ? v => sgnUsd(v) : null;
   const narrow = W < 560, fs = narrow ? 10 : 11, labW = narrow ? 118 : 158;
   const L = narrow ? 42 : 52, R = labW + 16, Tp = 12, B = 24, pw = Math.max(20, W - L - R), ph = H - Tp - B;
   const X = t => L + (t - t0) / (t1 - t0) * pw;
   let mn = 0, mx = 0; ser.forEach(s => s.pts.forEach(p => { if (p.v < mn) mn = p.v; if (p.v > mx) mx = p.v; }));
-  const pad = Math.max(0.0025, (mx - mn) * 0.08); mn -= pad; mx += pad;
+  const pad = sq ? Math.max(25, (mx - mn) * 0.08) : Math.max(0.0025, (mx - mn) * 0.08); mn -= pad; mx += pad;
   const Y = v => Tp + (mx - v) / (mx - mn) * ph;
   ctx.font = `${fs}px ${MONO}`; ctx.lineWidth = 1;
   const stp = niceStep(mx - mn, narrow ? 4 : 6); ctx.textAlign = "right"; ctx.textBaseline = "middle";
@@ -134,7 +137,7 @@ function drawRace(w) {
     const yy = Math.round(Y(v)) + .5, zero = Math.abs(v) < stp / 1e3;
     ctx.strokeStyle = zero ? C.faint : C.rule; ctx.setLineDash(zero ? [3, 3] : []);
     ctx.beginPath(); ctx.moveTo(L, yy); ctx.lineTo(L + pw, yy); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle = C.dim; ctx.fillText((v > 0 ? "+" : v < 0 ? "−" : "") + +(Math.abs(v) * 100).toFixed(2) + "%", L - 8, yy);
+    ctx.fillStyle = C.dim; ctx.fillText(sq ? (zero ? "$0" : fv(v)) : (v > 0 ? "+" : v < 0 ? "−" : "") + +(Math.abs(v) * 100).toFixed(2) + "%", L - 8, yy);
   }
   // checkpoints + bet close markers, with labels that never overlap
   const labs = [{ x: L, t: "open", a: "left", c: C.dim, p: 0 }, { x: L + pw, t: raceSpan === "full" ? "close" : "now", a: "right", c: C.dim, p: 0 }];
@@ -155,7 +158,7 @@ function drawRace(w) {
   const tcc = tc != null ? Math.min(tc, te) : null;
   const items = ser.map(s => {
     let v = s.end, x = X(te);
-    if (tcc != null) { x = X(tcc); const p = pAt(s.tok, tcc); v = tcc >= s.pts[0].t && p != null ? p / s.o - 1 : null; }
+    if (tcc != null) { x = X(tcc); v = tcc >= s.pts[0].t ? s.at(tcc) : null; }
     return { s, v, x, yl: v == null ? null : Y(v), y: v == null ? Y(s.end) : Y(v) };
   });
   items.forEach(it => { if (it.yl == null) return; ctx.globalAlpha = hov && it.s.tok.m !== hov ? .25 : 1; ctx.fillStyle = it.s.col; ctx.beginPath(); ctx.arc(it.x, it.yl, it.s.tok.m === hov ? 3.8 : 2.6, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; });
@@ -174,9 +177,9 @@ function drawRace(w) {
     ctx.fillStyle = C.fg; ctx.textAlign = "left"; ctx.font = `${it.s.tok.m === hov ? 600 : 500} ${fs}px ${MONO}`;
     const name = it.s.tok.s.length > 9 ? it.s.tok.s.slice(0, 8) + "…" : it.s.tok.s; ctx.fillText(name, lx + rr * 2 + 7, it.ly);
     ctx.textAlign = "right"; ctx.font = `${fs}px ${MONO}`; ctx.fillStyle = it.v == null ? C.faint : it.v >= 0 ? C.up : C.down;
-    ctx.fillText(it.v == null ? "—" : fmtPct(it.v, narrow ? 1 : 2), W - 1, it.ly); ctx.globalAlpha = 1;
+    ctx.fillText(it.v == null ? "—" : sq ? fv(it.v) : fmtPct(it.v, narrow ? 1 : 2), W - 1, it.ly); ctx.globalAlpha = 1;
   });
-  if (!ser.length) { ctx.fillStyle = C.dim; ctx.textAlign = "center"; ctx.font = `12px ${MONO}`; ctx.fillText("Waiting for prices…", L + pw / 2, Tp + ph / 2); }
+  if (!ser.length) { ctx.fillStyle = C.dim; ctx.textAlign = "center"; ctx.font = `12px ${MONO}`; ctx.fillText(!sq ? "Waiting for prices…" : !S.srv ? "The squad race runs on the live arena." : PFS.on ? "Waiting for squad profits…" : PFS.loadedAt ? "pump.fun's squads aren't loaded on the round server yet." : "Loading squads…", L + pw / 2, Tp + ph / 2); }
   raceGeo = { L, pw, Tp, ph, X, Y, t0, t1, te, ser, items };
 }
 function raceHit(e) {
@@ -184,7 +187,7 @@ function raceHit(e) {
   const rc = race.getBoundingClientRect(), x = e.clientX - rc.left, y = e.clientY - rc.top, g = raceGeo;
   if (x >= g.L && x <= g.L + g.pw) {
     raceCross = { x, y }; const tc = Math.min(g.te, g.t0 + (x - g.L) / g.pw * (g.t1 - g.t0)); let best = null, bd = 18;
-    g.ser.forEach(s => { if (tc < s.pts[0].t) return; const p = pAt(s.tok, tc); if (p == null) return; const d = Math.abs(g.Y(p / s.o - 1) - y); if (d < bd) { bd = d; best = s.tok.m; } });
+    g.ser.forEach(s => { if (tc < s.pts[0].t) return; const v = s.at(tc); if (v == null) return; const d = Math.abs(g.Y(v) - y); if (d < bd) { bd = d; best = s.tok.m; } });
     setHover(best);
   } else if (x > g.L + g.pw) { raceCross = null; const it = g.items.find(it => Math.abs(it.ly - y) < 9); setHover(it ? it.s.tok.m : null); }
   else { raceCross = null; setHover(null); }
@@ -193,9 +196,9 @@ function raceHit(e) {
 race.addEventListener("pointermove", raceHit);
 race.addEventListener("pointerdown", raceHit);
 race.addEventListener("pointerleave", () => { raceCross = null; setHover(null); dirty.race = true; });
-race.addEventListener("click", () => { if (hover) location.hash = "#coin-" + hover; });
+race.addEventListener("click", () => { if (hover) location.hash = (RACE.mode === "squads" ? "#sq-" : "#coin-") + hover; });
 qsa("#raceSeg button").forEach(b => b.addEventListener("click", () => { raceSpan = b.dataset.r; qsa("#raceSeg button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); dirty.race = true; }));
-function setHover(m) { if (hover === m) return; hover = m; rowEls.forEach((el, k) => el.classList.toggle("hot", k === m)); dirty.race = true; }
+function setHover(m) { if (hover === m) return; hover = m; rowEls.forEach((el, k) => el.classList.toggle("hot", k === m)); qsa("#sqTbl .row[data-sq]").forEach(el => el.classList.toggle("hot", el.dataset.sq === m)); dirty.race = true; }
 
 /* ---------- board table ---------- */
 const COLS = [["rk", "22px", "#", 22], ["tok", "minmax(118px,1fr)", "Coin", 140], ["price", "86px", "Price", 86], ["round", "70px", "Round", 70], ["m5", "62px", "5m", 62], ["mc", "76px", "Mcap", 76], ["liq", "70px", "Liq", 70], ["vol", "70px", "Vol 1h", 70], ["txn", "64px", "Trades 1h", 64], ["age", "48px", "Age", 48], ["chart", "minmax(56px,96px)", "15 min", 60], ["squad", "48px", "Squad", 48], ["back", "56px", "", 56]];
