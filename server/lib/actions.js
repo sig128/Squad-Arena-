@@ -47,7 +47,7 @@ export async function placeBet(user, body) {
   const tf = String(body.tf || ""), mk = String(body.mk || ""), m = String(body.m || ""), cur = String(body.cur || "tSOL");
   if (!TF[tf] || !MKS.includes(mk)) throw err("Unknown market.");
   if (!TFK.includes(tf)) throw err("Rounds now run for 24 hours. Reload the page to bet.", 409);
-  if (!CURRENCIES().includes(cur) || (cur === "SOL" && !MONEY.enabled)) throw err("Betting with SOL is off on this server.");
+  if (!CURRENCIES().includes(cur) || (cur === "SOL" && !MONEY.enabled)) throw err(cur === "tSOL" ? "Bets are in real SOL now. Reload the page." : "Betting with SOL is off on this server.");
   if (!rateOk("bet:" + user.id, 30, 6)) throw err("Slow down a little.", 429);
   await ensureUser(user);
   const w = Date.now(), r = roundAt(tf, w);

@@ -81,7 +81,8 @@ if (!TFK.length) TFK.push("24h");
 export const MKS = ["top", "lcs", "eff", "bust", "sq"];     // sq: the pump.fun squad race
 export const MAX_AGE = 72 * 3600e3;
 export const GATE = { liq: 25e3, turn: 0.25, trades: 2000, tx24: 300, mcLiq: 60 };
-export const CURRENCIES = () => CFG.realMoney ? ["tSOL", "SOL"] : ["tSOL"];
+// real SOL only when the SOL wallet is on (PRACTICE=1 brings the practice credits back alongside it)
+export const CURRENCIES = () => CFG.realMoney ? (env("PRACTICE") === "1" ? ["tSOL", "SOL"] : ["SOL"]) : ["tSOL"];
 
 export function checkConfig(log) {
   const miss = [];
