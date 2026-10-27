@@ -221,8 +221,9 @@ $("autoBtn").addEventListener("click", () => { const on = $("autoBtn").getAttrib
 /* ---------- footer ---------- */
 function renderFoot() {
   $("foot").innerHTML = `${S.srv ? "Squad Arena. Coins, prices and launch data are real Solana mainnet data from pump.fun, DEX Screener, GeckoTerminal and the Solana RPC. Practice credits (tSOL) for everyone; SOL bets only where the SOL wallet is on. Nothing here is financial advice. Real-money betting is regulated, and some countries block or forbid it." : "Squad Arena prototype. Coins, prices and launch data are real Solana mainnet data from pump.fun, DEX Screener and GeckoTerminal. Bets use practice credits; no SOL moves and nothing here is financial advice. Real-money prediction markets are regulated, and some countries block unlicensed ones."}
-  <br><a class="link" href="/docs">Docs</a> · <button type="button" class="link" id="fData">Data</button> · <button type="button" class="link" id="fIntro">Replay intro</button>`;
+  <br><a class="link" href="/docs">Docs</a> · <button type="button" class="link" id="fData">Data</button> · <button type="button" class="link" id="fIntro">Replay intro</button> · <button type="button" class="link" id="fTour">Tour</button>`;
   $("fData").onclick = openData; $("fIntro").onclick = () => playIntro(true);
+  $("fTour").onclick = () => { if (S.view !== "arena") location.hash = "#arena"; scrollTo({ top: 0, behavior: reduced ? "auto" : "smooth" }); setTimeout(startTour, 450); };
 }
 
 /* ---------- collapsible rail ---------- */

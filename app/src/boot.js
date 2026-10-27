@@ -20,11 +20,11 @@ function playIntro(manual) {
   const seed = rng(hashStr(coins.map(c => c.tok ? c.tok.m : "-").join())), from = coins.map(() => ({ dx: seed() - 0.5, dy: seed() }));
   const T0 = performance.now(), CUT0 = 1800, CUTDT = 330, DUEL = CUT0 + 5 * CUTDT, MORPH = DUEL + 820, END = DUEL + 3800;
   let textStage = 0, finished = false;
-  const hud = [["SQUAD ARENA // ROUND ENGINE", "tl"], [new Date().toISOString().slice(0, 16).replace("T", " ") + " UTC", "tr"], ["PUMP.FUN · SOLANA MAINNET", "bl"], ["15 COINS · 3 MARKETS · 4 ROUND LENGTHS", "br"]];
+  const hud = [["SQUAD ARENA // ROUND ENGINE", "tl"], [new Date().toISOString().slice(0, 16).replace("T", " ") + " UTC", "tr"], ["PUMP.FUN · SOLANA MAINNET", "bl"], ["100 SQUADS · 15 COINS · 24 H ROUNDS", "br"]];
   const finish = () => {
     if (finished) return; finished = true; cancelAnimationFrame(introRaf);
     el.classList.add("out"); store.set("intro", 1);
-    setTimeout(() => { el.hidden = true; el.classList.remove("out"); document.documentElement.style.overflow = ""; scramble($("brandWord"), "SQUAD ARENA", 700); const v = $("v-" + S.view); if (v) enterAnim(v); }, reduced ? 0 : 720);
+    setTimeout(() => { el.hidden = true; el.classList.remove("out"); document.documentElement.style.overflow = ""; scramble($("brandWord"), "SQUAD ARENA", 700); const v = $("v-" + S.view); if (v) enterAnim(v); maybeTour(900); }, reduced ? 0 : 720);
     window.removeEventListener("keydown", onKey); el.removeEventListener("click", finish);
   };
   const onKey = e => { if (e.key === "Escape" || e.key === "Enter" || e.key === " ") finish(); };
@@ -165,7 +165,7 @@ function boot() {
   if (!S.srv) wire("Desk", `Replay of a real hour on pump.fun: ${n} coins launched in the last 72 hours, 1-minute candles, ${utc(D0, false)}–${utc(REC_END, false)} UTC on 23 Oct. The hour loops on the UTC clock, so everyone sees the same round.${rug.length ? " Watch for the rug filter near the end of the hour." : ""}`);
   setInterval(tick, S.srv ? 400 : 1000);         // live: board numbers follow the price stream closely
   requestAnimationFrame(frame);
-  if (store.get("intro", 0) !== 1 && !reduced) playIntro(false);
+  if (store.get("intro", 0) !== 1 && !reduced) playIntro(false); else maybeTour(2500);
   if (S.srv) { srvStart(); return; }
   initSocial().then(() => { renderChatState(); dirty.chat = true; });
   useCap("sample").then(s => { SAMPLE = s; caps.sample = !!s; $("askBtn").hidden = $("autoBtn").hidden = !s; });
