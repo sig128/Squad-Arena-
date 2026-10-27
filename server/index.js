@@ -66,12 +66,23 @@ function keyInfo() {
   return { kind, length: k.length, project: host };
 }
 // the database answers? (a one-row read every minute)
-const DBH = { ok: null, err: "", at: 0 };
-async function dbPing() { try { await DB.ping(); DBH.ok = true; DBH.err = ""; } catch (e) { DBH.ok = false; DBH.err = String(e.message || e).slice(0, 200); log("error", "database: " + DBH.err); } DBH.at = now(); }
+const DBH = { ok: null, err: "", at: 0, missing: null, schemaAt: 0 };
+const NEED = ["profiles", "rounds", "bets", "squad_members", "proofs", "proof_marks", "chat", "ledger", "deposits", "withdrawals", "candles",
+  "rpc/place_bet", "rpc/settle_bet", "rpc/use_streak_pass", "rpc/topup_practice", "rpc/credit_deposit", "rpc/request_withdrawal", "rpc/finish_withdrawal"];
+async function dbPing() {
+  try { await DB.ping(); DBH.ok = true; DBH.err = ""; } catch (e) { DBH.ok = false; DBH.err = String(e.message || e).slice(0, 200); log("error", "database: " + DBH.err); }
+  DBH.at = now();
+  // every 10 minutes: anything from supabase/schema.sql the database lacks
+  if (DBH.ok && now() - DBH.schemaAt > 600e3) {
+    DBH.schemaAt = now();
+    try { const p = await DB.schema(); if (p) { const have = new Set(p.map(x => x.replace(/^\//, ""))); DBH.missing = NEED.filter(x => !have.has(x)); if (DBH.missing.length) log("warn", "database is missing: " + DBH.missing.join(", ") + " (run supabase/schema.sql)"); } }
+    catch (e) { DBH.missing = ["could not read the schema: " + String(e.message).slice(0, 120)]; }
+  }
+}
 setInterval(dbPing, 60000); setTimeout(dbPing, 3000);
 function health() {
   return { ok: true, time: now(), up: Math.round((now() - STARTED) / 1000), feed: CFG.feed, coins: TL.size, board: G.board.top.length, rpc: RPC.live, rpcCoins: RPC.watched.size,
-    db: DB.kind, dbOk: DBH.ok, dbErr: DBH.err || undefined, dbAt: DBH.at, dbKey: keyInfo(), bets: { open: [...G.bets.values()].filter(b => b.st === "open").length, loaded: G.bets.size }, money: moneyInfo(), treasurySol: MONEY.treasuryLamports == null ? null : MONEY.treasuryLamports / 1e9, calls: FEED.calls, errors: FEED.errs, lastError: FEED.lastErr || null, lastPrice: FEED.lastPrice,
+    db: DB.kind, dbOk: DBH.ok, dbErr: DBH.err || undefined, dbAt: DBH.at, dbKey: keyInfo(), dbMissing: DBH.missing, bets: { open: [...G.bets.values()].filter(b => b.st === "open").length, loaded: G.bets.size }, money: moneyInfo(), treasurySol: MONEY.treasuryLamports == null ? null : MONEY.treasuryLamports / 1e9, calls: FEED.calls, errors: FEED.errs, lastError: FEED.lastErr || null, lastPrice: FEED.lastPrice,
     discovery: { pools: FEED.sample.pools, fresh: FEED.sample.fresh, ago: FEED.sample.at ? Math.round((now() - FEED.sample.at) / 1000) : null, err: FEED.sample.err, pending: FEED.pending.length, pumpfun: !pumpOff() },
     kols: { list: KOL.list.size, ...KOL.stats, coins: KOL.byMint.size, queue: KOL.queue.length, history: kolHistBudget() }, trending: TREND.list.length,
     // coins the scam filter keeps off the board, biggest first
