@@ -16,6 +16,7 @@ class SupaDB {
     catch (e) { let msg = e.message; try { const j = JSON.parse(e.body || ""); msg = j.message || msg; e.code = j.code; } catch (_) {} e.message = msg; throw e; }
   }
   rpc(fn, args) { return this.req("rpc/" + fn, { method: "POST", body: args }); }
+  ping() { return this.req("rounds?select=key&limit=1"); }
   async one(path) { const r = await this.req(path); return Array.isArray(r) ? r[0] || null : r; }
 
   getProfile(id) { return this.one(`profiles?id=eq.${enc(id)}&select=*`); }
@@ -63,6 +64,7 @@ class SupaDB {
 
 /* ---------- in-memory stand-in with the same behaviour as the SQL functions ---------- */
 class MemDB {
+  ping() { return Promise.resolve([]); }
   constructor() { this.kind = "memory"; this.p = new Map(); this.bets = new Map(); this.sq = new Map(); this.rounds = new Map(); this.proofs = new Map(); this.marks = new Set(); this.chat = []; this.dep = new Map(); this.wd = new Map(); this.ledger = []; this.cid = 0; }
   bal(uid, cur, amt, kind, ref) {
     const p = this.p.get(uid); const col = cur === "tSOL" ? "bal_tsol" : "bal_sol";
