@@ -3455,7 +3455,7 @@ function setRail(open, animate) {
 function bumpUnread(n) { if (!railOff || n <= 0) return; unread += n; $("railUnread").textContent = unread > 99 ? "99+" : String(unread); }
 $("railClose").addEventListener("click", () => setRail(false, true));
 $("railOpen").addEventListener("click", () => setRail(true, true));
-setRail(store.get("rail", 1) !== 0, false);
+setRail(true, false);                    // the bet slip is always open when the page loads (hiding it lasts until the next load)
 
 /* ================= live data: Claude browser bridge, direct fetch, RPC stream ================= */
 S.direct = typeof window.claude === "undefined";      // a self-hosted copy fetches the public APIs itself
