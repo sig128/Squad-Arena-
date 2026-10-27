@@ -58,13 +58,20 @@ function snapshot() {
     rounds, results, docs: allDocs(), people: peopleOut()
   };
 }
+// which kind of Supabase key the server holds, and for which project (never the key itself)
+function keyInfo() {
+  const k = CFG.supabaseKey || "", u = CFG.supabaseUrl || "";
+  let host = ""; try { host = new URL(u).host; } catch (_) { host = u ? "not a URL" : ""; }
+  const kind = !k ? "missing" : /^sb_secret_/.test(k) ? "secret key" : /^sb_publishable_/.test(k) ? "publishable key (the wrong one: use the secret key)" : /^eyJ/.test(k) ? "legacy JWT key" : "not a Supabase key";
+  return { kind, length: k.length, project: host };
+}
 // the database answers? (a one-row read every minute)
 const DBH = { ok: null, err: "", at: 0 };
 async function dbPing() { try { await DB.ping(); DBH.ok = true; DBH.err = ""; } catch (e) { DBH.ok = false; DBH.err = String(e.message || e).slice(0, 200); log("error", "database: " + DBH.err); } DBH.at = now(); }
 setInterval(dbPing, 60000); setTimeout(dbPing, 3000);
 function health() {
   return { ok: true, time: now(), up: Math.round((now() - STARTED) / 1000), feed: CFG.feed, coins: TL.size, board: G.board.top.length, rpc: RPC.live, rpcCoins: RPC.watched.size,
-    db: DB.kind, dbOk: DBH.ok, dbErr: DBH.err || undefined, dbAt: DBH.at, bets: { open: [...G.bets.values()].filter(b => b.st === "open").length, loaded: G.bets.size }, money: moneyInfo(), treasurySol: MONEY.treasuryLamports == null ? null : MONEY.treasuryLamports / 1e9, calls: FEED.calls, errors: FEED.errs, lastError: FEED.lastErr || null, lastPrice: FEED.lastPrice,
+    db: DB.kind, dbOk: DBH.ok, dbErr: DBH.err || undefined, dbAt: DBH.at, dbKey: keyInfo(), bets: { open: [...G.bets.values()].filter(b => b.st === "open").length, loaded: G.bets.size }, money: moneyInfo(), treasurySol: MONEY.treasuryLamports == null ? null : MONEY.treasuryLamports / 1e9, calls: FEED.calls, errors: FEED.errs, lastError: FEED.lastErr || null, lastPrice: FEED.lastPrice,
     discovery: { pools: FEED.sample.pools, fresh: FEED.sample.fresh, ago: FEED.sample.at ? Math.round((now() - FEED.sample.at) / 1000) : null, err: FEED.sample.err, pending: FEED.pending.length, pumpfun: !pumpOff() },
     kols: { list: KOL.list.size, ...KOL.stats, coins: KOL.byMint.size, queue: KOL.queue.length, history: kolHistBudget() }, trending: TREND.list.length,
     // coins the scam filter keeps off the board, biggest first

@@ -1,5 +1,8 @@
 // Every setting comes from environment variables (Railway → Variables). Nothing secret lives in the code.
 const env = (k, d = "") => (process.env[k] ?? d).toString().trim();
+// a pasted value can carry quotes or the variable's own name ("SUPABASE_SECRET_KEY=sb_secret_…"): both are dropped
+const unq = v => v.replace(/^["'`\s]+|["'`\s]+$/g, "");
+const clean = k => unq(unq(env(k)).replace(/^[A-Z][A-Z0-9_]*\s*=\s*/, ""));
 const num = (k, d) => { const v = Number(env(k, "")); return Number.isFinite(v) && env(k, "") !== "" ? v : d; };
 
 export const CFG = {
@@ -12,8 +15,8 @@ export const CFG = {
   devAuth: env("AUTH_DEV") === "1",                     // local testing only: accepts "dev:<id>" tokens. Never set this on Railway.
 
   // Supabase (storage)
-  supabaseUrl: env("SUPABASE_URL").replace(/\/$/, ""),
-  supabaseKey: env("SUPABASE_SECRET_KEY"),
+  supabaseUrl: clean("SUPABASE_URL").replace(/\/+$/, "").replace(/\/rest\/v1$/, ""),
+  supabaseKey: clean("SUPABASE_SECRET_KEY"),
 
   // Market data
   quicknode: env("QUICKNODE_RPC_URL"),                  // mainnet RPC: streams pool balances for prices
