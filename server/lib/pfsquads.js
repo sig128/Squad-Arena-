@@ -67,6 +67,7 @@ export async function pfIngest(req, res, send) {
   useCopy(c, false);
   log("info", `pump.fun squads: copy of ${c.squads.length} squads, ${[...PF.squads.values()].reduce((a, s) => a + s.members.length, 0)} members (${c.comp.title})`);
   await pfSave(true);
+  pfCoinMeta().catch(() => {});
   return send(200, { ok: true, squads: c.squads.length });
 }
 
@@ -158,6 +159,48 @@ export const pfFieldIds = key => (PF.fields.get(key) || {}).ids || null;
 export const pfRanked = () => [...PF.squads.values()].map(s => ({ s, v: PF.live.get(s.id) || { pnl: s.pnl0, r: s.r0, u: s.u0 } })).sort((a, b) => b.v.pnl - a.v.pnl);
 export const pfTop = n => pfRanked().slice(0, n).map(x => x.s.id);
 
+/* ---------- the squads' top coins: real logos and tickers ---------- */
+// pump.fun's copied coin images are often on hosts that refuse other sites, slow IPFS gateways, or missing. Each coin is
+// looked up on DEX Screener by its address (Solana and the EVM chains it lists); its logo and ticker win when found.
+const DS_CHAIN = { 1399811149: "solana", 8453: "base", 56: "bsc", 1: "ethereum", 999: "hyperevm" };
+const coinKey = (ch, m) => ch + ":" + (ch === "solana" ? m : String(m).toLowerCase());
+export async function pfCoinMeta() {
+  if (!PF.squads.size) return 0;
+  const want = new Map();                                   // chain -> addresses not looked up in the last 12 hours
+  for (const s of PF.squads.values()) for (const p of s.top) {
+    const ch = DS_CHAIN[p.chain]; if (!ch || !p.m || (p.dsAt && now() - p.dsAt < 12 * 3600e3)) continue;
+    if (!want.has(ch)) want.set(ch, new Set()); want.get(ch).add(p.m);
+  }
+  const found = new Map(), asked = new Set(); let calls = 0;
+  for (const [ch, set] of want) {
+    const list = [...set];
+    for (let i = 0; i < list.length; i += 30) {
+      const part = list.slice(i, i + 30);
+      try {
+        const pairs = await getJSON(`https://api.dexscreener.com/tokens/v1/${ch}/${part.join(",")}`, { timeout: 15000 }); calls++;
+        for (const x of Array.isArray(pairs) ? pairs : []) {
+          const b = x && x.baseToken; if (!b || !b.address) continue;
+          // DEX Screener's logos come 800 px wide; 64 px is plenty for a 20 px avatar
+          const k = coinKey(ch, b.address), have = found.get(k), img = httpsUrl(String((x.info && x.info.imageUrl) || "").replace(/([?&])width=\d+/, "$1width=64").replace(/([?&])height=\d+/, "$1height=64"));
+          if (!have || (!have.img && img)) found.set(k, { s: str(b.symbol, 20), n: str(b.name, 40), img });
+        }
+        part.forEach(m => asked.add(coinKey(ch, m)));
+      } catch (e) { PF.stats.err = "coin logos: " + String(e.message).slice(0, 120); }
+      await new Promise(r => setTimeout(r, 400));
+    }
+  }
+  let n = 0;
+  for (const s of PF.squads.values()) for (const p of s.top) {
+    const ch = DS_CHAIN[p.chain]; if (!ch) continue; const k = coinKey(ch, p.m); if (!asked.has(k)) continue;
+    const f = found.get(k); p.dsAt = now(); p.ds = f ? { s: f.s, n: f.n, img: f.img } : null; if (f) n++;
+  }
+  PF.stats.coins = { calls, found: found.size, at: now() };
+  if (calls) await pfSave(true);
+  return n;
+}
+// what a page shows for a top coin: DEX Screener's logo and ticker when known, pump.fun's otherwise
+const coinOut = p => ({ m: p.m, c: p.chain, s: (p.ds && p.ds.s) || p.s, n: (p.ds && p.ds.n) || p.n, img: (p.ds && p.ds.img) || p.img, img0: p.ds && p.ds.img && p.img !== p.ds.img ? p.img : null });
+
 /* ---------- what pages see ---------- */
 // a squad's history for a page: every point from the last few hours (rounds are scored on those), older history
 // thinned to about 300 points (the last one in each slice of time)
@@ -175,7 +218,7 @@ export function pfList(since) {
   const ranked = pfRanked(), cut = Math.max(0, +since || 0), fieldIds = new Set(ranked.slice(0, 25).map(x => x.s.id));
   return { on: true, comp: PF.comp, at: PF.at, tracked: PF.stats.lastAt,
     squads: ranked.map((x, i) => ({ id: x.s.id, rank: i + 1, rank0: x.s.rank0, name: x.s.name, img: x.s.img, n: x.s.n, pnl: +x.v.pnl.toFixed(2), r: +x.v.r.toFixed(2), u: +x.v.u.toFixed(2),
-      top: x.s.top.slice(0, 3).map(p => ({ s: p.s, img: p.img })) })),
+      top: x.s.top.slice(0, 3).map(coinOut) })),
     series: cut ? Object.fromEntries([...fieldIds].map(id => [id, thinFor(PF.series.get(id) || [], cut, now())])) : {} };
 }
 export function pfSquad(id, since) {
@@ -184,7 +227,7 @@ export function pfSquad(id, since) {
   const members = s.members.map(m => { const b = PF.base.get(m.w), c = PF.cur.get(m.w), d = b && c ? [c[0] - b[0], c[1] - b[1], c[2] - b[2]] : [0, 0, 0];
     return { w: m.w, u: m.u, img: m.img, x: m.x, pnl: +(m.pnl0 + d[0]).toFixed(2), r: +(m.r0 + d[1]).toFixed(2), un: +(m.u0 + d[2]).toFixed(2) }; }).sort((a, b) => b.pnl - a.pnl);
   return { id, rank, rank0: s.rank0, name: s.name, img: s.img, x: s.x, n: s.n, pnl: +v.pnl.toFixed(2), r: +v.r.toFixed(2), u: +v.u.toFixed(2), sol: s.sol, positions: s.positions,
-    top: s.top, members, comp: PF.comp, at: PF.at, tracked: PF.stats.lastAt, series: thinFor(PF.series.get(id) || [], cut, now()) };
+    top: s.top.map(coinOut), members, comp: PF.comp, at: PF.at, tracked: PF.stats.lastAt, series: thinFor(PF.series.get(id) || [], cut, now()) };
 }
 export const pfHealth = () => ({ on: PF.squads.size > 0, squads: PF.squads.size, members: [...PF.squads.values()].reduce((a, s) => a + s.members.length, 0), copiedAt: PF.at, ...PF.stats,
   pausedFor: Math.max(0, Math.round((PF.stats.pauseUntil - now()) / 1000)) });

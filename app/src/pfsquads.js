@@ -7,6 +7,9 @@ const RACE = { mode: "squads" };          // the page opens on the squad race; C
 const sqTok = s => ({ m: s.id, s: s.name, n: s.n + " members", logo: s.img });
 const sgnUsd = v => v == null || !isFinite(v) ? "—" : (v >= 0 ? "+" : "−") + fmtUsd(Math.abs(v));
 const sqAv = (s, size) => avHTML(sqTok(s), size, 2);
+// a squad's top coin: the coin's logo (falls back like any coin logo: other gateways, the site's image proxy, its initial)
+const SOL_CHAIN = 1399811149;
+const coinAv = (p, size) => `<span class="sq-coin" title="${esc(p.s || "?")}${p.n && p.n !== p.s ? " · " + esc(p.n) : ""}">${avHTML({ m: p.m || p.s || "", s: p.s || "?", logo: p.img }, size, 1)}</span>`;
 
 /* ---------- data ---------- */
 function pfVal(id, t) {
@@ -98,7 +101,7 @@ function renderSqTable(w) {
     <span class="num ${s.pnl >= 0 ? "up" : "down"}">${sgnUsd(s.pnl)}</span>
     <span class="num dim sq-ru">${sgnUsd(s.r)}</span>
     <span class="num dim sq-ru">${sgnUsd(s.u)}</span>
-    <span class="sq-top">${(s.top || []).map(p => p.img ? `<img src="${esc(p.img)}" alt="${esc(p.s)}" width="16" height="16" loading="lazy" referrerpolicy="no-referrer">` : "").join("")}</span>
+    <span class="sq-top">${(s.top || []).map(p => coinAv(p, 18)).join("")}</span>
     <span class="back">${inF.has(s.id) ? `<span class="btn btn-quiet btn-xs" data-act="bet"${bs.open ? "" : ` aria-disabled="true"`}>Back</span>` : ""}</span></div>`;
   setHTML(el, `<div class="row thead sqr"><span>#</span><span>Squad</span><span class="num">Profit</span><span class="num sq-ru">Realized</span><span class="num sq-ru">Unrealized</span><span>Top coins</span><span></span></div>`
     + PFS.list.map(row).join("")
@@ -198,7 +201,7 @@ function renderSquadPage(full) {
           <div class="ox"><table class="tbl2"><thead><tr><th>#</th><th>Member</th><th class="n">Profit</th><th class="n">Realized</th><th class="n">Unrealized</th><th>Wallet</th></tr></thead><tbody id="sqMembers"></tbody></table></div></div>
       </div><div class="side">
         <div class="box"><h4>Back ${esc(d.name)}</h4><div id="sqBack"></div></div>
-        <div class="box"><h4>Top coins</h4><div class="pos">${(d.top || []).map(p => `<div class="p"><b style="display:flex;align-items:center;gap:8px">${p.img ? `<img src="${esc(p.img)}" alt="" width="20" height="20" style="border-radius:50%" loading="lazy" referrerpolicy="no-referrer">` : ""}${esc(p.s || "?")}</b><span class="num">${esc(p.n || "")}</span></div>`).join("") || `<p class="fine">No positions listed.</p>`}</div></div>
+        <div class="box"><h4>Top coins</h4><div class="pos">${(d.top || []).map(p => `<div class="p"><b style="display:flex;align-items:center;gap:8px">${coinAv(p, 20)}${p.c === SOL_CHAIN && p.m ? `<a class="link" href="#coin-${esc(p.m)}">${esc(p.s || "?")}</a>` : esc(p.s || "?")}</b><span class="num dim">${esc(p.n || "")}</span></div>`).join("") || `<p class="fine">No positions listed.</p>`}</div></div>
         <div class="box"><h4>Squad</h4><dl class="kv"><dt>Rank now</dt><dd id="sqRank2">#${d.rank}</dd><dt>Rank at the copy</dt><dd>#${d.rank0}</dd><dt>Positions</dt><dd>${fmtNum(d.positions)}</dd><dt>Bought</dt><dd>${d.sol ? fmtNum(d.sol) + " SOL" : "—"}</dd><dt>Copied from pump.fun</dt><dd>${d.at ? local(d.at, false) : "—"}</dd><dt>Profit updated</dt><dd id="sqUpd">${d.tracked ? ago(w - d.tracked) : "—"}</dd></dl>
           <p class="fine">Names, pictures and members as on pump.fun. Profit is pump.fun's at the copy plus each member's on-chain profit since, so it can differ slightly from pump.fun's official score.</p></div>
       </div></div>`;

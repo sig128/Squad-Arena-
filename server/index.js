@@ -11,7 +11,7 @@ import { emit, online } from "./lib/hub.js";
 import { makeServer } from "./lib/api.js";
 import { initMoney, moneyInfo, scanDeposits, recoverWithdrawals, MONEY } from "./lib/money.js";
 import { startReplay } from "./lib/replay.js";
-import { PF, pfStep, pfSave, pfLoad, pfHealth } from "./lib/pfsquads.js";
+import { PF, pfStep, pfSave, pfLoad, pfHealth, pfCoinMeta } from "./lib/pfsquads.js";
 import { KOL, loadKols, kolStep, kolCount, kolWho, kolPrune, kolHistory, kolHistDue, kolHistBudget } from "./lib/kol.js";
 import { BLOCKED } from "./lib/game.js";
 import { MAX_AGE, GATE } from "./lib/config.js";
@@ -322,7 +322,9 @@ async function main() {
   try { await loadState(); } catch (e) { log("error", "could not load saved state: " + e.message + " — did you run supabase/schema.sql?"); }
   // pump.fun squads: the stored copy, then every member wallet's profit, a batch of up to 100 every 15 s
   // saved every minute while scores move (and on shutdown), so a restart keeps each round's squad race and its scores
-  pfLoad().then(() => { setInterval(pfStep, +process.env.PF_STEP_MS || 15000); setInterval(() => { if (PF.dirty) pfSave(false); }, 60e3); });
+  pfLoad().then(() => { setInterval(pfStep, +process.env.PF_STEP_MS || 15000); setInterval(() => { if (PF.dirty) pfSave(false); }, 60e3);
+    // the squads' top coins: logos and tickers from DEX Screener, now and every 15 minutes (each coin at most twice a day)
+    pfCoinMeta().catch(() => {}); setInterval(() => pfCoinMeta().catch(() => {}), 15 * 60e3); });
   if (CFG.feed === "replay") startReplay(process.env.REPLAY_FILE || new URL("./replay.json", import.meta.url).pathname);
   else {
     setInterval(() => feedStep(), 1000);
