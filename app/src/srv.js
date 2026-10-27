@@ -71,7 +71,7 @@ async function srvSnapshot() {
   SRV.results.clear(); for (const [k, res] of Object.entries(snap.results || {})) SRV.results.set(k, res);
   S.members.clear(); S.proofs.clear(); S.posts.clear(); srvDocs(snap.docs);
   for (const [id, p] of Object.entries(snap.people || {})) PROF.set(id, { id, name: p.name, avatarUrl: p.avatarUrl });
-  if (!SRV.cfg.currencies.includes(CUR)) setCurrency("tSOL");
+  if (!SRV.cfg.currencies.includes(CUR)) setCurrency(SRV.cfg.currencies.includes("SOL") ? "SOL" : "tSOL");
   SRV.ready = true; SRV.lastMsg = nowW(); S.results.clear(); dirty.all = true;
 }
 function srvStream() {
@@ -118,7 +118,7 @@ async function refreshMe() {
   } catch (e) { if (e.status === 401 && PV.api) { wire("Account", "Your login expired. Log in again from the wallet button."); } else console.warn("me", e.message); }
 }
 function setCurrency(c) {
-  if (S.srv && SRV.cfg && !SRV.cfg.currencies.includes(c)) c = "tSOL";
+  if (S.srv && SRV.cfg && !SRV.cfg.currencies.includes(c)) c = SRV.cfg.currencies.includes("SOL") ? "SOL" : "tSOL";
   CUR = c; store.set("cur", c);
   srvMine(); rebuildBetIdx(); renderWallet(); dirty.all = true;
 }
@@ -215,7 +215,7 @@ async function srvWithdraw(sol, to) { const out = await api("/withdraw", { sol, 
 
 /* ---------- start ---------- */
 async function srvStart() {
-  CUR = store.get("cur", "tSOL") === "SOL" ? "SOL" : "tSOL";
+  CUR = "SOL";                                 // real SOL; the server's settings switch to practice credits only where SOL is off
   S.mode = "live"; T = TL; LIVE.on = false; resetMemos();
   S.my = { v: 1, bal: 0, b: [], sq: {}, h: "" }; S.dbReady = true;
   renderTf(); renderMode();
@@ -239,7 +239,7 @@ function openAccount() {
   if (!loggedIn()) {
     modal(`${head("Log in", "Squad Arena account")}
       <p class="fine" style="color:var(--fg);margin-top:14px">Log in with Google and you get your own Solana wallet, made for you on the spot. Already have Phantom, Solflare or Backpack? Connect it instead.</p>
-      <p class="fine">Everyone starts with ${SRV.cfg ? SRV.cfg.startBalance : 25} tSOL of practice credits.${solOn ? ` Real SOL bets run on Solana ${esc(m.network || "devnet")}.` : ""}</p>
+      <p class="fine">${solOn ? `Bets are in real SOL on Solana ${esc(m.network || "mainnet")}. Deposit SOL from your wallet to start betting.` : `Everyone starts with ${SRV.cfg ? SRV.cfg.startBalance : 25} tSOL of practice credits.`}</p>
       <p class="err" id="lgErr">${esc(PV.failed)}</p>
       <button class="btn btn-solid btn-wide" type="button" id="lgGo">Log in</button>`);
     $("lgGo").onclick = async () => { $("lgGo").disabled = true; $("lgGo").textContent = "Opening…"; closeModal(); await srvLogin(); };
@@ -247,7 +247,7 @@ function openAccount() {
   }
   const net = m.network === "mainnet" ? "Solana mainnet" : "Solana devnet (test SOL)";
   modal(`${head("Account", me ? me.name : "")}
-    <div class="seg" id="curSeg" role="group" aria-label="Currency" style="margin-top:14px"><button type="button" data-c="tSOL" aria-pressed="${CUR === "tSOL"}">Practice · tSOL</button>${solOn ? `<button type="button" data-c="SOL" aria-pressed="${CUR === "SOL"}">SOL</button>` : ""}</div>
+    ${SRV.cfg && SRV.cfg.currencies.length > 1 ? `<div class="seg" id="curSeg" role="group" aria-label="Currency" style="margin-top:14px"><button type="button" data-c="tSOL" aria-pressed="${CUR === "tSOL"}">Practice · tSOL</button><button type="button" data-c="SOL" aria-pressed="${CUR === "SOL"}">SOL</button></div>` : ""}
     <div class="m-px" style="display:flex;align-items:baseline;gap:10px;margin:14px 0 4px"><b style="font-size:24px;font-weight:500" class="tab-n">${fmtAmt(SRV.bal[CUR] || 0, CUR)}</b><span class="dim">${CUR === "SOL" ? "in the arena · " + esc(net) : "practice credits"}</span></div>
     ${me && me.wallet ? `<p class="fine" style="margin:0 0 6px">Wallet <code>${esc(short(me.wallet))}</code> <button class="btn btn-quiet btn-xs" type="button" id="acCopy">Copy address</button></p>` : `<p class="fine">No Solana wallet on this login yet.</p>`}
     ${CUR === "SOL" ? `

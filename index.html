@@ -681,7 +681,7 @@ body.chart-full{overflow:hidden}
         <span>Left<b id="sLeft">--:--</b></span>
         <span class="opt">Bets close<b id="sBets">--</b></span>
         <span class="opt">Next cut<b id="sCut">--</b></span>
-        <span>Pools<b id="sPool">0 tSOL</b></span>
+        <span>Pools<b id="sPool">0 SOL</b></span>
       </div>
     </div>
 
@@ -754,7 +754,7 @@ body.chart-full{overflow:hidden}
         <div class="slip-h" id="slipHead">Squad · this round · pays</div>
         <div class="scroll slip-list" id="slipList" aria-label="Pick what to back"></div>
         <div class="slip-foot">
-          <div class="field"><input id="sAmt" type="number" inputmode="decimal" min="0" step="0.05" aria-label="Stake"><span id="sCur">tSOL</span></div>
+          <div class="field"><input id="sAmt" type="number" inputmode="decimal" min="0" step="0.05" aria-label="Stake"><span id="sCur">SOL</span></div>
           <div class="quick" id="sQuick"></div>
           <div class="calc"><div><span>Weight if placed now</span><b id="sW">—</b></div><div class="pay"><span>Payout if it wins</span><b id="sO">—</b></div></div>
           <p class="err" id="sErr"></p>
@@ -3355,7 +3355,7 @@ function openData() {
     modal(`${head("Data", "Live")}
       <div class="rules">
       <h4>One shared arena</h4><p>Everyone on this site sees the same arena. A round server watches pump.fun around the clock, prices every coin${c.rpc ? " on every swap through a Solana RPC stream" : " from DEX Screener every few seconds"}, fixes each round's field at the open, runs the bracket cuts and settles every bet. ${TL.size} coins tracked, ${SRV.board.top.length} on the board.</p>
-      <h4>Money</h4><p>Practice credits (tSOL) for everyone${m.enabled ? `, plus a SOL wallet on Solana ${esc(m.network)}${m.network === "mainnet" ? "" : " with test SOL"}` : ""}. Deposits and withdrawals go between your own wallet and the arena's treasury.</p>
+      <h4>Money</h4><p>${m.enabled ? `Bets are in real SOL on Solana ${esc(m.network)}${m.network === "mainnet" ? "" : " (test SOL)"}` : "Practice credits (tSOL) only"}. Deposits and withdrawals go between your own wallet and the arena's treasury.</p>
       </div>`);
     return;
   }
@@ -3452,7 +3452,7 @@ $("autoBtn").addEventListener("click", () => { const on = $("autoBtn").getAttrib
 
 /* ---------- footer ---------- */
 function renderFoot() {
-  $("foot").innerHTML = `${S.srv ? "Squad Arena. Coins, prices and launch data are real Solana mainnet data from pump.fun, DEX Screener, GeckoTerminal and the Solana RPC. Practice credits (tSOL) for everyone; SOL bets only where the SOL wallet is on. Nothing here is financial advice. Real-money betting is regulated, and some countries block or forbid it." : "Squad Arena prototype. Coins, prices and launch data are real Solana mainnet data from pump.fun, DEX Screener and GeckoTerminal. Bets use practice credits; no SOL moves and nothing here is financial advice. Real-money prediction markets are regulated, and some countries block unlicensed ones."}
+  $("foot").innerHTML = `${S.srv ? "Squad Arena. Coins, prices and launch data are real Solana mainnet data from pump.fun, DEX Screener, GeckoTerminal and the Solana RPC. Bets are in real SOL on Solana mainnet. Nothing here is financial advice. Real-money betting is regulated, and some countries block or forbid it." : "Squad Arena prototype. Coins, prices and launch data are real Solana mainnet data from pump.fun, DEX Screener and GeckoTerminal. Bets use practice credits; no SOL moves and nothing here is financial advice. Real-money prediction markets are regulated, and some countries block unlicensed ones."}
   <br><a class="link" href="/docs">Docs</a> · <button type="button" class="link" id="fData">Data</button> · <button type="button" class="link" id="fIntro">Replay intro</button> · <button type="button" class="link" id="fTour">Tour</button>`;
   $("fData").onclick = openData; $("fIntro").onclick = () => playIntro(true);
   $("fTour").onclick = () => { if (S.view !== "arena") location.hash = "#arena"; scrollTo({ top: 0, behavior: reduced ? "auto" : "smooth" }); setTimeout(startTour, 450); };
@@ -3797,7 +3797,7 @@ async function srvSnapshot() {
   SRV.results.clear(); for (const [k, res] of Object.entries(snap.results || {})) SRV.results.set(k, res);
   S.members.clear(); S.proofs.clear(); S.posts.clear(); srvDocs(snap.docs);
   for (const [id, p] of Object.entries(snap.people || {})) PROF.set(id, { id, name: p.name, avatarUrl: p.avatarUrl });
-  if (!SRV.cfg.currencies.includes(CUR)) setCurrency("tSOL");
+  if (!SRV.cfg.currencies.includes(CUR)) setCurrency(SRV.cfg.currencies.includes("SOL") ? "SOL" : "tSOL");
   SRV.ready = true; SRV.lastMsg = nowW(); S.results.clear(); dirty.all = true;
 }
 function srvStream() {
@@ -3844,7 +3844,7 @@ async function refreshMe() {
   } catch (e) { if (e.status === 401 && PV.api) { wire("Account", "Your login expired. Log in again from the wallet button."); } else console.warn("me", e.message); }
 }
 function setCurrency(c) {
-  if (S.srv && SRV.cfg && !SRV.cfg.currencies.includes(c)) c = "tSOL";
+  if (S.srv && SRV.cfg && !SRV.cfg.currencies.includes(c)) c = SRV.cfg.currencies.includes("SOL") ? "SOL" : "tSOL";
   CUR = c; store.set("cur", c);
   srvMine(); rebuildBetIdx(); renderWallet(); dirty.all = true;
 }
@@ -3941,7 +3941,7 @@ async function srvWithdraw(sol, to) { const out = await api("/withdraw", { sol, 
 
 /* ---------- start ---------- */
 async function srvStart() {
-  CUR = store.get("cur", "tSOL") === "SOL" ? "SOL" : "tSOL";
+  CUR = "SOL";                                 // real SOL; the server's settings switch to practice credits only where SOL is off
   S.mode = "live"; T = TL; LIVE.on = false; resetMemos();
   S.my = { v: 1, bal: 0, b: [], sq: {}, h: "" }; S.dbReady = true;
   renderTf(); renderMode();
@@ -3965,7 +3965,7 @@ function openAccount() {
   if (!loggedIn()) {
     modal(`${head("Log in", "Squad Arena account")}
       <p class="fine" style="color:var(--fg);margin-top:14px">Log in with Google and you get your own Solana wallet, made for you on the spot. Already have Phantom, Solflare or Backpack? Connect it instead.</p>
-      <p class="fine">Everyone starts with ${SRV.cfg ? SRV.cfg.startBalance : 25} tSOL of practice credits.${solOn ? ` Real SOL bets run on Solana ${esc(m.network || "devnet")}.` : ""}</p>
+      <p class="fine">${solOn ? `Bets are in real SOL on Solana ${esc(m.network || "mainnet")}. Deposit SOL from your wallet to start betting.` : `Everyone starts with ${SRV.cfg ? SRV.cfg.startBalance : 25} tSOL of practice credits.`}</p>
       <p class="err" id="lgErr">${esc(PV.failed)}</p>
       <button class="btn btn-solid btn-wide" type="button" id="lgGo">Log in</button>`);
     $("lgGo").onclick = async () => { $("lgGo").disabled = true; $("lgGo").textContent = "Opening…"; closeModal(); await srvLogin(); };
@@ -3973,7 +3973,7 @@ function openAccount() {
   }
   const net = m.network === "mainnet" ? "Solana mainnet" : "Solana devnet (test SOL)";
   modal(`${head("Account", me ? me.name : "")}
-    <div class="seg" id="curSeg" role="group" aria-label="Currency" style="margin-top:14px"><button type="button" data-c="tSOL" aria-pressed="${CUR === "tSOL"}">Practice · tSOL</button>${solOn ? `<button type="button" data-c="SOL" aria-pressed="${CUR === "SOL"}">SOL</button>` : ""}</div>
+    ${SRV.cfg && SRV.cfg.currencies.length > 1 ? `<div class="seg" id="curSeg" role="group" aria-label="Currency" style="margin-top:14px"><button type="button" data-c="tSOL" aria-pressed="${CUR === "tSOL"}">Practice · tSOL</button><button type="button" data-c="SOL" aria-pressed="${CUR === "SOL"}">SOL</button></div>` : ""}
     <div class="m-px" style="display:flex;align-items:baseline;gap:10px;margin:14px 0 4px"><b style="font-size:24px;font-weight:500" class="tab-n">${fmtAmt(SRV.bal[CUR] || 0, CUR)}</b><span class="dim">${CUR === "SOL" ? "in the arena · " + esc(net) : "practice credits"}</span></div>
     ${me && me.wallet ? `<p class="fine" style="margin:0 0 6px">Wallet <code>${esc(short(me.wallet))}</code> <button class="btn btn-quiet btn-xs" type="button" id="acCopy">Copy address</button></p>` : `<p class="fine">No Solana wallet on this login yet.</p>`}
     ${CUR === "SOL" ? `
@@ -4658,7 +4658,7 @@ const TOUR_STEPS = [
   { el: () => $("boardH").closest(".sec-h"), title: "The leaderboard", body: "Every squad ranked by profit, with members, top coins and PnL. Click a row for the full page; Back puts it in your bet slip." },
   { el: () => $("slip"), title: "Your bet slip", body: "Pick a squad or coin, set a stake and see what it pays before you place it. The squad that gains the most over the 24 hours wins the pool.", place: "left" },
   { el: () => document.querySelector('#railTabs [data-rt="wire"]'), title: "The wire", body: "Live notes from the arena: big moves, leaders changing and results as they happen." },
-  { el: () => $("walletBtn"), title: "Log in", body: "Log in with Google or connect Phantom, Solflare or Backpack. You start with free practice credits (tSOL), and can switch to real SOL any time." }
+  { el: () => $("walletBtn"), title: "Log in", body: "Log in with Google or connect Phantom, Solflare or Backpack, then deposit SOL from your wallet. Every bet is real SOL on Solana mainnet." }
 ];
 const TOUR = { i: -1, box: null, on: null, raf: 0 };
 

@@ -123,7 +123,7 @@ function openData() {
     modal(`${head("Data", "Live")}
       <div class="rules">
       <h4>One shared arena</h4><p>Everyone on this site sees the same arena. A round server watches pump.fun around the clock, prices every coin${c.rpc ? " on every swap through a Solana RPC stream" : " from DEX Screener every few seconds"}, fixes each round's field at the open, runs the bracket cuts and settles every bet. ${TL.size} coins tracked, ${SRV.board.top.length} on the board.</p>
-      <h4>Money</h4><p>Practice credits (tSOL) for everyone${m.enabled ? `, plus a SOL wallet on Solana ${esc(m.network)}${m.network === "mainnet" ? "" : " with test SOL"}` : ""}. Deposits and withdrawals go between your own wallet and the arena's treasury.</p>
+      <h4>Money</h4><p>${m.enabled ? `Bets are in real SOL on Solana ${esc(m.network)}${m.network === "mainnet" ? "" : " (test SOL)"}` : "Practice credits (tSOL) only"}. Deposits and withdrawals go between your own wallet and the arena's treasury.</p>
       </div>`);
     return;
   }
@@ -220,7 +220,7 @@ $("autoBtn").addEventListener("click", () => { const on = $("autoBtn").getAttrib
 
 /* ---------- footer ---------- */
 function renderFoot() {
-  $("foot").innerHTML = `${S.srv ? "Squad Arena. Coins, prices and launch data are real Solana mainnet data from pump.fun, DEX Screener, GeckoTerminal and the Solana RPC. Practice credits (tSOL) for everyone; SOL bets only where the SOL wallet is on. Nothing here is financial advice. Real-money betting is regulated, and some countries block or forbid it." : "Squad Arena prototype. Coins, prices and launch data are real Solana mainnet data from pump.fun, DEX Screener and GeckoTerminal. Bets use practice credits; no SOL moves and nothing here is financial advice. Real-money prediction markets are regulated, and some countries block unlicensed ones."}
+  $("foot").innerHTML = `${S.srv ? "Squad Arena. Coins, prices and launch data are real Solana mainnet data from pump.fun, DEX Screener, GeckoTerminal and the Solana RPC. Bets are in real SOL on Solana mainnet. Nothing here is financial advice. Real-money betting is regulated, and some countries block or forbid it." : "Squad Arena prototype. Coins, prices and launch data are real Solana mainnet data from pump.fun, DEX Screener and GeckoTerminal. Bets use practice credits; no SOL moves and nothing here is financial advice. Real-money prediction markets are regulated, and some countries block unlicensed ones."}
   <br><a class="link" href="/docs">Docs</a> · <button type="button" class="link" id="fData">Data</button> · <button type="button" class="link" id="fIntro">Replay intro</button> · <button type="button" class="link" id="fTour">Tour</button>`;
   $("fData").onclick = openData; $("fIntro").onclick = () => playIntro(true);
   $("fTour").onclick = () => { if (S.view !== "arena") location.hash = "#arena"; scrollTo({ top: 0, behavior: reduced ? "auto" : "smooth" }); setTimeout(startTour, 450); };

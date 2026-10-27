@@ -8,7 +8,7 @@ const TOUR_STEPS = [
   { el: () => $("boardH").closest(".sec-h"), title: "The leaderboard", body: "Every squad ranked by profit, with members, top coins and PnL. Click a row for the full page; Back puts it in your bet slip." },
   { el: () => $("slip"), title: "Your bet slip", body: "Pick a squad or coin, set a stake and see what it pays before you place it. The squad that gains the most over the 24 hours wins the pool.", place: "left" },
   { el: () => document.querySelector('#railTabs [data-rt="wire"]'), title: "The wire", body: "Live notes from the arena: big moves, leaders changing and results as they happen." },
-  { el: () => $("walletBtn"), title: "Log in", body: "Log in with Google or connect Phantom, Solflare or Backpack. You start with free practice credits (tSOL), and can switch to real SOL any time." }
+  { el: () => $("walletBtn"), title: "Log in", body: "Log in with Google or connect Phantom, Solflare or Backpack, then deposit SOL from your wallet. Every bet is real SOL on Solana mainnet." }
 ];
 const TOUR = { i: -1, box: null, on: null, raf: 0 };
 

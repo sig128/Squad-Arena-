@@ -291,7 +291,6 @@ details > div{padding:0 0 16px;color:var(--ink2)}
     <a href="#rail">Bet slip and wire</a>
     <div class="grp">Your account</div>
     <a href="#login">Logging in</a>
-    <a href="#practice">Practice credits</a>
     <a href="#sol-wallet">The SOL wallet</a>
     <div class="grp">Trust</div>
     <a href="#fairness">How results stay fair</a>
@@ -346,7 +345,7 @@ details > div{padding:0 0 16px;color:var(--ink2)}
       <h2>Quick start</h2>
       <ol class="steps">
         <li><b>Log in</b>Press Log in at the top right. Google creates a Solana wallet for you on the spot. If you already use Phantom, Solflare or Backpack, connect it instead.</li>
-        <li><b>Get your practice credits</b>Every account starts with <span data-cfg="startBalance">25</span> tSOL. They have no value and can't be withdrawn, so you can learn the game without risking anything.</li>
+        <li><b>Deposit SOL</b>Every bet is real SOL on Solana mainnet. Open your account from the top right and deposit SOL from your wallet into your arena balance. You can withdraw it back to your linked wallet at any time.</li>
         <li><b>Pick a squad or a coin</b>Press Back next to a squad or a coin, or pick one in the bet slip on the right. Set your stake and check the payout estimate before you place the bet. The newest round takes bets until the next one opens, on the hour.</li>
         <li><b>Watch the race</b>In Squads, the race chart shows each squad's profit. In Coins, it shows every coin's change since the round opened. A round runs for 24 hours and settles 5 seconds after it ends, and winnings land in your balance straight away.</li>
         <li><b>Find your squad</b>Open the coin's page to see its squad: who's in it and the tasks it's working on.</li>
@@ -499,16 +498,15 @@ details > div{padding:0 0 16px;color:var(--ink2)}
     <!-- ================= pools ================= -->
     <section class="doc prose" id="pools">
       <h2>Pools and payouts</h2>
-      <p>Every round has a separate pool for each market and each currency: practice tSOL and real SOL never mix. Payouts are <span class="k">pari-mutuel</span>. There are no fixed odds and no bookmaker taking the other side. You're betting against the other players, and the pool is split among whoever backed the winner.</p>
+      <p>Every round has a separate pool for each market, in real SOL. Payouts are <span class="k">pari-mutuel</span>. There are no fixed odds and no bookmaker taking the other side. You're betting against the other players, and the pool is split among whoever backed the winner.</p>
       <h3>How a payout is worked out</h3>
       <p>Your <span class="k">share</span> of a pick is your stake times its weight. When the round settles, the whole pool minus the <span data-cfg="rake">3%</span> rake goes to the winning coin, split by share:</p>
       <div class="formula">payout = pool × (1 − rake) × your share ÷ all shares on the winning coin</div>
-      <p>Each pool also starts with a <span class="k">house seed</span>: <span data-cfg="seedTSOL">0.1 tSOL per coin</span> in practice pools, and <span data-cfg="seedSOL">0.01 SOL per coin</span> in SOL pools. The seed gives every coin a share from the first second, so the house holds a small stake on each coin like any other player.</p>
+      <p>Each pool also starts with a <span class="k">house seed</span>: <span data-cfg="seedSOL">0.01 SOL per coin</span> (or per squad). The seed gives every coin a share from the first second, so the house holds a small stake on each coin like any other player.</p>
       <h3>Try it</h3>
     </section>
     <div class="calc wide" id="calc">
       <div class="in">
-        <div class="seg" role="group" aria-label="Currency"><button type="button" data-cur="tSOL" aria-pressed="true">tSOL</button><button type="button" data-cur="SOL" aria-pressed="false">SOL</button></div>
         <label for="cStake"><span>Your stake</span><input id="cStake" type="number" min="0" step="0.05" value="1" inputmode="decimal"></label>
         <label for="cAt"><span>Placed this long after the round opened <output id="cAtO">10 min</output></span><input id="cAt" type="range" min="0" max="60" step="1" value="10"></label>
         <label for="cOthers"><span>Everyone else's stakes in this pool</span><input id="cOthers" type="number" min="0" step="0.5" value="8" inputmode="decimal"></label>
@@ -531,7 +529,6 @@ details > div{padding:0 0 16px;color:var(--ink2)}
       <div class="tbl"><table>
         <thead><tr><th>Limits per bet</th><th class="n">Minimum</th><th class="n">Maximum</th></tr></thead>
         <tbody>
-          <tr><td>Practice (tSOL)</td><td class="n" data-cfg="minTSOL">0.05 tSOL</td><td class="n" data-cfg="maxTSOL">100 tSOL</td></tr>
           <tr><td>Real (SOL)</td><td class="n" data-cfg="minSOL">0.01 SOL</td><td class="n" data-cfg="maxSOL">10 SOL</td></tr>
         </tbody>
       </table></div>
@@ -623,17 +620,6 @@ details > div{padding:0 0 16px;color:var(--ink2)}
       <p>Your account keeps your balances, your bets, your squads and your proofs, on every device you log in from. In the account sheet you can also add your X handle, which appears on your proofs.</p>
     </section>
 
-    <!-- ================= practice ================= -->
-    <section class="doc prose" id="practice">
-      <h2>Practice credits</h2>
-      <p>Practice credits, written tSOL, work exactly like SOL inside the arena: same markets, same pools, same rules. They just aren't worth anything, and they can't be deposited or withdrawn.</p>
-      <ul>
-        <li>Every new account starts with <span data-cfg="startBalance">25</span> tSOL.</li>
-        <li>If your balance drops under 5 tSOL, you can top it back up to <span data-cfg="startBalance">25</span> once a day.</li>
-        <li>Practice pools are separate from SOL pools, so practice bets never touch real money.</li>
-      </ul>
-    </section>
-
     <!-- ================= sol wallet ================= -->
     <section class="doc prose" id="sol-wallet">
       <h2>The SOL wallet</h2>
@@ -720,7 +706,6 @@ details > div{padding:0 0 16px;color:var(--ink2)}
       <details><summary>Can I cancel a bet?</summary><div>No. A stake is final once it's placed.</div></details>
       <details><summary>Why can't I bet on a coin I found in search?</summary><div>Only coins in a round's field can be bet on. You can still join any coin's squad from search, and if it makes the board, its squad will already be waiting.</div></details>
       <details><summary>How long does a withdrawal take?</summary><div>Usually under a minute. If the network is slow, the withdrawal is checked again automatically, and it's refunded if it never lands.</div></details>
-      <details><summary>Are practice credits worth anything?</summary><div>No. tSOL can't be deposited, withdrawn or exchanged. It exists so anyone can play.</div></details>
     </section>
 
     <footer class="foot prose">
@@ -882,8 +867,8 @@ function drawHero() {
   $("lvLeft").textContent = clock(r.e - t);
   $("lvBets").textContent = t < betEnd ? "close in " + clock(betEnd - t) : "closed";
   $("lvCp").textContent = el >= 5 / 6 ? "final duel" : "C" + cp + " in " + clock(r.s + cp * DAY / 6 - t);
-  let P = 0; for (const mk of ["top", "lcs", "eff", "bust", "sq"]) { const pl = (H.pools || {})[mk + "|tSOL"]; P += pl ? pl.P : cfg.seed.tSOL * (mk === "sq" ? (H.sq || []).length : H.field.length + (mk === "top" ? (H.bench || []).length : 0)); }
-  $("lvPool").textContent = H.example || !P ? "--" : amt(P, "tSOL");
+  let P = 0; for (const mk of ["top", "lcs", "eff", "bust", "sq"]) { const pl = (H.pools || {})[mk + "|SOL"]; P += pl ? pl.P : cfg.seed.SOL * (mk === "sq" ? (H.sq || []).length : H.field.length + (mk === "top" ? (H.bench || []).length : 0)); }
+  $("lvPool").textContent = H.example || !P ? "--" : amt(P, "SOL");
 }
 let reloading = false;
 async function reload() { if (reloading) return; reloading = true; try { await loadSnap(); } catch (_) {} reloading = false; }
@@ -997,7 +982,7 @@ function figMoney() {
 }
 
 /* ---------- payout calculator ---------- */
-let cur = "tSOL";
+let cur = "SOL";
 function calc() {
   const s = Math.max(0, +$("cStake").value || 0), mins = Math.max(0, Math.min(60, +$("cAt").value || 0)), e = mins / 1440, others = Math.max(0, +$("cOthers").value || 0), onMine = Math.min(others, Math.max(0, +$("cMine").value || 0)), n = Math.max(2, Math.min(25, Math.round(+$("cN").value || 15)));
   const w = 1 / (1 + 2 * e), seed = (cfg.seed && cfg.seed[cur]) || 0, rake = cfg.rake;
