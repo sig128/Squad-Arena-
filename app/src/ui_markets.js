@@ -36,7 +36,7 @@ function renderMarkets(w) {
   const mine = new Set(S.my.b.filter(b => b.rk === r.key).map(b => b.mk + b.m));
   // top gainer
   const pt = pool(r, "top"), st = standings(r, w);
-  $("tPool").textContent = fmtSol(pt.P); $("tPeople").textContent = pt.people; $("tWin").textContent = bs.open ? "close in " + dur(r.s + r.W * BET_WIN - w) : "closed";
+  $("tPool").textContent = fmtSol(pt.P); $("tPeople").textContent = pt.people; $("tWin").textContent = bs.open ? "close in " + dur(betCloseAt(r) - w) : "closed";
   setHTML($("tList"), st.map((x, i) => {
     const sh = (pt.sh.get(x.tok.m) || 0) / [...pt.sh.values()].reduce((a, b) => a + b, 0);
     const cls = (x.rug ? "out " : "") + (inBench(x.tok.m) || !inTop(x.tok.m) ? "dimb " : "") + (mine.has("top" + x.tok.m) ? "mine" : "");
@@ -51,7 +51,7 @@ function renderMarkets(w) {
     : ls.winner ? `<span>Winner ${tkHTML(T.get(ls.winner), 13)}</span><b>${fmtPct(ls.final[0].R)}</b>` : `<span>Final duel: ${[...ls.alive].map(m => tkHTML(T.get(m), 13)).join(" vs ")}</span><b>${dur(r.e - w)}</b>`;
   // hype
   const pe = pool(r, "eff"), pb = pool(r, "bust"), h = hype(r, w).filter(x => x.R != null), hb = betState(r, "eff", w);
-  $("hPool").textContent = fmtSol(pe.P + pb.P); $("hWin").textContent = hb.open ? "close in " + dur(r.s + r.W * BET_WIN - w) : "closed";
+  $("hPool").textContent = fmtSol(pe.P + pb.P); $("hWin").textContent = hb.open ? "close in " + dur(betCloseAt(r) - w) : "closed";
   const effS = h.slice().sort((a, b) => b.eff - a.eff).slice(0, 5), bustS = h.filter(x => x.bust > 0).sort((a, b) => b.bust - a.bust).slice(0, 5);
   const line = (x, v, mk) => `<div class="st" data-m="${esc(x.tok.m)}" data-mk="${mk}" style="grid-template-columns:minmax(0,1fr) 54px 46px"><span class="nmw">${tkHTML(x.tok, 13)}</span><span class="num ${x.R >= 0 ? "up" : "down"}">${fmtPct(x.R, 1)}</span><span class="odds">${v.toFixed(3)}</span></div>`;
   setHTML($("effList"), effS.map(x => line(x, x.eff, "eff")).join("") || `<div class="empty">No scores yet.</div>`);

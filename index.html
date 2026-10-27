@@ -170,8 +170,7 @@ main{min-width:0;padding-right:24px;border-right:1px solid var(--rule);min-heigh
   .shell{grid-template-columns:minmax(0,1fr)}
   main{padding-right:0;border-right:0;min-height:0}
   .rail{position:static;height:auto;padding-left:0;border-top:1px solid var(--rule);margin-top:24px;grid-template-rows:auto auto}
-  .rail .panel{height:440px}
-  .rail.bet .panel:first-child{height:600px}
+  .rail .panel{height:600px}
   .rail{max-height:1200px;transition:opacity .3s ease,transform .5s var(--ease),max-height .55s var(--ease),margin-top .55s var(--ease)}
   body.rail-off .rail{max-height:0;margin-top:0;border-top-color:transparent}
   body.rail-off main{padding-right:0}
@@ -188,7 +187,8 @@ body.rail-off .shell{grid-template-columns:minmax(0,1fr) 0px}
 body.rail-off main{padding-right:38px;border-right-color:transparent}
 body.rail-off .rail{opacity:0;transform:translateX(56px);padding-left:0;pointer-events:none}
 body.no-anim .shell,body.no-anim main,body.no-anim .rail,body.no-anim .railtab{transition:none!important}
-.rail.bet{grid-template-rows:minmax(0,1fr) minmax(130px,.38fr)}
+.rail,.rail.bet{grid-template-rows:minmax(0,1fr)}
+.chat-panel[hidden]{display:none}
 .rtabs{display:flex;gap:2px}
 .rtabs button{font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;padding:4px 8px;color:var(--dim);border:1px solid transparent;display:inline-flex;align-items:center;gap:6px}
 .rtabs button:hover{color:var(--fg)}
@@ -726,10 +726,10 @@ body.chart-full{overflow:hidden}
     <footer class="foot" id="foot"></footer>
   </main>
 
-  <aside class="rail bet" aria-label="Bet slip, wire and chat">
+  <aside class="rail bet" aria-label="Bet slip and wire">
     <section class="panel">
       <div class="p-head"><div class="rtabs" id="railTabs" role="group" aria-label="Bet slip or wire"><button type="button" data-rt="bet" aria-pressed="true">Bet</button><button type="button" data-rt="wire" aria-pressed="false">Wire<b id="wireN"></b></button></div><span class="sp"></span>
-        <div class="ask"><button class="btn btn-quiet btn-xs" id="askBtn" type="button" hidden>Ask Claude</button><button class="btn btn-quiet btn-xs" id="autoBtn" type="button" hidden aria-pressed="false">Auto</button><button class="railbtn" id="railClose" type="button" aria-label="Hide wire and chat" title="Hide wire and chat"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 2l4 4-4 4"/></svg></button></div></div>
+        <div class="ask"><button class="btn btn-quiet btn-xs" id="askBtn" type="button" hidden>Ask Claude</button><button class="btn btn-quiet btn-xs" id="autoBtn" type="button" hidden aria-pressed="false">Auto</button><button class="railbtn" id="railClose" type="button" aria-label="Hide the bet slip and wire" title="Hide the bet slip and wire"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 2l4 4-4 4"/></svg></button></div></div>
       <div class="slip" id="slip">
         <div class="slip-top"><div class="seg" id="slipMode" role="group" aria-label="What to back"><button type="button" data-mode="squads" aria-pressed="true">Squads</button><button type="button" data-mode="coins" aria-pressed="false">Coins</button></div><span class="slip-st" id="slipSt"></span></div>
         <div class="slip-alt" id="slipAlt"></div>
@@ -746,7 +746,7 @@ body.chart-full{overflow:hidden}
       </div>
       <div class="scroll" id="feed" aria-live="polite" hidden></div>
     </section>
-    <section class="panel">
+    <section class="panel chat-panel" hidden>
       <div class="p-head"><h2>Chat</h2><span class="meta" id="onlineTxt"></span><span class="sp"></span><div class="chat-tabs" id="chatTabs"></div></div>
       <div class="scroll" id="chatList"></div>
       <form class="chat-form" id="chatForm" autocomplete="off"><input id="chatIn" maxlength="280" placeholder="Say something to the arena" aria-label="Chat message"><button class="btn btn-quiet" type="submit" id="chatSend">Send</button></form>
@@ -755,7 +755,7 @@ body.chart-full{overflow:hidden}
   </aside>
 </div>
 
-<button class="railtab" id="railOpen" type="button" aria-label="Show wire and chat"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 2L4 6l4 4"/></svg><span>Bet · Wire · Chat</span><b id="railUnread"></b></button>
+<button class="railtab" id="railOpen" type="button" aria-label="Show the bet slip and wire"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 2L4 6l4 4"/></svg><span>Bet · Wire</span><b id="railUnread"></b></button>
 <div class="lens" id="lens" aria-hidden="true">
   <div class="l-top"><span id="lAv"></span><b id="lSym"></b><span class="nm" id="lName"></span><span class="px" id="lPx"></span><span class="num" id="lPct"></span></div>
   <canvas id="lensCv"></canvas>
@@ -796,10 +796,14 @@ const TF = {
   "15m": { k: "15m", W: 15 * 60e3, label: "15 min" },
   "30m": { k: "30m", W: 30 * 60e3, label: "30 min" },
   "1h":  { k: "1h",  W: 3600e3,     label: "1 hour" },
-  "24h": { k: "24h", W: 86400e3,    label: "24 hours" }
+  // a new 24-hour round starts every hour (P) and takes bets in its first hour, so every bet runs for a day
+  "24h": { k: "24h", W: 86400e3, P: 3600e3, label: "24 hours" }
 };
-const TFK = ["15m", "30m", "1h", "24h"];
+const TFK = ["24h"];                     // the round length that's open for bets (older ones only finish their bets)
 const RAKE = 0.03, SEED = 0.1, BET_WIN = 0.4, START_BAL = 25, MIN_STAKE = 0.05, MAX_AGE = 72 * 3600e3;
+const betWin = r => r.tf && r.tf.P ? r.tf.P / r.W : BET_WIN;          // share of the round that takes bets
+const betCloseAt = r => r.s + r.W * betWin(r);
+const nextRoundAt = r => r.s + (r.tf && r.tf.P ? r.tf.P : r.W);       // when the next round opens
 const GATE = { liq: 25e3, turn: 0.25, trades: 2000, tx24: 300, mcLiq: 60 };
 
 /* ---------- formatting ---------- */
@@ -1030,7 +1034,7 @@ function markSVG(color) {
 
 /* ================= engine: board, rounds, markets, pools, settlement ================= */
 const S = {
-  mode: "replay", tf: TFK.includes(store.get("tf", "15m")) ? store.get("tf", "15m") : "15m",
+  mode: "replay", tf: "24h",
   view: "arena", coin: null,
   board: { top: [], bench: [] }, boardSig: "", rt: 0, w: 0,
   me: { id: null, name: "", avatar: "", color: "", isOwner: false, canWrite: null },
@@ -1054,7 +1058,7 @@ const modeCode = () => S.mode === "replay" ? "R" : "L";
 const replayRec = w => D0 + (((w % LOOP) + LOOP) % LOOP);
 const mktT = w => S.mode === "replay" ? replayRec(w) : w;
 function roundAt(tfk, w, md) {
-  md = md || modeCode(); const tf = TF[tfk], s = Math.floor(w / tf.W) * tf.W;
+  md = md || modeCode(); const tf = TF[tfk], P = tf.P || tf.W, s = Math.floor(w / P) * P;
   return { tfk, tf, W: tf.W, s, e: s + tf.W, md, rs: md === "R" ? replayRec(s) : s, key: md + "." + tfk + "." + s };
 }
 const recOf = (r, w) => r.rs + (w - r.s);
@@ -1208,13 +1212,14 @@ function impliedOdds(r, mk, m) { const pl = pool(r, mk), sh = pl.sh.get(m) || 0;
 function betState(r, mk, w, m) {
   const el = (w - r.s) / r.W;
   if (!tfOk(r.tfk)) return { open: false, why: "24-hour rounds need live data. Switch to live in the data panel." };
-  if (!roundLive(r)) return { open: false, why: "Live data joined this round partway, so it isn't scored. Betting opens with the next round in " + dur(r.e - w) + "." };
+  if (!roundLive(r)) return { open: false, why: "Live data joined this round partway, so it isn't scored. Betting opens with the next round in " + dur(nextRoundAt(r) - w) + "." };
+  if (r.tf.P && w >= r.s + r.tf.P) return { open: false, why: "The next 24-hour round opens in " + dur(nextRoundAt(r) - w) + "." };
   if (mk === "lcs") {
     if (w >= r.e - winOf(r)) return { open: false, why: "The final duel is being scored. The next bracket opens in " + dur(r.e - w) + "." };
     if (m) { const st = lcs(r, w); if (!st.alive.has(m)) return { open: false, why: "That coin is out of this bracket." }; }
     return { open: true, el, w: 1 / (1 + 2 * el) };
   }
-  if (el >= BET_WIN) return { open: false, why: "Bets close at 40% of the round. The next round opens in " + dur(r.e - w) + "." };
+  if (el >= betWin(r)) return { open: false, why: "Bets on this round are closed. The next round opens in " + dur(nextRoundAt(r) - w) + "." };
   if (m) { const tok = T.get(m); if (!tok || (tok.rugAt && tok.rugAt <= recOf(r, w))) return { open: false, why: "That coin was removed by the rug filter." }; if (!fieldOf(r, mk).some(t => t.m === m)) return { open: false, why: "That coin is not in this round's field." }; }
   return { open: true, el, w: 1 / (1 + 2 * el) };
 }
@@ -1359,7 +1364,7 @@ function events(w) {
         dirty.settled = true;
       }, 1600);
     }
-    wire("Round", `${esc(TF[S.tf].label)} round open until ${S.mode === "replay" ? utc(recOf(r, r.e), false) + " UTC" : local(r.e, false)}. Bets on Top gainer and Hype close at 40%. The bracket cuts at 1/6 to 5/6.`);
+    wire("Round", `${esc(TF[S.tf].label)} round open until ${S.mode === "replay" ? utc(recOf(r, r.e), false) + " UTC" : local(r.e, false)}. ${r.tf.P ? "Bets close at " + local(betCloseAt(r), false) + ", when the next 24-hour round opens." : "Bets on Top gainer and Hype close at 40%."} The bracket cuts at 1/6 to 5/6.`);
     S.lastLead = null;
   }
   const st = standings(r, w).filter(x => !x.rug && x.R != null);
@@ -1690,6 +1695,7 @@ addEventListener("hashchange", route);
 /* ---------- timeframe + mode controls ---------- */
 function renderTf() {
   qsa(".seg.tf").forEach(seg => {
+    seg.hidden = TFK.length < 2;           // one round length: nothing to choose
     seg.innerHTML = TFK.map(k => `<button type="button" data-tf="${k}" aria-pressed="${k === S.tf}"${tfOk(k) ? "" : ` disabled title="24-hour rounds need live data"`}>${k.toUpperCase()}</button>`).join("");
     qsa("button", seg).forEach(b => b.onclick = () => setTf(b.dataset.tf));
   });
@@ -1708,12 +1714,12 @@ function renderMode() {
 function renderStrip(w) {
   const r = roundAt(S.tf, w);
   if (!tfOk(S.tf)) { $("sTitle").textContent = "ROUND · " + S.tf.toUpperCase(); $("sSub").textContent = "Live only"; return; }
-  const a = S.mode === "replay" ? utc(r.rs, false) + "–" + utc(r.rs + r.W, false) + " UTC · replay" : local(r.s, false) + "–" + local(r.e, false);
+  const a = S.mode === "replay" ? utc(r.rs, false) + "–" + utc(r.rs + r.W, false) + " UTC · replay" : local(r.s, false) + "–" + local(r.e, false) + (r.W >= 20 * 3600e3 ? " tomorrow" : "");
   $("sTitle").textContent = "ROUND · " + S.tf.toUpperCase();
   $("sSub").textContent = a;
   $("sLeft").textContent = dur(r.e - w);
   const el = (w - r.s) / r.W;
-  $("sBets").textContent = el < BET_WIN ? dur(r.s + r.W * BET_WIN - w) : "closed";
+  $("sBets").textContent = el < betWin(r) ? dur(betCloseAt(r) - w) : "closed";
   const st = lcs(r, w), nk = st.done + 1;
   $("sCut").textContent = st.warming ? "next round" : nk <= 5 ? dur(r.s + nk * r.W / 6 - w) + " · " + nk + "/5" : "final";
   if (st.warming) $("sBets").textContent = "next round";
@@ -1729,9 +1735,10 @@ function drawTimeline(w) {
   ctx.fillStyle = C.rule; ctx.fillRect(x0, y - 1, x1 - x0, 2);
   ctx.fillStyle = C.fg; ctx.fillRect(x0, y - 1, (x1 - x0) * el, 2);
   // bet window bracket
-  ctx.strokeStyle = el < BET_WIN ? C.fg : C.faint; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(X(0) + .5, y - 7); ctx.lineTo(X(0) + .5, y - 10); ctx.lineTo(X(BET_WIN) - .5, y - 10); ctx.lineTo(X(BET_WIN) - .5, y - 7); ctx.stroke();
-  ctx.fillStyle = el < BET_WIN ? C.fg : C.faint; ctx.textAlign = "left"; ctx.textBaseline = "bottom"; ctx.fillText("BETS OPEN", X(0) + 4, y - 11.5);
+  const bw = betWin(r);
+  ctx.strokeStyle = el < bw ? C.fg : C.faint; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(X(0) + .5, y - 7); ctx.lineTo(X(0) + .5, y - 10); ctx.lineTo(X(bw) - .5, y - 10); ctx.lineTo(X(bw) - .5, y - 7); ctx.stroke();
+  ctx.fillStyle = el < bw ? C.fg : C.faint; ctx.textAlign = "left"; ctx.textBaseline = "bottom"; ctx.fillText("BETS OPEN", X(0) + 4, y - 11.5);
   // checkpoints
   const st = lcs(r, w);
   for (let k = 1; k <= 5; k++) {
@@ -1791,7 +1798,7 @@ function drawRace(w) {
     : [{ x: L, t: "open", a: "left", c: C.dim, p: 0 }, { x: L + pw, t: raceSpan === "full" ? "close" : "now", a: "right", c: C.dim, p: 0 }];
   if (abs) { const st = niceTime((t1 - t0) / (narrow ? 3 : 6)); for (let t = Math.ceil(t0 / st) * st; t < t1 - st * 0.4; t += st) { if (t - t0 < st * 0.4) continue; const x = Math.round(X(t)) + .5; ctx.strokeStyle = C.rule2; ctx.setLineDash([2, 4]); ctx.beginPath(); ctx.moveTo(x, Tp); ctx.lineTo(x, Tp + ph); ctx.stroke(); ctx.setLineDash([]); labs.push({ x, t: tlab(t), a: "center", c: C.faint, p: 2 }); } }
   else for (let k = 1; k <= 5; k++) { const t = r.rs + k * r.W / 6; if (t > t1) break; const x = Math.round(X(t)) + .5; ctx.strokeStyle = C.rule2; ctx.setLineDash([2, 4]); ctx.beginPath(); ctx.moveTo(x, Tp); ctx.lineTo(x, Tp + ph); ctx.stroke(); ctx.setLineDash([]); labs.push({ x, t: "C" + k, a: "center", c: C.faint, p: 2 }); }
-  const bx = r.rs + r.W * BET_WIN; if (!abs && bx <= t1) { const x = Math.round(X(bx)) + .5; ctx.strokeStyle = C.faint; ctx.beginPath(); ctx.moveTo(x, Tp); ctx.lineTo(x, Tp + ph); ctx.stroke(); labs.push({ x, t: "bets close", a: "center", c: C.dim, p: 1 }); }
+  const bx = r.rs + r.W * betWin(r); if (!abs && bx <= t1) { const x = Math.round(X(bx)) + .5; ctx.strokeStyle = C.faint; ctx.beginPath(); ctx.moveTo(x, Tp); ctx.lineTo(x, Tp + ph); ctx.stroke(); labs.push({ x, t: "bets close", a: "center", c: C.dim, p: 1 }); }
   ctx.textBaseline = "top"; const placed = [];
   labs.sort((a, b) => a.p - b.p).forEach(l => { const wd = ctx.measureText(l.t).width, x0 = l.a === "left" ? l.x : l.a === "right" ? l.x - wd : l.x - wd / 2;
     if (placed.some(p => x0 < p[1] + 8 && x0 + wd > p[0] - 8)) return; placed.push([x0, x0 + wd]); ctx.fillStyle = l.c; ctx.textAlign = "left"; ctx.fillText(l.t, x0, Tp + ph + 8); });
@@ -2040,7 +2047,7 @@ function renderMarkets(w) {
   const mine = new Set(S.my.b.filter(b => b.rk === r.key).map(b => b.mk + b.m));
   // top gainer
   const pt = pool(r, "top"), st = standings(r, w);
-  $("tPool").textContent = fmtSol(pt.P); $("tPeople").textContent = pt.people; $("tWin").textContent = bs.open ? "close in " + dur(r.s + r.W * BET_WIN - w) : "closed";
+  $("tPool").textContent = fmtSol(pt.P); $("tPeople").textContent = pt.people; $("tWin").textContent = bs.open ? "close in " + dur(betCloseAt(r) - w) : "closed";
   setHTML($("tList"), st.map((x, i) => {
     const sh = (pt.sh.get(x.tok.m) || 0) / [...pt.sh.values()].reduce((a, b) => a + b, 0);
     const cls = (x.rug ? "out " : "") + (inBench(x.tok.m) || !inTop(x.tok.m) ? "dimb " : "") + (mine.has("top" + x.tok.m) ? "mine" : "");
@@ -2055,7 +2062,7 @@ function renderMarkets(w) {
     : ls.winner ? `<span>Winner ${tkHTML(T.get(ls.winner), 13)}</span><b>${fmtPct(ls.final[0].R)}</b>` : `<span>Final duel: ${[...ls.alive].map(m => tkHTML(T.get(m), 13)).join(" vs ")}</span><b>${dur(r.e - w)}</b>`;
   // hype
   const pe = pool(r, "eff"), pb = pool(r, "bust"), h = hype(r, w).filter(x => x.R != null), hb = betState(r, "eff", w);
-  $("hPool").textContent = fmtSol(pe.P + pb.P); $("hWin").textContent = hb.open ? "close in " + dur(r.s + r.W * BET_WIN - w) : "closed";
+  $("hPool").textContent = fmtSol(pe.P + pb.P); $("hWin").textContent = hb.open ? "close in " + dur(betCloseAt(r) - w) : "closed";
   const effS = h.slice().sort((a, b) => b.eff - a.eff).slice(0, 5), bustS = h.filter(x => x.bust > 0).sort((a, b) => b.bust - a.bust).slice(0, 5);
   const line = (x, v, mk) => `<div class="st" data-m="${esc(x.tok.m)}" data-mk="${mk}" style="grid-template-columns:minmax(0,1fr) 54px 46px"><span class="nmw">${tkHTML(x.tok, 13)}</span><span class="num ${x.R >= 0 ? "up" : "down"}">${fmtPct(x.R, 1)}</span><span class="odds">${v.toFixed(3)}</span></div>`;
   setHTML($("effList"), effS.map(x => line(x, x.eff, "eff")).join("") || `<div class="empty">No scores yet.</div>`);
@@ -2300,7 +2307,7 @@ function buildCoin(m) {
     </div>
   </div>
   <div class="sec">
-    <div class="sec-h"><div class="t"><h2 data-scr>Squad</h2><p id="cSqSub"></p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-quiet" type="button" id="cChat">Squad chat</button><button class="btn btn-quiet" type="button" id="cBet" hidden>Back $${esc(tok.s)}</button><button class="btn btn-solid" type="button" id="cJoin"></button></div></div>
+    <div class="sec-h"><div class="t"><h2 data-scr>Squad</h2><p id="cSqSub"></p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-quiet" type="button" id="cBet" hidden>Back $${esc(tok.s)}</button><button class="btn btn-solid" type="button" id="cJoin"></button></div></div>
     <p class="desc" style="margin:0 0 12px">${esc(RULES_TASKS)}</p>
     <div class="tasks" id="cTasks"></div>
   </div>
@@ -2324,7 +2331,6 @@ function buildCoin(m) {
     catch (e) { notice(e.message); }
     finally { b.disabled = false; }
   };
-  $("cChat").onclick = () => { setChatChan(m); $("chatIn").focus(); };
   if (lw) { if (chartInit(m)) { chartWire(); chartSync(true); } else { buildCoinFallback(m); } }
   else {
   qsa("#cSpan button").forEach(b => { b.setAttribute("aria-pressed", String(coinUI.span === 0)); b.onclick = () => { const on = coinUI.span !== 0; coinUI.span = on ? 0 : 90; coinUI.pan = 0; b.setAttribute("aria-pressed", String(on)); dirty.coin = true; }; });
@@ -3257,7 +3263,7 @@ function openBet(m, mk) {
   const calc = () => {
     if (!$("bAmt")) return;
     const w = nowW(), r = roundAt(S.tf, w), a = parseFloat($("bAmt").value) || 0, bs = betState(r, st.mk, w, st.m);
-    $("bRule").textContent = { top: "Best TWAP return over the round wins. Bets close at 40%.", lcs: "Last survivor of the bracket wins. Open until the final duel; weight drops as the round goes on.", eff: "Best return per unit of attention growth wins. Bets close at 40%.", bust: "Biggest drop while trading pace rose wins. Refunds if no coin qualifies." }[st.mk];
+    $("bRule").textContent = { top: "Best TWAP return over the 24 hours wins. Bets close when the next round opens, an hour in.", lcs: "Last survivor of the bracket wins. Bets close when the next round opens, an hour in.", eff: "Best return per unit of attention growth wins. Bets close when the next round opens, an hour in.", bust: "Biggest drop while trading pace rose wins. Refunds if no coin qualifies." }[st.mk];
     $("cW").textContent = bs.open ? "×" + bs.w.toFixed(3) : "—";
     const pl = pool(r, st.mk); $("cP").textContent = fmtSol(pl.P) + " · " + pl.people + " bettor" + (pl.people === 1 ? "" : "s");
     if (st.m && bs.open && a > 0) { const q = quote(r, st.mk, st.m, a, bs.w), sh = (pl.sh.get(st.m) || 0); $("cS").textContent = ((a * bs.w) / (sh + a * bs.w) * 100).toFixed(1) + "%"; $("cO").textContent = fmtSol(q.pay) + " · " + fmtX(q.mult); }
@@ -3390,7 +3396,7 @@ let autoT = null;
 function claudeSnapshot() {
   const w = nowW(), r = roundAt(S.tf, w), st = tfOk(S.tf) ? standings(r, w).filter(x => x.R != null) : [], ls = tfOk(S.tf) ? lcs(r, w) : null, z = ls ? lcsZone(r, ls, w) : null;
   const h = tfOk(S.tf) ? hype(r, w).filter(x => x.R != null) : [];
-  return { mode: S.mode === "replay" ? "replay of a recorded hour" : "live", round: S.tf, time_left: dur(r.e - w), bets_open: (w - r.s) / r.W < BET_WIN,
+  return { mode: S.mode === "replay" ? "replay of a recorded hour" : "live", round: S.tf, time_left: dur(r.e - w), bets_open: (w - r.s) / r.W < betWin(r),
     top_gainer: st.slice(0, 6).map(x => ({ coin: x.tok.s, twap_return_pct: +(x.R * 100).toFixed(2), on_deck: !inTop(x.tok.m) })),
     last_coin_standing: ls ? { alive: [...ls.alive].map(m => T.get(m) && T.get(m).s), checkpoint_next: ls.done < 5 ? ls.done + 1 : "final", cut_zone: z ? z.cut.map(m => T.get(m) && T.get(m).s) : [] } : null,
     hype: h.sort((a, b) => b.eff - a.eff).slice(0, 4).map(x => ({ coin: x.tok.s, return_pct: +(x.R * 100).toFixed(2), pace_growth_pct: Math.round(x.A * 100) })),
@@ -4368,8 +4374,8 @@ function sqBetState(r, w, id) {
   if (!S.srv) return { open: false, why: "The squad race runs on the live arena." };
   // the squad race is scored from the squads' tracked history, so it stays open even when the coin race isn't
   const st = SRV.rounds && SRV.rounds.get(r.key);
-  if (el >= BET_WIN) return { open: false, why: "Bets close at 40% of the round. The next round opens in " + dur(r.e - w) + "." };
-  if (!st || !(st.field.sq || []).length) return { open: false, why: "The squad race starts with the next round, in " + dur(r.e - w) + "." };
+  if (el >= betWin(r)) return { open: false, why: "Bets on this round are closed. The next round opens in " + dur(nextRoundAt(r) - w) + "." };
+  if (!st || !(st.field.sq || []).length) return { open: false, why: "The squad race starts with the next round, in " + dur(nextRoundAt(r) - w) + "." };
   if (id && !st.field.sq.includes(id)) return { open: false, why: "That squad isn't in this round's race. The 15 leading squads at the open race." };
   return { open: true, el, w: 1 / (1 + 2 * el) };
 }
@@ -4386,7 +4392,7 @@ function openSqBet(id) {
   const draw = () => {
     const w = nowW(), r = roundAt(S.tf, w), field = sqField(r).map(x => PFS.byId.get(x)).filter(Boolean), s = st.id ? PFS.byId.get(st.id) : null;
     modal(`${head("Back a squad", TF[S.tf].label + " squad race · live", s ? sqAv(s, 30) : "")}
-      <p class="fine" style="margin:10px 0 12px">The squad that gains the most profit during the round wins the pool. Bets close at 40%; earlier bets carry more weight.</p>
+      <p class="fine" style="margin:10px 0 12px">The squad that gains the most profit over the 24-hour round wins the pool. A new round opens every hour and takes bets until the next one opens; earlier bets carry a little more weight.</p>
       <label class="lbl">Squad</label>
       <div class="picks" id="bPicks">${field.map(x => `<button type="button" data-m="${esc(x.id)}" aria-pressed="${x.id === st.id}">${sqAv(x, 16)}<span>${esc(x.name)}</span></button>`).join("") || `<span class="dim">No squads in this round's race yet.</span>`}</div>
       <label class="lbl" for="bAmt">Stake</label>
@@ -4558,12 +4564,12 @@ function renderSlip(w, force) {
   if (mode === "squads" && S.srv && PFS.loadedFor !== r.key) pfLoad(r);
   qsa("#slipMode button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
   // when bets close, or why they can't be placed
-  const bs = slipState(r, w, null), closeAt = r.s + BET_WIN * r.W;
-  $("slipSt").textContent = bs.open ? `bets close in ${dur(closeAt - w)}` : `Bets closed · next round in ${dur(r.e - w)}`;
+  const bs = slipState(r, w, null), closeAt = betCloseAt(r);
+  $("slipSt").textContent = bs.open ? `bets close in ${dur(closeAt - w)}` : `Bets closed · next round in ${dur(nextRoundAt(r) - w)}`;
   $("slipSt").className = "slip-st" + (bs.open ? "" : " shut");
   // closed here but open in another round length: one click to switch
-  const alt = bs.open ? null : Object.keys(TF).filter(k => k !== S.tf && tfOk(k)).map(k => ({ k, r: roundAt(k, w) })).find(x => slipState(x.r, w, null).open);
-  setHTML($("slipAlt"), alt ? `<button type="button" class="btn btn-solid btn-xs" data-tf="${alt.k}">Bet in the ${TF[alt.k].label} round · open ${dur(alt.r.s + BET_WIN * alt.r.W - w)}</button>` : "");
+  const alt = bs.open ? null : TFK.filter(k => k !== S.tf && tfOk(k)).map(k => ({ k, r: roundAt(k, w) })).find(x => slipState(x.r, w, null).open);
+  setHTML($("slipAlt"), alt ? `<button type="button" class="btn btn-solid btn-xs" data-tf="${alt.k}">Bet in the ${TF[alt.k].label} round · open ${dur(betCloseAt(alt.r) - w)}</button>` : "");
   const { rows, empty } = slipRows(r, w);
   setHTML($("slipList"), rows.length ? rows.map((x, i) => `<button type="button" class="srow" data-id="${esc(x.id)}" aria-pressed="${x.id === pick}">
       <span class="rk">${i + 1}</span>${x.av}<span class="nm"><b>${esc(x.name)}</b><span>${esc(x.sub)}</span></span>

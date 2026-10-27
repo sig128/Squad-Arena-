@@ -5,7 +5,7 @@ import { log, now } from "./lib/util.js";
 import { DB } from "./lib/db.js";
 import { STORE, storeInit, storeSave, storeLoad } from "./lib/store.js";
 import { TL, FEED, RPC, jobPrices, jobValidate, jobDiscover, jobDiscoverDS, jobBackfill, jobMeta, jobDesc, samplePools, chartC, prune, rpcStart, rpcWatch, pumpOff } from "./lib/market.js";
-import { G, roundAt, roundOfKey, refreshBoard, ensureFields, lcs, lcsJSON, lcsFromJSON, resultOf, decide, roundsWithOpenBets, indexBet, roundState } from "./lib/game.js";
+import { G, roundAt, roundOfKey, refreshBoard, ensureFields, lcs, lcsJSON, lcsFromJSON, resultOf, decide, roundsWithOpenBets, indexBet, roundState, runningRounds, retOf, fieldOf } from "./lib/game.js";
 import { SOC, betIn, joinSquad, pushDoc, allDocs, peopleOut } from "./lib/social.js";
 import { emit, online } from "./lib/hub.js";
 import { makeServer } from "./lib/api.js";
@@ -34,7 +34,7 @@ function tokOut(tok, full = true) {
 // coins the site needs: the board, everything in a running round's field, and coins with open bets
 function keepSet(t) {
   const keep = new Set([...G.board.top, ...G.board.bench].map(x => x.m));
-  for (const tfk of TFK) { const f = G.fields.get(roundAt(tfk, t).key); if (f) { f.top.forEach(m => keep.add(m)); f.bench.forEach(m => keep.add(m)); } }
+  for (const tfk of TFK) for (const r of runningRounds(tfk, t)) { const f = G.fields.get(r.key); if (f) { f.top.forEach(m => keep.add(m)); f.bench.forEach(m => keep.add(m)); } }
   for (const b of G.bets.values()) if (b.st === "open") keep.add(b.m);
   // coins with a squad, most recently joined first
   [...G.followed].sort((a, b) => b[1] - a[1]).slice(0, 300).forEach(([m]) => keep.add(m));
@@ -47,8 +47,9 @@ function keepSet(t) {
 function snapshot() {
   const t = now(), keep = keepSet(t);
   const rounds = {}, results = {};
-  for (const tfk of TFK) for (const k of [0, 1]) {
-    const r = roundAt(tfk, t - k * TF[tfk].W), st = roundState(r, t); if (st) rounds[r.key] = st;
+  // every running round and the one that just ended
+  for (const tfk of TFK) for (const r of [...runningRounds(tfk, t), roundAt(tfk, t - TF[tfk].W)]) {
+    const st = roundState(r, t); if (st) rounds[r.key] = st;
     for (const mk of MKS) { const res = G.results.get(r.key + "|" + mk); if (res) results[r.key + "|" + mk] = res; }
   }
   return {
@@ -269,7 +270,7 @@ async function saveStep(all) {
 process.on("SIGTERM", async () => {
   log("info", "stopping: saving candles and squad tracking");
   saveBusy = false;
-  await Promise.race([Promise.all([saveStep(true), pfSave(false)]), new Promise(r => setTimeout(r, 8000))]);
+  await Promise.race([Promise.all([saveStep(true), pfSave(false), opensSave()]), new Promise(r => setTimeout(r, 8000))]);
   process.exit(0);
 });
 // background chart history for coins on the board (then on deck, then everything else kept), one GeckoTerminal call at a time
@@ -287,17 +288,39 @@ function engineStep() {
   const t = now();
   refreshBoard(t);
   ensureFields(t);
-  for (const tfk of TFK) lcs(roundAt(tfk, t), t);
+  for (const tfk of TFK) for (const r of runningRounds(tfk, t)) if (G.fields.has(r.key)) { lcs(r, t); fixOpens(r, t); }
   settleTick(t).catch(e => log("error", "settle: " + e.message));
+}
+
+// a round's opening prices, fixed for every coin in its field once the opening window has passed and kept in the
+// database, so a server restart doesn't cancel the round: its results compare the close with these same prices
+const opensDone = new Set(); let opensDirty = false;
+function fixOpens(r, t) {
+  if (opensDone.has(r.key) || t < r.s + Math.max(5000, r.W * 0.03) + 5000) return;
+  const f = G.fields.get(r.key); if (!f || !f.live) { opensDone.add(r.key); return; }
+  let n = 0; for (const tok of fieldOf(r, "top")) { retOf(tok, r, t); if (G.opens.has(r.key + "|" + tok.m)) n++; }
+  opensDone.add(r.key); if (n) opensDirty = true;
+}
+async function opensSave() {
+  if (!opensDirty || DB.kind !== "supabase") return; opensDirty = false;
+  try { await DB.req("candles?on_conflict=mint", { method: "POST", body: { mint: "game:opens", data: JSON.stringify([...G.opens]), updated_at: new Date().toISOString() }, prefer: "resolution=merge-duplicates,return=minimal" }); }
+  catch (e) { opensDirty = true; log("warn", "save opening prices: " + e.message); }
+}
+async function opensLoad() {
+  if (DB.kind !== "supabase") return;
+  try { const r = await DB.req("candles?mint=eq.game:opens&select=data"); if (r && r[0]) for (const [k, v] of JSON.parse(r[0].data)) if (!G.opens.has(k)) G.opens.set(k, v); }
+  catch (e) { log("warn", "load opening prices: " + e.message); }
 }
 
 async function loadState() {
   const t = now(), since = t - 26 * 3600e3;
+  await opensLoad();
   for (const r of await DB.loadRounds(since)) {
-    // a round that was still running when the server restarted lost its prices from before the restart, so it isn't
-    // scored (its bets are refunded) unless its results were already saved
+    // a round that was still running when the server restarted keeps going if its opening prices were saved; otherwise
+    // it lost its prices from before the restart, so it isn't scored (its bets are refunded) unless its results were saved
     const R = roundOfKey(r.key), saved = r.settled_at || (r.results && Object.keys(r.results).length);
-    const cut = !saved && R && R.s < t && !CFG.scoreLate;
+    const kept = R && (r.field_top || []).some(m => G.opens.has(r.key + "|" + m));
+    const cut = !saved && R && R.s < t && !CFG.scoreLate && !kept;
     G.fields.set(r.key, { top: r.field_top || [], bench: r.field_bench || [], live: !!r.live && !cut, at: Date.parse(r.created_at) || t });
     if (r.lcs) G.lcs.set(r.key, lcsFromJSON(r.lcs));
     if (r.results) for (const [mk, res] of Object.entries(r.results)) G.results.set(r.key + "|" + mk, res);
@@ -353,6 +376,7 @@ async function main() {
     setInterval(() => prune(keepSet(now())), 60000);
   }
   setInterval(engineStep, 1000);
+  setInterval(() => opensSave().catch(() => {}), 60e3);
   setInterval(() => { const t = now(); for (const k of G.opens.keys()) { const r = roundOfKey(k.split("|")[0]); if (!r || t - r.e > 26 * 3600e3) G.opens.delete(k); } }, 600e3);
   if (MONEY.enabled) {
     setInterval(() => scanDeposits().catch(e => log("warn", "deposit scan: " + e.message)), 30000);

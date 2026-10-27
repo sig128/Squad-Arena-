@@ -25,10 +25,14 @@ const TF = {
   "15m": { k: "15m", W: 15 * 60e3, label: "15 min" },
   "30m": { k: "30m", W: 30 * 60e3, label: "30 min" },
   "1h":  { k: "1h",  W: 3600e3,     label: "1 hour" },
-  "24h": { k: "24h", W: 86400e3,    label: "24 hours" }
+  // a new 24-hour round starts every hour (P) and takes bets in its first hour, so every bet runs for a day
+  "24h": { k: "24h", W: 86400e3, P: 3600e3, label: "24 hours" }
 };
-const TFK = ["15m", "30m", "1h", "24h"];
+const TFK = ["24h"];                     // the round length that's open for bets (older ones only finish their bets)
 const RAKE = 0.03, SEED = 0.1, BET_WIN = 0.4, START_BAL = 25, MIN_STAKE = 0.05, MAX_AGE = 72 * 3600e3;
+const betWin = r => r.tf && r.tf.P ? r.tf.P / r.W : BET_WIN;          // share of the round that takes bets
+const betCloseAt = r => r.s + r.W * betWin(r);
+const nextRoundAt = r => r.s + (r.tf && r.tf.P ? r.tf.P : r.W);       // when the next round opens
 const GATE = { liq: 25e3, turn: 0.25, trades: 2000, tx24: 300, mcLiq: 60 };
 
 /* ---------- formatting ---------- */

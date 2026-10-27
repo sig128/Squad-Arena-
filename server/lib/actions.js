@@ -1,5 +1,5 @@
 // Everything a logged-in player can do. Each action checks the rules on the server before anything is saved.
-import { CFG, TF, MKS, CURRENCIES } from "./config.js";
+import { CFG, TF, TFK, MKS, CURRENCIES } from "./config.js";
 import { DB } from "./db.js";
 import { TL, FEED, applyPairs } from "./market.js";
 import { getJSON, isAddress } from "./util.js";
@@ -46,6 +46,7 @@ function trimChat() { if (SOC.chat.length > 6000) SOC.chat.splice(0, SOC.chat.le
 export async function placeBet(user, body) {
   const tf = String(body.tf || ""), mk = String(body.mk || ""), m = String(body.m || ""), cur = String(body.cur || "tSOL");
   if (!TF[tf] || !MKS.includes(mk)) throw err("Unknown market.");
+  if (!TFK.includes(tf)) throw err("Rounds now run for 24 hours. Reload the page to bet.", 409);
   if (!CURRENCIES().includes(cur) || (cur === "SOL" && !MONEY.enabled)) throw err("Betting with SOL is off on this server.");
   if (!rateOk("bet:" + user.id, 30, 6)) throw err("Slow down a little.", 429);
   await ensureUser(user);

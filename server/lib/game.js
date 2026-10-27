@@ -19,7 +19,11 @@ export const G = {
   hooks: { field: null, lcs: null, settled: null, bet: null, board: null, sq: null }
 };
 
-export function roundAt(tfk, w) { const tf = TF[tfk], s = Math.floor(w / tf.W) * tf.W; return { tfk, tf, W: tf.W, s, e: s + tf.W, rs: s, key: "L." + tfk + "." + s }; }
+export function roundAt(tfk, w) { const tf = TF[tfk], P = tf.P || tf.W, s = Math.floor(w / P) * P; return { tfk, tf, W: tf.W, s, e: s + tf.W, rs: s, key: "L." + tfk + "." + s }; }
+// the rounds of a length running at t (24-hour rounds start every hour, so up to 24 run at once), newest first
+export function runningRounds(tfk, t) { const tf = TF[tfk], P = tf.P || tf.W, out = []; for (let k = 0; k * P < tf.W; k++) out.push(roundAt(tfk, t - k * P)); return out; }
+// a round with an hourly start takes bets only until the next one opens
+export const betCloseAt = r => r.s + (r.tf.P ? r.tf.P : r.W * CFG.betWindow);
 export const roundOfKey = key => { const [, tfk, s] = String(key).split("."); return TF[tfk] ? roundAt(tfk, +s) : null; };
 const winOf = r => Math.max(5000, r.W * 0.03);
 
@@ -178,6 +182,7 @@ export function quote(r, mk, m, s, w, cur) {
 }
 export function betState(r, mk, w, m) {
   const el = (w - r.s) / r.W;
+  if (r.tf.P && w >= r.s + r.tf.P) return { open: false, why: "This round has stopped taking bets. A new 24-hour round opens every hour." };
   if (mk === "sq") {
     if (el >= CFG.betWindow) return { open: false, why: "Bets close at 40% of the round." };
     const ids = pfFieldIds(r.key);

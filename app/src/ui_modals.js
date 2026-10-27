@@ -49,7 +49,7 @@ function openBet(m, mk) {
   const calc = () => {
     if (!$("bAmt")) return;
     const w = nowW(), r = roundAt(S.tf, w), a = parseFloat($("bAmt").value) || 0, bs = betState(r, st.mk, w, st.m);
-    $("bRule").textContent = { top: "Best TWAP return over the round wins. Bets close at 40%.", lcs: "Last survivor of the bracket wins. Open until the final duel; weight drops as the round goes on.", eff: "Best return per unit of attention growth wins. Bets close at 40%.", bust: "Biggest drop while trading pace rose wins. Refunds if no coin qualifies." }[st.mk];
+    $("bRule").textContent = { top: "Best TWAP return over the 24 hours wins. Bets close when the next round opens, an hour in.", lcs: "Last survivor of the bracket wins. Bets close when the next round opens, an hour in.", eff: "Best return per unit of attention growth wins. Bets close when the next round opens, an hour in.", bust: "Biggest drop while trading pace rose wins. Refunds if no coin qualifies." }[st.mk];
     $("cW").textContent = bs.open ? "×" + bs.w.toFixed(3) : "—";
     const pl = pool(r, st.mk); $("cP").textContent = fmtSol(pl.P) + " · " + pl.people + " bettor" + (pl.people === 1 ? "" : "s");
     if (st.m && bs.open && a > 0) { const q = quote(r, st.mk, st.m, a, bs.w), sh = (pl.sh.get(st.m) || 0); $("cS").textContent = ((a * bs.w) / (sh + a * bs.w) * 100).toFixed(1) + "%"; $("cO").textContent = fmtSol(q.pay) + " · " + fmtX(q.mult); }
@@ -182,7 +182,7 @@ let autoT = null;
 function claudeSnapshot() {
   const w = nowW(), r = roundAt(S.tf, w), st = tfOk(S.tf) ? standings(r, w).filter(x => x.R != null) : [], ls = tfOk(S.tf) ? lcs(r, w) : null, z = ls ? lcsZone(r, ls, w) : null;
   const h = tfOk(S.tf) ? hype(r, w).filter(x => x.R != null) : [];
-  return { mode: S.mode === "replay" ? "replay of a recorded hour" : "live", round: S.tf, time_left: dur(r.e - w), bets_open: (w - r.s) / r.W < BET_WIN,
+  return { mode: S.mode === "replay" ? "replay of a recorded hour" : "live", round: S.tf, time_left: dur(r.e - w), bets_open: (w - r.s) / r.W < betWin(r),
     top_gainer: st.slice(0, 6).map(x => ({ coin: x.tok.s, twap_return_pct: +(x.R * 100).toFixed(2), on_deck: !inTop(x.tok.m) })),
     last_coin_standing: ls ? { alive: [...ls.alive].map(m => T.get(m) && T.get(m).s), checkpoint_next: ls.done < 5 ? ls.done + 1 : "final", cut_zone: z ? z.cut.map(m => T.get(m) && T.get(m).s) : [] } : null,
     hype: h.sort((a, b) => b.eff - a.eff).slice(0, 4).map(x => ({ coin: x.tok.s, return_pct: +(x.R * 100).toFixed(2), pace_growth_pct: Math.round(x.A * 100) })),

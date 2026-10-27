@@ -52,12 +52,12 @@ function renderSlip(w, force) {
   if (mode === "squads" && S.srv && PFS.loadedFor !== r.key) pfLoad(r);
   qsa("#slipMode button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
   // when bets close, or why they can't be placed
-  const bs = slipState(r, w, null), closeAt = r.s + BET_WIN * r.W;
-  $("slipSt").textContent = bs.open ? `bets close in ${dur(closeAt - w)}` : `Bets closed · next round in ${dur(r.e - w)}`;
+  const bs = slipState(r, w, null), closeAt = betCloseAt(r);
+  $("slipSt").textContent = bs.open ? `bets close in ${dur(closeAt - w)}` : `Bets closed · next round in ${dur(nextRoundAt(r) - w)}`;
   $("slipSt").className = "slip-st" + (bs.open ? "" : " shut");
   // closed here but open in another round length: one click to switch
-  const alt = bs.open ? null : Object.keys(TF).filter(k => k !== S.tf && tfOk(k)).map(k => ({ k, r: roundAt(k, w) })).find(x => slipState(x.r, w, null).open);
-  setHTML($("slipAlt"), alt ? `<button type="button" class="btn btn-solid btn-xs" data-tf="${alt.k}">Bet in the ${TF[alt.k].label} round · open ${dur(alt.r.s + BET_WIN * alt.r.W - w)}</button>` : "");
+  const alt = bs.open ? null : TFK.filter(k => k !== S.tf && tfOk(k)).map(k => ({ k, r: roundAt(k, w) })).find(x => slipState(x.r, w, null).open);
+  setHTML($("slipAlt"), alt ? `<button type="button" class="btn btn-solid btn-xs" data-tf="${alt.k}">Bet in the ${TF[alt.k].label} round · open ${dur(betCloseAt(alt.r) - w)}</button>` : "");
   const { rows, empty } = slipRows(r, w);
   setHTML($("slipList"), rows.length ? rows.map((x, i) => `<button type="button" class="srow" data-id="${esc(x.id)}" aria-pressed="${x.id === pick}">
       <span class="rk">${i + 1}</span>${x.av}<span class="nm"><b>${esc(x.name)}</b><span>${esc(x.sub)}</span></span>

@@ -71,10 +71,13 @@ export const TF = {
   "15m": { k: "15m", W: 15 * 60e3 / SCALE, label: "15 min" },
   "30m": { k: "30m", W: 30 * 60e3 / SCALE, label: "30 min" },
   "1h":  { k: "1h",  W: 3600e3 / SCALE,     label: "1 hour" },
-  "24h": { k: "24h", W: 86400e3 / SCALE,    label: "24 hours" }
+  // 24-hour rounds start every hour (P) and take bets in their first hour, so a bet always runs for a day
+  "24h": { k: "24h", W: 86400e3 / SCALE, P: 3600e3 / SCALE, label: "24 hours" }
 };
 CFG.scoreLate = env("SCORE_LATE_ROUNDS") === "1";
-export const TFK = ["15m", "30m", "1h", "24h"];
+// round lengths that open new rounds (ROUND_TFS, default 24h). The others only finish the bets they already have.
+export const TFK = String(process.env.ROUND_TFS || "24h").split(",").map(s => s.trim()).filter(k => TF[k]);
+if (!TFK.length) TFK.push("24h");
 export const MKS = ["top", "lcs", "eff", "bust", "sq"];     // sq: the pump.fun squad race
 export const MAX_AGE = 72 * 3600e3;
 export const GATE = { liq: 25e3, turn: 0.25, trades: 2000, tx24: 300, mcLiq: 60 };

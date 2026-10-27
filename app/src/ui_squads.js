@@ -89,7 +89,7 @@ function buildCoin(m) {
     </div>
   </div>
   <div class="sec">
-    <div class="sec-h"><div class="t"><h2 data-scr>Squad</h2><p id="cSqSub"></p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-quiet" type="button" id="cChat">Squad chat</button><button class="btn btn-quiet" type="button" id="cBet" hidden>Back $${esc(tok.s)}</button><button class="btn btn-solid" type="button" id="cJoin"></button></div></div>
+    <div class="sec-h"><div class="t"><h2 data-scr>Squad</h2><p id="cSqSub"></p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-quiet" type="button" id="cBet" hidden>Back $${esc(tok.s)}</button><button class="btn btn-solid" type="button" id="cJoin"></button></div></div>
     <p class="desc" style="margin:0 0 12px">${esc(RULES_TASKS)}</p>
     <div class="tasks" id="cTasks"></div>
   </div>
@@ -113,7 +113,6 @@ function buildCoin(m) {
     catch (e) { notice(e.message); }
     finally { b.disabled = false; }
   };
-  $("cChat").onclick = () => { setChatChan(m); $("chatIn").focus(); };
   if (lw) { if (chartInit(m)) { chartWire(); chartSync(true); } else { buildCoinFallback(m); } }
   else {
   qsa("#cSpan button").forEach(b => { b.setAttribute("aria-pressed", String(coinUI.span === 0)); b.onclick = () => { const on = coinUI.span !== 0; coinUI.span = on ? 0 : 90; coinUI.pan = 0; b.setAttribute("aria-pressed", String(on)); dirty.coin = true; }; });

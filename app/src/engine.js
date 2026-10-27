@@ -1,6 +1,6 @@
 /* ================= engine: board, rounds, markets, pools, settlement ================= */
 const S = {
-  mode: "replay", tf: TFK.includes(store.get("tf", "15m")) ? store.get("tf", "15m") : "15m",
+  mode: "replay", tf: "24h",
   view: "arena", coin: null,
   board: { top: [], bench: [] }, boardSig: "", rt: 0, w: 0,
   me: { id: null, name: "", avatar: "", color: "", isOwner: false, canWrite: null },
@@ -24,7 +24,7 @@ const modeCode = () => S.mode === "replay" ? "R" : "L";
 const replayRec = w => D0 + (((w % LOOP) + LOOP) % LOOP);
 const mktT = w => S.mode === "replay" ? replayRec(w) : w;
 function roundAt(tfk, w, md) {
-  md = md || modeCode(); const tf = TF[tfk], s = Math.floor(w / tf.W) * tf.W;
+  md = md || modeCode(); const tf = TF[tfk], P = tf.P || tf.W, s = Math.floor(w / P) * P;
   return { tfk, tf, W: tf.W, s, e: s + tf.W, md, rs: md === "R" ? replayRec(s) : s, key: md + "." + tfk + "." + s };
 }
 const recOf = (r, w) => r.rs + (w - r.s);
@@ -178,13 +178,14 @@ function impliedOdds(r, mk, m) { const pl = pool(r, mk), sh = pl.sh.get(m) || 0;
 function betState(r, mk, w, m) {
   const el = (w - r.s) / r.W;
   if (!tfOk(r.tfk)) return { open: false, why: "24-hour rounds need live data. Switch to live in the data panel." };
-  if (!roundLive(r)) return { open: false, why: "Live data joined this round partway, so it isn't scored. Betting opens with the next round in " + dur(r.e - w) + "." };
+  if (!roundLive(r)) return { open: false, why: "Live data joined this round partway, so it isn't scored. Betting opens with the next round in " + dur(nextRoundAt(r) - w) + "." };
+  if (r.tf.P && w >= r.s + r.tf.P) return { open: false, why: "The next 24-hour round opens in " + dur(nextRoundAt(r) - w) + "." };
   if (mk === "lcs") {
     if (w >= r.e - winOf(r)) return { open: false, why: "The final duel is being scored. The next bracket opens in " + dur(r.e - w) + "." };
     if (m) { const st = lcs(r, w); if (!st.alive.has(m)) return { open: false, why: "That coin is out of this bracket." }; }
     return { open: true, el, w: 1 / (1 + 2 * el) };
   }
-  if (el >= BET_WIN) return { open: false, why: "Bets close at 40% of the round. The next round opens in " + dur(r.e - w) + "." };
+  if (el >= betWin(r)) return { open: false, why: "Bets on this round are closed. The next round opens in " + dur(nextRoundAt(r) - w) + "." };
   if (m) { const tok = T.get(m); if (!tok || (tok.rugAt && tok.rugAt <= recOf(r, w))) return { open: false, why: "That coin was removed by the rug filter." }; if (!fieldOf(r, mk).some(t => t.m === m)) return { open: false, why: "That coin is not in this round's field." }; }
   return { open: true, el, w: 1 / (1 + 2 * el) };
 }
@@ -329,7 +330,7 @@ function events(w) {
         dirty.settled = true;
       }, 1600);
     }
-    wire("Round", `${esc(TF[S.tf].label)} round open until ${S.mode === "replay" ? utc(recOf(r, r.e), false) + " UTC" : local(r.e, false)}. Bets on Top gainer and Hype close at 40%. The bracket cuts at 1/6 to 5/6.`);
+    wire("Round", `${esc(TF[S.tf].label)} round open until ${S.mode === "replay" ? utc(recOf(r, r.e), false) + " UTC" : local(r.e, false)}. ${r.tf.P ? "Bets close at " + local(betCloseAt(r), false) + ", when the next 24-hour round opens." : "Bets on Top gainer and Hype close at 40%."} The bracket cuts at 1/6 to 5/6.`);
     S.lastLead = null;
   }
   const st = standings(r, w).filter(x => !x.rug && x.R != null);

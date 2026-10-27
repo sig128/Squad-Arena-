@@ -116,8 +116,8 @@ function sqBetState(r, w, id) {
   if (!S.srv) return { open: false, why: "The squad race runs on the live arena." };
   // the squad race is scored from the squads' tracked history, so it stays open even when the coin race isn't
   const st = SRV.rounds && SRV.rounds.get(r.key);
-  if (el >= BET_WIN) return { open: false, why: "Bets close at 40% of the round. The next round opens in " + dur(r.e - w) + "." };
-  if (!st || !(st.field.sq || []).length) return { open: false, why: "The squad race starts with the next round, in " + dur(r.e - w) + "." };
+  if (el >= betWin(r)) return { open: false, why: "Bets on this round are closed. The next round opens in " + dur(nextRoundAt(r) - w) + "." };
+  if (!st || !(st.field.sq || []).length) return { open: false, why: "The squad race starts with the next round, in " + dur(nextRoundAt(r) - w) + "." };
   if (id && !st.field.sq.includes(id)) return { open: false, why: "That squad isn't in this round's race. The 15 leading squads at the open race." };
   return { open: true, el, w: 1 / (1 + 2 * el) };
 }
@@ -134,7 +134,7 @@ function openSqBet(id) {
   const draw = () => {
     const w = nowW(), r = roundAt(S.tf, w), field = sqField(r).map(x => PFS.byId.get(x)).filter(Boolean), s = st.id ? PFS.byId.get(st.id) : null;
     modal(`${head("Back a squad", TF[S.tf].label + " squad race · live", s ? sqAv(s, 30) : "")}
-      <p class="fine" style="margin:10px 0 12px">The squad that gains the most profit during the round wins the pool. Bets close at 40%; earlier bets carry more weight.</p>
+      <p class="fine" style="margin:10px 0 12px">The squad that gains the most profit over the 24-hour round wins the pool. A new round opens every hour and takes bets until the next one opens; earlier bets carry a little more weight.</p>
       <label class="lbl">Squad</label>
       <div class="picks" id="bPicks">${field.map(x => `<button type="button" data-m="${esc(x.id)}" aria-pressed="${x.id === st.id}">${sqAv(x, 16)}<span>${esc(x.name)}</span></button>`).join("") || `<span class="dim">No squads in this round's race yet.</span>`}</div>
       <label class="lbl" for="bAmt">Stake</label>

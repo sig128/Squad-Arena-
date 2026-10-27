@@ -141,8 +141,7 @@ main{min-width:0;padding-right:24px;border-right:1px solid var(--rule);min-heigh
   .shell{grid-template-columns:minmax(0,1fr)}
   main{padding-right:0;border-right:0;min-height:0}
   .rail{position:static;height:auto;padding-left:0;border-top:1px solid var(--rule);margin-top:24px;grid-template-rows:auto auto}
-  .rail .panel{height:440px}
-  .rail.bet .panel:first-child{height:600px}
+  .rail .panel{height:600px}
   .rail{max-height:1200px;transition:opacity .3s ease,transform .5s var(--ease),max-height .55s var(--ease),margin-top .55s var(--ease)}
   body.rail-off .rail{max-height:0;margin-top:0;border-top-color:transparent}
   body.rail-off main{padding-right:0}
@@ -159,7 +158,8 @@ body.rail-off .shell{grid-template-columns:minmax(0,1fr) 0px}
 body.rail-off main{padding-right:38px;border-right-color:transparent}
 body.rail-off .rail{opacity:0;transform:translateX(56px);padding-left:0;pointer-events:none}
 body.no-anim .shell,body.no-anim main,body.no-anim .rail,body.no-anim .railtab{transition:none!important}
-.rail.bet{grid-template-rows:minmax(0,1fr) minmax(130px,.38fr)}
+.rail,.rail.bet{grid-template-rows:minmax(0,1fr)}
+.chat-panel[hidden]{display:none}
 .rtabs{display:flex;gap:2px}
 .rtabs button{font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;padding:4px 8px;color:var(--dim);border:1px solid transparent;display:inline-flex;align-items:center;gap:6px}
 .rtabs button:hover{color:var(--fg)}
@@ -696,10 +696,10 @@ body.chart-full{overflow:hidden}
     <footer class="foot" id="foot"></footer>
   </main>
 
-  <aside class="rail bet" aria-label="Bet slip, wire and chat">
+  <aside class="rail bet" aria-label="Bet slip and wire">
     <section class="panel">
       <div class="p-head"><div class="rtabs" id="railTabs" role="group" aria-label="Bet slip or wire"><button type="button" data-rt="bet" aria-pressed="true">Bet</button><button type="button" data-rt="wire" aria-pressed="false">Wire<b id="wireN"></b></button></div><span class="sp"></span>
-        <div class="ask"><button class="btn btn-quiet btn-xs" id="askBtn" type="button" hidden>Ask Claude</button><button class="btn btn-quiet btn-xs" id="autoBtn" type="button" hidden aria-pressed="false">Auto</button><button class="railbtn" id="railClose" type="button" aria-label="Hide wire and chat" title="Hide wire and chat"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 2l4 4-4 4"/></svg></button></div></div>
+        <div class="ask"><button class="btn btn-quiet btn-xs" id="askBtn" type="button" hidden>Ask Claude</button><button class="btn btn-quiet btn-xs" id="autoBtn" type="button" hidden aria-pressed="false">Auto</button><button class="railbtn" id="railClose" type="button" aria-label="Hide the bet slip and wire" title="Hide the bet slip and wire"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 2l4 4-4 4"/></svg></button></div></div>
       <div class="slip" id="slip">
         <div class="slip-top"><div class="seg" id="slipMode" role="group" aria-label="What to back"><button type="button" data-mode="squads" aria-pressed="true">Squads</button><button type="button" data-mode="coins" aria-pressed="false">Coins</button></div><span class="slip-st" id="slipSt"></span></div>
         <div class="slip-alt" id="slipAlt"></div>
@@ -716,7 +716,7 @@ body.chart-full{overflow:hidden}
       </div>
       <div class="scroll" id="feed" aria-live="polite" hidden></div>
     </section>
-    <section class="panel">
+    <section class="panel chat-panel" hidden>
       <div class="p-head"><h2>Chat</h2><span class="meta" id="onlineTxt"></span><span class="sp"></span><div class="chat-tabs" id="chatTabs"></div></div>
       <div class="scroll" id="chatList"></div>
       <form class="chat-form" id="chatForm" autocomplete="off"><input id="chatIn" maxlength="280" placeholder="Say something to the arena" aria-label="Chat message"><button class="btn btn-quiet" type="submit" id="chatSend">Send</button></form>
@@ -725,7 +725,7 @@ body.chart-full{overflow:hidden}
   </aside>
 </div>
 
-<button class="railtab" id="railOpen" type="button" aria-label="Show wire and chat"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 2L4 6l4 4"/></svg><span>Bet · Wire · Chat</span><b id="railUnread"></b></button>
+<button class="railtab" id="railOpen" type="button" aria-label="Show the bet slip and wire"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 2L4 6l4 4"/></svg><span>Bet · Wire</span><b id="railUnread"></b></button>
 <div class="lens" id="lens" aria-hidden="true">
   <div class="l-top"><span id="lAv"></span><b id="lSym"></b><span class="nm" id="lName"></span><span class="px" id="lPx"></span><span class="num" id="lPct"></span></div>
   <canvas id="lensCv"></canvas>

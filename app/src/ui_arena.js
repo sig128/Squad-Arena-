@@ -47,6 +47,7 @@ addEventListener("hashchange", route);
 /* ---------- timeframe + mode controls ---------- */
 function renderTf() {
   qsa(".seg.tf").forEach(seg => {
+    seg.hidden = TFK.length < 2;           // one round length: nothing to choose
     seg.innerHTML = TFK.map(k => `<button type="button" data-tf="${k}" aria-pressed="${k === S.tf}"${tfOk(k) ? "" : ` disabled title="24-hour rounds need live data"`}>${k.toUpperCase()}</button>`).join("");
     qsa("button", seg).forEach(b => b.onclick = () => setTf(b.dataset.tf));
   });
@@ -65,12 +66,12 @@ function renderMode() {
 function renderStrip(w) {
   const r = roundAt(S.tf, w);
   if (!tfOk(S.tf)) { $("sTitle").textContent = "ROUND · " + S.tf.toUpperCase(); $("sSub").textContent = "Live only"; return; }
-  const a = S.mode === "replay" ? utc(r.rs, false) + "–" + utc(r.rs + r.W, false) + " UTC · replay" : local(r.s, false) + "–" + local(r.e, false);
+  const a = S.mode === "replay" ? utc(r.rs, false) + "–" + utc(r.rs + r.W, false) + " UTC · replay" : local(r.s, false) + "–" + local(r.e, false) + (r.W >= 20 * 3600e3 ? " tomorrow" : "");
   $("sTitle").textContent = "ROUND · " + S.tf.toUpperCase();
   $("sSub").textContent = a;
   $("sLeft").textContent = dur(r.e - w);
   const el = (w - r.s) / r.W;
-  $("sBets").textContent = el < BET_WIN ? dur(r.s + r.W * BET_WIN - w) : "closed";
+  $("sBets").textContent = el < betWin(r) ? dur(betCloseAt(r) - w) : "closed";
   const st = lcs(r, w), nk = st.done + 1;
   $("sCut").textContent = st.warming ? "next round" : nk <= 5 ? dur(r.s + nk * r.W / 6 - w) + " · " + nk + "/5" : "final";
   if (st.warming) $("sBets").textContent = "next round";
@@ -86,9 +87,10 @@ function drawTimeline(w) {
   ctx.fillStyle = C.rule; ctx.fillRect(x0, y - 1, x1 - x0, 2);
   ctx.fillStyle = C.fg; ctx.fillRect(x0, y - 1, (x1 - x0) * el, 2);
   // bet window bracket
-  ctx.strokeStyle = el < BET_WIN ? C.fg : C.faint; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(X(0) + .5, y - 7); ctx.lineTo(X(0) + .5, y - 10); ctx.lineTo(X(BET_WIN) - .5, y - 10); ctx.lineTo(X(BET_WIN) - .5, y - 7); ctx.stroke();
-  ctx.fillStyle = el < BET_WIN ? C.fg : C.faint; ctx.textAlign = "left"; ctx.textBaseline = "bottom"; ctx.fillText("BETS OPEN", X(0) + 4, y - 11.5);
+  const bw = betWin(r);
+  ctx.strokeStyle = el < bw ? C.fg : C.faint; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(X(0) + .5, y - 7); ctx.lineTo(X(0) + .5, y - 10); ctx.lineTo(X(bw) - .5, y - 10); ctx.lineTo(X(bw) - .5, y - 7); ctx.stroke();
+  ctx.fillStyle = el < bw ? C.fg : C.faint; ctx.textAlign = "left"; ctx.textBaseline = "bottom"; ctx.fillText("BETS OPEN", X(0) + 4, y - 11.5);
   // checkpoints
   const st = lcs(r, w);
   for (let k = 1; k <= 5; k++) {
@@ -148,7 +150,7 @@ function drawRace(w) {
     : [{ x: L, t: "open", a: "left", c: C.dim, p: 0 }, { x: L + pw, t: raceSpan === "full" ? "close" : "now", a: "right", c: C.dim, p: 0 }];
   if (abs) { const st = niceTime((t1 - t0) / (narrow ? 3 : 6)); for (let t = Math.ceil(t0 / st) * st; t < t1 - st * 0.4; t += st) { if (t - t0 < st * 0.4) continue; const x = Math.round(X(t)) + .5; ctx.strokeStyle = C.rule2; ctx.setLineDash([2, 4]); ctx.beginPath(); ctx.moveTo(x, Tp); ctx.lineTo(x, Tp + ph); ctx.stroke(); ctx.setLineDash([]); labs.push({ x, t: tlab(t), a: "center", c: C.faint, p: 2 }); } }
   else for (let k = 1; k <= 5; k++) { const t = r.rs + k * r.W / 6; if (t > t1) break; const x = Math.round(X(t)) + .5; ctx.strokeStyle = C.rule2; ctx.setLineDash([2, 4]); ctx.beginPath(); ctx.moveTo(x, Tp); ctx.lineTo(x, Tp + ph); ctx.stroke(); ctx.setLineDash([]); labs.push({ x, t: "C" + k, a: "center", c: C.faint, p: 2 }); }
-  const bx = r.rs + r.W * BET_WIN; if (!abs && bx <= t1) { const x = Math.round(X(bx)) + .5; ctx.strokeStyle = C.faint; ctx.beginPath(); ctx.moveTo(x, Tp); ctx.lineTo(x, Tp + ph); ctx.stroke(); labs.push({ x, t: "bets close", a: "center", c: C.dim, p: 1 }); }
+  const bx = r.rs + r.W * betWin(r); if (!abs && bx <= t1) { const x = Math.round(X(bx)) + .5; ctx.strokeStyle = C.faint; ctx.beginPath(); ctx.moveTo(x, Tp); ctx.lineTo(x, Tp + ph); ctx.stroke(); labs.push({ x, t: "bets close", a: "center", c: C.dim, p: 1 }); }
   ctx.textBaseline = "top"; const placed = [];
   labs.sort((a, b) => a.p - b.p).forEach(l => { const wd = ctx.measureText(l.t).width, x0 = l.a === "left" ? l.x : l.a === "right" ? l.x - wd : l.x - wd / 2;
     if (placed.some(p => x0 < p[1] + 8 && x0 + wd > p[0] - 8)) return; placed.push([x0, x0 + wd]); ctx.fillStyle = l.c; ctx.textAlign = "left"; ctx.fillText(l.t, x0, Tp + ph + 8); });
