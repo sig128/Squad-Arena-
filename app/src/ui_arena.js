@@ -4,6 +4,7 @@ function parseHash() {
   const h = decodeURIComponent((location.hash || "").slice(1));
   if (h.startsWith("coin-")) return { v: "coin", m: h.slice(5) };
   if (h.startsWith("sq-")) return { v: "sq", m: h.slice(3) };
+  if (h.startsWith("pf-upload=")) return { v: S.view || "arena" };
   if (h === "arena" || h === "markets" || h === "squads" || h === "trending") return { v: h };
   return { v: "arena" };
 }

@@ -223,3 +223,27 @@ function drawSquadChart() {
   ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillStyle = C.dim; ctx.fillText(local(t0, false), L, Tp + ph + 6); ctx.textAlign = "right"; ctx.fillText("now", L + pw, Tp + ph + 6);
   ctx.strokeStyle = d.pnl >= pts[0][1] ? C.up : C.down; ctx.lineWidth = 1.8; ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(X(p[0]), Y(p[1])) : ctx.moveTo(X(p[0]), Y(p[1]))); ctx.stroke();
 }
+
+/* ---------- loading a squad copy (the round server's owner only: the link carries a one-off upload token) ---------- */
+function pfUploadFromHash() {
+  const m = /^#pf-upload=([0-9a-f]{32,64})$/.exec(location.hash || ""); if (!m || !S.srv) return false;
+  const token = m[1]; history.replaceState(null, "", location.pathname + location.search + "#arena");
+  modal(`${head("Load pump.fun squads", "Pick the squad copy file to send to the round server")}
+    <p class="fine" style="margin:12px 0">Choose <b>pump-squads.json</b> from your Downloads folder.</p>
+    <label class="btn btn-solid btn-wide" for="pfFile" style="margin-top:6px">Choose file</label>
+    <input id="pfFile" type="file" accept="application/json,.json" style="position:absolute;width:1px;height:1px;opacity:0">
+    <p class="fine" id="pfMsg" aria-live="polite"></p>`);
+  $("pfFile").addEventListener("change", async e => {
+    const f = e.target.files && e.target.files[0], msg = $("pfMsg"); if (!f) return;
+    msg.textContent = "Sending " + f.name + "…";
+    try {
+      const data = JSON.parse(await f.text());
+      const r = await fetch(SRV.url + "/admin/pf-copy", { method: "POST", headers: { "content-type": "text/plain" }, body: JSON.stringify({ token, data }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || "The server said " + r.status);
+      msg.textContent = `Loaded ${j.squads} squads. Tracking starts now.`; pfLoad(roundAt(S.tf, nowW()), true);
+    } catch (er) { msg.textContent = "Didn't work: " + er.message; }
+  });
+  return true;
+}
+addEventListener("hashchange", pfUploadFromHash);

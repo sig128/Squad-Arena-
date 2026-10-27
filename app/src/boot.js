@@ -150,6 +150,7 @@ function boot() {
   tick(true);
   layoutCols(); new ResizeObserver(() => { layoutCols(); dirty.all = true; }).observe($("tbl"));
   raceModeUI();
+  pfUploadFromHash();
   route();
   matchMedia("(prefers-color-scheme:dark)").addEventListener("change", readTheme);
   new MutationObserver(readTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "class", "style"] });
