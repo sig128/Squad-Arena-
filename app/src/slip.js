@@ -53,8 +53,11 @@ function renderSlip(w, force) {
   qsa("#slipMode button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
   // when bets close, or why they can't be placed
   const bs = slipState(r, w, null), closeAt = r.s + BET_WIN * r.W;
-  $("slipSt").textContent = bs.open ? `bets close in ${dur(closeAt - w)}` : bs.why;
+  $("slipSt").textContent = bs.open ? `bets close in ${dur(closeAt - w)}` : `Bets closed · next round in ${dur(r.e - w)}`;
   $("slipSt").className = "slip-st" + (bs.open ? "" : " shut");
+  // closed here but open in another round length: one click to switch
+  const alt = bs.open ? null : Object.keys(TF).filter(k => k !== S.tf && tfOk(k)).map(k => ({ k, r: roundAt(k, w) })).find(x => slipState(x.r, w, null).open);
+  setHTML($("slipAlt"), alt ? `<button type="button" class="btn btn-solid btn-xs" data-tf="${alt.k}">Bet in the ${TF[alt.k].label} round · open ${dur(alt.r.s + BET_WIN * alt.r.W - w)}</button>` : "");
   const { rows, empty } = slipRows(r, w);
   setHTML($("slipList"), rows.length ? rows.map((x, i) => `<button type="button" class="srow" data-id="${esc(x.id)}" aria-pressed="${x.id === pick}">
       <span class="rk">${i + 1}</span>${x.av}<span class="nm"><b>${esc(x.name)}</b><span>${esc(x.sub)}</span></span>
@@ -71,7 +74,7 @@ function slipCalc(r, w) {
   const mode = RACE.mode, pick = SLIP.pick[mode], a = parseFloat($("sAmt").value) || 0, bs = slipState(r, w, pick);
   $("sCur").textContent = CUR;
   const name = !pick ? "—" : mode === "squads" ? (PFS.byId.get(pick) || {}).name || "—" : (tokAny(pick) || {}).s || "—";
-  $("sPick").textContent = name;
+  SLIP.name = name;
   $("sW").textContent = bs.open ? "×" + bs.w.toFixed(3) : "—";
   let pay = null;
   if (pick && bs.open && a > 0) {
@@ -83,7 +86,7 @@ function slipCalc(r, w) {
   if (!SLIP.busy) {
     go.textContent = S.srv && !S.me.id ? "Log in to bet" : !pick ? (mode === "squads" ? "Pick a squad" : "Pick a coin") : "Back " + name;
     go.disabled = !!(S.srv && S.me.id) && (!pick || !bs.open);
-    $("sErr").textContent = pick && !bs.open ? bs.why : "";
+    $("sErr").textContent = pick && !bs.open && !/close|next round/i.test(bs.why) ? bs.why : "";
   }
   $("sBal").textContent = (CUR === "SOL" ? "Real SOL" : "Practice tSOL") + " · balance " + fmtSol(S.my.bal);
 }
@@ -95,7 +98,7 @@ async function slipGo() {
   try {
     const r = roundAt(S.tf, nowW());
     if (mode === "squads") await srvPlaceBet(r, "sq", pick, a); else await placeBet(r, "top", pick, a);
-    notice("Bet placed · " + fmtSol(a) + " on " + $("sPick").textContent); dirty.race = true;
+    notice("Bet placed · " + fmtSol(a) + " on " + SLIP.name); dirty.race = true;
   } catch (e) { $("sErr").textContent = e && e.message ? e.message : "The bet didn't go through."; }
   finally { SLIP.busy = false; renderSlip(nowW(), true); }
 }
@@ -109,6 +112,7 @@ async function slipGo() {
   amt.addEventListener("keydown", e => { if (e.key === "Enter") slipGo(); });
   $("sQuick").addEventListener("click", e => { const b = e.target.closest("button[data-v]"); if (!b) return; amt.value = b.dataset.v === "max" ? Math.max(0, Math.floor(S.my.bal * 100) / 100) : b.dataset.v; slipCalc(roundAt(S.tf, nowW()), nowW()); });
   $("sGo").addEventListener("click", slipGo);
+  $("slipAlt").addEventListener("click", e => { const b = e.target.closest("button[data-tf]"); if (b) { setTf(b.dataset.tf); renderSlip(nowW(), true); } });
   $("sMore").addEventListener("click", () => { const p = SLIP.pick[RACE.mode]; if (RACE.mode === "squads") openSqBet(p); else openBet(p, "top"); });
   setRailTab("bet", true);                 // the page always opens on the slip
 })();

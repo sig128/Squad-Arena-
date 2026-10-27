@@ -155,21 +155,24 @@ body.rail-off .shell{grid-template-columns:minmax(0,1fr) 0px}
 body.rail-off main{padding-right:38px;border-right-color:transparent}
 body.rail-off .rail{opacity:0;transform:translateX(56px);padding-left:0;pointer-events:none}
 body.no-anim .shell,body.no-anim main,body.no-anim .rail,body.no-anim .railtab{transition:none!important}
-.rail.bet{grid-template-rows:minmax(0,1.5fr) minmax(0,1fr)}
+.rail.bet{grid-template-rows:minmax(0,1fr) minmax(130px,.38fr)}
 .rtabs{display:flex;gap:2px}
 .rtabs button{font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;padding:4px 8px;color:var(--dim);border:1px solid transparent;display:inline-flex;align-items:center;gap:6px}
 .rtabs button:hover{color:var(--fg)}
 .rtabs button[aria-pressed="true"]{color:var(--fg);border-color:var(--rule2)}
 .rtabs b{font-size:9.5px;font-weight:600;letter-spacing:0;min-width:16px;height:16px;display:inline-grid;place-items:center;background:var(--fg);color:var(--bg);padding:0 3px}
 .rtabs b:empty{display:none}
-.slip{display:flex;flex-direction:column;min-height:0;flex:1;padding-top:12px}
+.slip{display:flex;flex-direction:column;min-height:0;flex:1;padding-top:10px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--rule2) transparent}
 .slip[hidden]{display:none}
 .slip-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .slip-st{font-size:10.5px;color:var(--dim);line-height:1.4;flex:1;min-width:120px;text-align:right}
-.slip-st.shut{text-align:left;flex-basis:100%}
-.slip-h{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);padding:12px 0 6px;border-bottom:1px solid var(--rule)}
-.slip-list{min-height:96px}
-.srow{display:grid;grid-template-columns:18px 22px minmax(0,1fr) auto;align-items:center;gap:8px;width:100%;text-align:left;padding:7px 6px;border-bottom:1px solid var(--rule);border-left:2px solid transparent}
+.slip-st.shut{color:var(--fg)}
+.slip-alt:empty{display:none}
+.slip-alt{padding-top:8px}
+.slip-alt .btn{width:100%}
+.slip-h{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);padding:10px 0 5px;border-bottom:1px solid var(--rule)}
+.slip-list{min-height:190px;flex:1 1 190px}
+.srow{display:grid;grid-template-columns:18px 22px minmax(0,1fr) auto;align-items:center;gap:8px;width:100%;text-align:left;padding:5px 6px;border-bottom:1px solid var(--rule);border-left:2px solid transparent}
 .srow:hover{background:var(--hover)}
 .srow[aria-pressed="true"]{background:var(--hover);border-left-color:var(--fg)}
 .srow .rk{font-size:10px;color:var(--dim);font-variant-numeric:tabular-nums}
@@ -178,12 +181,14 @@ body.no-anim .shell,body.no-anim main,body.no-anim .rail,body.no-anim .railtab{t
 .srow .nm span,.srow .v span{font-size:10px;color:var(--dim);font-variant-numeric:tabular-nums}
 .srow .v{display:flex;flex-direction:column;align-items:flex-end;font-variant-numeric:tabular-nums}
 .srow .v b{font-weight:500;font-size:12px}
-.slip-foot{padding-top:12px;border-top:1px solid var(--rule)}
-.slip-foot .field input{font-size:17px;padding:7px 0}
-.slip-foot .quick{margin:8px 0 10px}
-.slip-foot .calc{margin-bottom:8px}
-.slip-foot .err{margin-bottom:8px}
-.slip-foot .btn-wide{padding:11px}
+.slip-foot{padding-top:10px;border-top:1px solid var(--rule);flex:none}
+.slip-foot .field input{font-size:15px;padding:6px 0}
+.slip-foot .quick{margin:6px 0 8px;gap:4px}
+.slip-foot .quick button{padding:5px 0}
+.slip-foot .calc{margin-bottom:6px;gap:3px;font-size:11.5px}
+.slip-foot .calc .pay b{font-size:13px}
+.slip-foot .err{margin-bottom:6px;min-height:0}
+.slip-foot .btn-wide{padding:10px}
 .slip-fine{display:flex;justify-content:space-between;gap:10px;font-size:10px;color:var(--dim);margin-top:8px}
 .slip-fine .link{font-size:10px;color:var(--dim);text-decoration:underline;text-underline-offset:2px}
 .slip-fine .link:hover{color:var(--fg)}
@@ -692,12 +697,13 @@ body.chart-full{overflow:hidden}
         <div class="ask"><button class="btn btn-quiet btn-xs" id="askBtn" type="button" hidden>Ask Claude</button><button class="btn btn-quiet btn-xs" id="autoBtn" type="button" hidden aria-pressed="false">Auto</button><button class="railbtn" id="railClose" type="button" aria-label="Hide wire and chat" title="Hide wire and chat"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 2l4 4-4 4"/></svg></button></div></div>
       <div class="slip" id="slip">
         <div class="slip-top"><div class="seg" id="slipMode" role="group" aria-label="What to back"><button type="button" data-mode="squads" aria-pressed="true">Squads</button><button type="button" data-mode="coins" aria-pressed="false">Coins</button></div><span class="slip-st" id="slipSt"></span></div>
+        <div class="slip-alt" id="slipAlt"></div>
         <div class="slip-h" id="slipHead">Squad · this round · pays</div>
         <div class="scroll slip-list" id="slipList" aria-label="Pick what to back"></div>
         <div class="slip-foot">
           <div class="field"><input id="sAmt" type="number" inputmode="decimal" min="0" step="0.05" aria-label="Stake"><span id="sCur">tSOL</span></div>
           <div class="quick" id="sQuick"></div>
-          <div class="calc"><div><span>Backing</span><b id="sPick">—</b></div><div><span>Weight if placed now</span><b id="sW">—</b></div><div class="pay"><span>Payout if it wins</span><b id="sO">—</b></div></div>
+          <div class="calc"><div><span>Weight if placed now</span><b id="sW">—</b></div><div class="pay"><span>Payout if it wins</span><b id="sO">—</b></div></div>
           <p class="err" id="sErr"></p>
           <button class="btn btn-solid btn-wide" type="button" id="sGo">Pick a squad</button>
           <div class="slip-fine"><span id="sBal"></span><button type="button" class="link" id="sMore">Pool details</button></div>
