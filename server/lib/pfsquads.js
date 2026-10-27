@@ -10,7 +10,7 @@ import { CFG } from "./config.js";
 import { DB } from "./db.js";
 import { getJSON, log, isAddress, now } from "./util.js";
 
-const ADMIN_HASH = "8092a20b9124a096e4f2387328173fccd5fdf5898854072cb2179caa1ca80613";   // sha256 of the upload token (the token isn't in the code)
+const ADMIN_HASH = "c665fd97550f44af6fed9d2bf94d676eb01849e66af1c16f17ab244427fe96cb";   // sha256 of the upload token (the token isn't in the code)
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const PF = {

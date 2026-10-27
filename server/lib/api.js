@@ -54,7 +54,7 @@ export function makeServer({ snapshot, health }) {
       return res.end();
     }
     // the pump.fun squad copy is uploaded from a pump.fun page (token-protected, any origin)
-    if (req.method === "POST" && path === "/admin/pf-copy") { try { return await pfIngest(req, res, (st, o) => send(req, res, st, o, null)); } catch (e) { return send(req, res, e.status || 500, { error: e.message }, null); } }
+    if (req.method === "POST" && path === "/admin/pf-copy") { try { return await pfIngest(req, res, (st, o) => send(req, res, st, o, origin)); } catch (e) { return send(req, res, e.status || 500, { error: e.message }, origin); } }
     if (req.headers.origin && !origin) return send(req, res, 403, { error: "This site isn't allowed to use the arena API." }, null);
     const ip = (req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").split(",")[0].trim();
     try {
