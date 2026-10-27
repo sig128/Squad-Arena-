@@ -6,5 +6,6 @@ window.SA_CONFIG = {
   treasury: "7ah1hkAhjnfp62jxFx1E3Ki5fLKr57RY964XdLWi9dRt", // the arena wallet. The site only signs deposits to this address.
   privyAppId: "cmvmfy22z01dx0gl2e980ir4r",
   supabaseUrl: "https://iipfuzfrwlsmxdlmjxit.supabase.co",
-  supabaseKey: "sb_publishable_tnd14IH0rhKAOm5uZOpHbw_qeEgPplz"
+  supabaseKey: "sb_publishable_tnd14IH0rhKAOm5uZOpHbw_qeEgPplz",
+  x: "SquadArena_"                                         // the project's X account, linked from the top bar
 };
