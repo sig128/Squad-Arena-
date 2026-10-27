@@ -27,7 +27,8 @@ class SupaDB {
   profilesByIds(ids) { return ids.length ? this.req(`profiles?id=in.(${ids.map(i => '"' + i.replace(/"/g, "") + '"').join(",")})&select=id,name,avatar,handle`) : []; }
   topup(id) { return this.rpc("topup_practice", { p_user: id }); }
 
-  placeBet(a) { return this.rpc("place_bet", { p_user: a.uid, p_round: a.rk, p_tf: a.tf, p_round_start: a.rs, p_market: a.mk, p_mint: a.m, p_currency: a.cur, p_stake: a.s, p_weight: a.w, p_quote: a.q }); }
+  // a squad-race bet is stored as market 'top' with mint 'sq:<squad id>', which the bets table already accepts
+  placeBet(a) { const sq = a.mk === "sq"; return this.rpc("place_bet", { p_user: a.uid, p_round: a.rk, p_tf: a.tf, p_round_start: a.rs, p_market: sq ? "top" : a.mk, p_mint: sq ? "sq:" + a.m : a.m, p_currency: a.cur, p_stake: a.s, p_weight: a.w, p_quote: a.q }); }
   settleBet(id, status, payout, why, receipt) { return this.rpc("settle_bet", { p_bet: id, p_status: status, p_payout: payout, p_why: why, p_receipt: receipt || null }); }
   usePass(id, uid, mint) { return this.rpc("use_streak_pass", { p_bet: id, p_user: uid, p_mint: mint }); }
   loadBets(sinceMs) { return this.req(`bets?or=(status.eq.open,created_at.gte.${enc('"' + iso(sinceMs) + '"')})&select=*&order=created_at.asc&limit=20000`); }

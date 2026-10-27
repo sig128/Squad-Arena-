@@ -303,7 +303,7 @@ async function loadState() {
     if (r.settled_at) G.settled.add(r.key);
   }
   for (const row of await DB.loadBets(since)) indexBet(betIn(row));
-  for (const s of await DB.loadSquads()) { const ts = Date.parse(s.joined_at); joinSquad(s.user_id, s.mint, ts); G.followed.set(s.mint, Math.max(G.followed.get(s.mint) || 0, ts)); }
+  for (const s of await DB.loadSquads()) { if (String(s.mint).startsWith("sq:")) continue; const ts = Date.parse(s.joined_at); joinSquad(s.user_id, s.mint, ts); G.followed.set(s.mint, Math.max(G.followed.get(s.mint) || 0, ts)); }
   for (const m of G.followed.keys()) if (!TL.has(m)) FEED.pending.push(m);
   // coins from the last few hours of rounds go straight back to DEX Screener, so a restart doesn't start from an empty board
   for (const f of G.fields.values()) if (t - f.at < 6 * 3600e3) for (const m of [...f.top, ...f.bench]) if (!TL.has(m) && !FEED.pending.includes(m)) FEED.pending.push(m);

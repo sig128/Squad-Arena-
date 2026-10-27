@@ -162,10 +162,11 @@ export function pfSquad(id, since) {
 export const pfHealth = () => ({ on: PF.squads.size > 0, squads: PF.squads.size, members: [...PF.squads.values()].reduce((a, s) => a + s.members.length, 0), copiedAt: PF.at, ...PF.stats,
   pausedFor: Math.max(0, Math.round((PF.stats.pauseUntil - now()) / 1000)) });
 
-/* ---------- kept in the database (kv table), so a restart keeps the copy and the tracking base ---------- */
+/* ---------- kept in the database, so a restart keeps the copy and the tracking base ---------- */
 const gz = o => zlib.gzipSync(JSON.stringify(o)).toString("base64"), ungz = s => JSON.parse(zlib.gunzipSync(Buffer.from(s, "base64")).toString());
-async function kvPut(k, v) { await DB.req("kv?on_conflict=k", { method: "POST", body: { k, v, updated_at: new Date().toISOString() }, prefer: "resolution=merge-duplicates,return=minimal" }); }
-async function kvGet(k) { const r = await DB.req(`kv?k=eq.${encodeURIComponent(k)}&select=v`); return r && r[0] ? r[0].v : null; }
+// rows in the candles table keyed "pf:copy" / "pf:track" (the table holds one text value per key)
+async function kvPut(k, v) { await DB.req("candles?on_conflict=mint", { method: "POST", body: { mint: k, data: JSON.stringify(v), updated_at: new Date().toISOString() }, prefer: "resolution=merge-duplicates,return=minimal" }); }
+async function kvGet(k) { const r = await DB.req(`candles?mint=eq.${encodeURIComponent(k)}&select=data`); return r && r[0] ? JSON.parse(r[0].data) : null; }
 export async function pfSave(withCopy) {
   if (DB.kind !== "supabase" || !PF.squads.size) return;
   try {

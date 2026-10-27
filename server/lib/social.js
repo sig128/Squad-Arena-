@@ -13,7 +13,8 @@ export const SOC = {
 
 export const betOut = b => ({ id: b.id, mk: b.mk, tf: b.tf, rs: b.rs, md: "L", rk: b.rk, m: b.m, s: b.s, w: b.w, ts: b.ts, st: b.st, q: b.q, pay: b.pay || 0, sp: b.sp ? 1 : 0, cur: b.cur, why: b.why || null });
 export function betIn(row) {
-  return { id: row.id, uid: row.user_id, rk: row.round_key, tf: row.tf, rs: +row.round_start, mk: row.market, m: row.mint, cur: row.currency, s: +row.stake, w: +row.weight, q: +row.quote || 0,
+  const sq = String(row.mint || "").startsWith("sq:");                       // a squad-race bet (see DB.placeBet)
+  return { id: row.id, uid: row.user_id, rk: row.round_key, tf: row.tf, rs: +row.round_start, mk: sq ? "sq" : row.market, m: sq ? row.mint.slice(3) : row.mint, cur: row.currency, s: +row.stake, w: +row.weight, q: +row.quote || 0,
     st: row.status, pay: +row.payout || 0, why: row.why || null, sp: !!row.pass_used, ts: Date.parse(row.created_at) || Date.now() };
 }
 export function joinSquad(uid, m, ts) { let s = SOC.squads.get(uid); if (!s) SOC.squads.set(uid, s = new Map()); if (!s.has(m)) { s.set(m, ts || Date.now()); return true; } return false; }
