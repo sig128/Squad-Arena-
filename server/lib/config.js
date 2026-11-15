@@ -39,7 +39,8 @@ export const CFG = {
   // SEED_SOL is house money added to every coin in a real-SOL pool; 0 makes the pools pure (the house only earns the rake)
   // and refunds everyone when nobody backed the winner.
   // KOLs: the list from Solana Tracker (free key) or KOL_WALLETS, their trades from a Solana WebSocket and RPC
-  solanaTrackerKey: env("SOLANATRACKER_API_KEY"),
+  // Solana Tracker is OFF unless SOLANATRACKER_ON=1: no KOL list, no KOL trade history, no squad profit tracking
+  solanaTrackerKey: env("SOLANATRACKER_ON") === "1" ? env("SOLANATRACKER_API_KEY") : "",
   kolPages: num("KOL_PAGES", 3),                         // 100 KOLs per page, most active over the last 7 days first
   kolWs: env("KOL_WS", "wss://api.mainnet-beta.solana.com"),
   kolRpc: env("KOL_RPC", "https://api.mainnet-beta.solana.com"),
